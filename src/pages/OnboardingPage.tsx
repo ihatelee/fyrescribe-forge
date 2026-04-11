@@ -225,9 +225,19 @@ const ImportModal = ({ onCreated, onClose }: ImportModalProps) => {
     if (uploadError) {
       setError(`Project created but file upload failed: ${uploadError.message}`);
       setSaving(false);
-      // Still navigate — the project exists
+      // Still navigate — the project exists even without the file
       onCreated(project);
       return;
+    }
+
+    // 3. Persist the storage path so AI analysis can retrieve the file later
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ manuscript_path: storagePath })
+      .eq("id", project.id);
+
+    if (updateError) {
+      console.error("Failed to save manuscript path:", updateError);
     }
 
     onCreated(project);
