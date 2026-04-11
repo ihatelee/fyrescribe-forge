@@ -233,7 +233,7 @@ const ImportModal = ({ onCreated, onClose }: ImportModalProps) => {
     // 3. Persist the storage path so AI analysis can retrieve the file later
     const { error: updateError } = await supabase
       .from("projects")
-      .update({ manuscript_path: storagePath })
+      .update({ manuscript_path: storagePath } as any)
       .eq("id", project.id);
 
     if (updateError) {
