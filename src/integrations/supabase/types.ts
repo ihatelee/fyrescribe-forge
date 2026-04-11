@@ -14,7 +14,432 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      chapters: {
+        Row: {
+          created_at: string
+          id: string
+          order: number
+          project_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order?: number
+          project_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order?: number
+          project_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chapters_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entities: {
+        Row: {
+          category: Database["public"]["Enums"]["entity_category"]
+          cover_image_url: string | null
+          created_at: string
+          fields: Json | null
+          id: string
+          is_dirty: boolean | null
+          name: string
+          project_id: string
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["entity_category"]
+          cover_image_url?: string | null
+          created_at?: string
+          fields?: Json | null
+          id?: string
+          is_dirty?: boolean | null
+          name: string
+          project_id: string
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["entity_category"]
+          cover_image_url?: string | null
+          created_at?: string
+          fields?: Json | null
+          id?: string
+          is_dirty?: boolean | null
+          name?: string
+          project_id?: string
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_links: {
+        Row: {
+          entity_a_id: string
+          entity_b_id: string
+          id: string
+          relationship: string | null
+        }
+        Insert: {
+          entity_a_id: string
+          entity_b_id: string
+          id?: string
+          relationship?: string | null
+        }
+        Update: {
+          entity_a_id?: string
+          entity_b_id?: string
+          id?: string
+          relationship?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_links_entity_a_id_fkey"
+            columns: ["entity_a_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_links_entity_b_id_fkey"
+            columns: ["entity_b_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_tags: {
+        Row: {
+          entity_id: string
+          tag_id: string
+        }
+        Insert: {
+          entity_id: string
+          tag_id: string
+        }
+        Update: {
+          entity_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_tags_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lore_suggestions: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          id: string
+          payload: Json | null
+          project_id: string
+          reviewed_at: string | null
+          status: Database["public"]["Enums"]["lore_suggestion_status"]
+          type: Database["public"]["Enums"]["lore_suggestion_type"]
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          payload?: Json | null
+          project_id: string
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["lore_suggestion_status"]
+          type: Database["public"]["Enums"]["lore_suggestion_type"]
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          payload?: Json | null
+          project_id?: string
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["lore_suggestion_status"]
+          type?: Database["public"]["Enums"]["lore_suggestion_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lore_suggestions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lore_suggestions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          last_sync_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_sync_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_sync_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scene_tags: {
+        Row: {
+          scene_id: string
+          tag_id: string
+        }
+        Insert: {
+          scene_id: string
+          tag_id: string
+        }
+        Update: {
+          scene_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_tags_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scenes: {
+        Row: {
+          chapter_id: string
+          content: string | null
+          id: string
+          is_dirty: boolean | null
+          order: number
+          pov_character_id: string | null
+          project_id: string
+          title: string
+          updated_at: string
+          word_count: number | null
+        }
+        Insert: {
+          chapter_id: string
+          content?: string | null
+          id?: string
+          is_dirty?: boolean | null
+          order?: number
+          pov_character_id?: string | null
+          project_id: string
+          title: string
+          updated_at?: string
+          word_count?: number | null
+        }
+        Update: {
+          chapter_id?: string
+          content?: string | null
+          id?: string
+          is_dirty?: boolean | null
+          order?: number
+          pov_character_id?: string | null
+          project_id?: string
+          title?: string
+          updated_at?: string
+          word_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scenes_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scenes_pov_character_id_fkey"
+            columns: ["pov_character_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scenes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_log: {
+        Row: {
+          id: string
+          project_id: string
+          ran_at: string
+          scenes_processed: number | null
+          status: Database["public"]["Enums"]["sync_status"]
+          suggestions_created: number | null
+          triggered_by: Database["public"]["Enums"]["sync_trigger"]
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          ran_at?: string
+          scenes_processed?: number | null
+          status?: Database["public"]["Enums"]["sync_status"]
+          suggestions_created?: number | null
+          triggered_by: Database["public"]["Enums"]["sync_trigger"]
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          ran_at?: string
+          scenes_processed?: number | null
+          status?: Database["public"]["Enums"]["sync_status"]
+          suggestions_created?: number | null
+          triggered_by?: Database["public"]["Enums"]["sync_trigger"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tags: {
+        Row: {
+          color: string | null
+          id: string
+          name: string
+          project_id: string
+        }
+        Insert: {
+          color?: string | null
+          id?: string
+          name: string
+          project_id: string
+        }
+        Update: {
+          color?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tags_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timeline_events: {
+        Row: {
+          date_label: string | null
+          date_sort: number | null
+          entity_id: string | null
+          id: string
+          label: string
+          project_id: string
+          type: Database["public"]["Enums"]["timeline_event_type"]
+        }
+        Insert: {
+          date_label?: string | null
+          date_sort?: number | null
+          entity_id?: string | null
+          id?: string
+          label: string
+          project_id: string
+          type?: Database["public"]["Enums"]["timeline_event_type"]
+        }
+        Update: {
+          date_label?: string | null
+          date_sort?: number | null
+          entity_id?: string | null
+          id?: string
+          label?: string
+          project_id?: string
+          type?: Database["public"]["Enums"]["timeline_event_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timeline_events_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timeline_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +448,24 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      entity_category:
+        | "characters"
+        | "places"
+        | "events"
+        | "artifacts"
+        | "creatures"
+        | "abilities"
+        | "factions"
+        | "doctrine"
+      lore_suggestion_status: "pending" | "accepted" | "edited" | "rejected"
+      lore_suggestion_type:
+        | "new_entity"
+        | "field_update"
+        | "contradiction"
+        | "new_tag"
+      sync_status: "running" | "completed" | "failed"
+      sync_trigger: "scheduled" | "manual"
+      timeline_event_type: "world_history" | "story_event"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +592,27 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      entity_category: [
+        "characters",
+        "places",
+        "events",
+        "artifacts",
+        "creatures",
+        "abilities",
+        "factions",
+        "doctrine",
+      ],
+      lore_suggestion_status: ["pending", "accepted", "edited", "rejected"],
+      lore_suggestion_type: [
+        "new_entity",
+        "field_update",
+        "contradiction",
+        "new_tag",
+      ],
+      sync_status: ["running", "completed", "failed"],
+      sync_trigger: ["scheduled", "manual"],
+      timeline_event_type: ["world_history", "story_event"],
+    },
   },
 } as const
