@@ -1,9 +1,24 @@
-import { Settings, User } from "lucide-react";
+import { Settings, User, LogOut } from "lucide-react";
 import logoSrc from "@/assets/fyrescribe_logo_white.svg";
 import { useActiveProject } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Titlebar = () => {
   const { activeProject } = useActiveProject();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  };
 
   return (
     <div className="fixed top-0 left-0 right-0 h-12 bg-fyrescribe-base border-b border-border flex items-center justify-between px-4 z-50">
@@ -18,9 +33,19 @@ const Titlebar = () => {
       )}
 
       <div className="flex items-center gap-2">
-        <button className="p-2 rounded-md text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors">
-          <Settings size={16} />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-2 rounded-md text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors">
+              <Settings size={16} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-card border-border">
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
+              <LogOut size={14} className="mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <button className="w-7 h-7 rounded-full bg-fyrescribe-raised border border-border flex items-center justify-center text-text-secondary hover:text-foreground transition-colors">
           <User size={14} />
         </button>
