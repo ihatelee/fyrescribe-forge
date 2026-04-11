@@ -215,29 +215,35 @@ export type Database = {
       }
       projects: {
         Row: {
+          archived_at: string | null
           cover_image_url: string | null
           created_at: string
           description: string | null
           id: string
           last_sync_at: string | null
+          manuscript_path: string | null
           title: string
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           last_sync_at?: string | null
+          manuscript_path?: string | null
           title: string
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           last_sync_at?: string | null
+          manuscript_path?: string | null
           title?: string
           user_id?: string
         }
