@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
   Clock,
@@ -53,7 +54,7 @@ const Sidebar = ({ loreSuggestionCount = 4 }: SidebarProps) => {
   }: {
     label: string;
     path: string;
-    icon: React.ComponentType<{ size?: number }>;
+    icon: LucideIcon;
   }) => {
     const active = isActive(path);
     return (

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { PLACEHOLDER_LORE_SUGGESTIONS } from "@/lib/placeholder-data";
+import type { LucideIcon } from "lucide-react";
 import { Check, X, Sparkles, AlertTriangle, Tag, FileText } from "lucide-react";
 
-const TYPE_CONFIG: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>; label: string; color: string }> = {
+const TYPE_CONFIG: Record<string, { icon: LucideIcon; label: string; color: string }> = {
   new_entity: { icon: Sparkles, label: "New Entity", color: "bg-green-500/20 text-green-300" },
   field_update: { icon: FileText, label: "Field Update", color: "bg-blue-500/20 text-blue-300" },
   contradiction: { icon: AlertTriangle, label: "Contradiction", color: "bg-orange-500/20 text-orange-300" },
