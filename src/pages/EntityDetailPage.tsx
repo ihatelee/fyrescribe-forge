@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
-import { PLACEHOLDER_ENTITIES } from "@/lib/placeholder-data";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search } from "lucide-react";
@@ -61,22 +60,6 @@ const SECTION_PLACEHOLDER_TEXT: Record<string, string> = {
   Origins: "Describe the origins and founding story…",
   Followers: "Describe the followers and adherents…",
   Contradictions: "Note known contradictions and points of debate…",
-};
-
-// Fallback data for when entity isn't in DB yet
-const ENTITY_FIELDS_FALLBACK: Record<string, Record<string, string>> = {
-  e1: { Age: "34", Title: "Warden of the Northern Watch", Allegiance: "The Vigil", "Notable Trait": "Carries guilt from the Last Siege" },
-  e2: { Age: "26", Title: "Apprentice Spymaster", Allegiance: "Ashenmere Intelligence", "Notable Trait": "Eidetic memory" },
-  e3: { Age: "41", Title: "Traveling Merchant", Allegiance: "Independent", "Notable Trait": "Smuggles forbidden texts" },
-  e4: { Age: "Unknown (ancient)", Title: "Advisor to the Pale Court", Allegiance: "The Pale Court", "Notable Trait": "Trapped in the body of a child" },
-  e5: { Location: "Northern border", Status: "Partially destroyed", Built: "Year 245", Significance: "Primary defense line" },
-  e6: { Region: "Western coast", Population: "~12,000", Economy: "Trade hub", Hazard: "Poisoned lake" },
-  e7: { Date: "15 years ago", Casualties: "Thousands", Outcome: "Wall breached", Legacy: "The Vigil diminished" },
-  e8: { Material: "White bone", Power: "Dominion over the dead", Origin: "Unknown", Status: "Lost" },
-  e9: { Habitat: "Twilight zones", Trigger: "Strong emotions", Threat: "High", Classification: "Spectral predator" },
-  e10: { School: "Blood magic", Cost: "Caster's vitality", Status: "Forbidden", Practitioners: "Very few" },
-  e11: { Founded: "Year 0", Purpose: "Defend the wall", Size: "Diminished", Leader: "Unknown" },
-  e12: { Faith: "Ashenmere religion", Tenets: "3", Origin: "Ancient", Influence: "Widespread" },
 };
 
 // ─── Tag Autocomplete Component ───────────────────────────────────
@@ -316,13 +299,12 @@ const EntityDetailInner = () => {
     if (!id) return;
     const fetchEntity = async () => {
       setLoading(true);
-      console.log("[entity] fetching id:", id);
       const { data: dbEntity, error } = await supabase
         .from("entities")
         .select("*")
         .eq("id", id)
         .maybeSingle();
-      console.log("[entity] fetch result — found:", !!dbEntity, "error:", error);
+      if (error) console.error("Failed to fetch entity:", error);
 
       if (dbEntity) {
         setEntity(dbEntity);
@@ -335,7 +317,6 @@ const EntityDetailInner = () => {
         setCoverImage(dbEntity.cover_image_url || null);
         setGalleryImages(dbEntity.gallery_image_urls || []);
 
-        // Fetch tags
         const { data: entityTags } = await supabase
           .from("entity_tags")
           .select("tag_id, tags(id, name, color)")
@@ -344,7 +325,6 @@ const EntityDetailInner = () => {
           setTags(entityTags.map((et: any) => et.tags).filter(Boolean));
         }
 
-        // Fetch linked entities (both directions)
         const { data: linksA } = await supabase
           .from("entity_links")
           .select("entity_b_id, entities!entity_links_entity_b_id_fkey(id, name, category)")
@@ -358,20 +338,6 @@ const EntityDetailInner = () => {
         linksA?.forEach((l: any) => { if (l.entities) linked.push(l.entities); });
         linksB?.forEach((l: any) => { if (l.entities) linked.push(l.entities); });
         setLinkedEntities(linked);
-      } else {
-        // Fall back to placeholder data
-        const placeholder = PLACEHOLDER_ENTITIES.find((e) => e.id === id);
-        if (placeholder) {
-          setEntity(placeholder);
-          setSummary(placeholder.summary);
-          setFields(ENTITY_FIELDS_FALLBACK[id] || {});
-          setTags(placeholder.tags.map((t) => ({ id: t, name: t, color: null })));
-          // Linked from placeholder
-          const linked = PLACEHOLDER_ENTITIES.filter(
-            (e) => e.id !== id && e.category === placeholder.category
-          ).slice(0, 3);
-          setLinkedEntities(linked.map((e) => ({ id: e.id, name: e.name, category: e.category })));
-        }
       }
       setLoading(false);
     };
@@ -385,13 +351,12 @@ const EntityDetailInner = () => {
   const sectionsRef = useRef<Record<string, string>>({});
 
   const saveSectionsToDb = useDebouncedCallback(async (newSections: Record<string, string>) => {
-    console.log("[sections] save triggered — id:", id, "data:", newSections);
-    if (!id) { console.warn("[sections] aborted — no id"); return; }
-    const { error, status } = await supabase
+    if (!id) return;
+    const { error } = await supabase
       .from("entities")
       .update({ sections: newSections as unknown as Json })
       .eq("id", id);
-    console.log("[sections] response — status:", status, "error:", error);
+    if (error) console.error("Failed to save sections:", error);
   }, 1000);
 
   const handleSectionInput = useCallback((sectionName: string, content: string) => {
@@ -402,24 +367,22 @@ const EntityDetailInner = () => {
 
   // ─── Save summary on blur ──────────────────────────────
   const saveSummary = useCallback(async () => {
-    console.log("[summary] save triggered — id:", id, "value:", summary);
-    if (!id) { console.warn("[summary] aborted — no id"); return; }
-    const { error, status } = await supabase
+    if (!id) return;
+    const { error } = await supabase
       .from("entities")
       .update({ summary })
       .eq("id", id);
-    console.log("[summary] response — status:", status, "error:", error);
+    if (error) console.error("Failed to save summary:", error);
   }, [id, summary]);
 
   // ─── Save fields on blur ──────────────────────────────
   const saveFields = useCallback(async (updatedFields: Record<string, string>) => {
-    console.log("[fields] save triggered — id:", id, "data:", updatedFields);
-    if (!id) { console.warn("[fields] aborted — no id"); return; }
-    const { error, status } = await supabase
+    if (!id) return;
+    const { error } = await supabase
       .from("entities")
       .update({ fields: updatedFields as unknown as Json })
       .eq("id", id);
-    console.log("[fields] response — status:", status, "error:", error);
+    if (error) console.error("Failed to save fields:", error);
   }, [id]);
 
   const handleSaveFieldEdit = useCallback((key: string) => {
@@ -472,11 +435,10 @@ const EntityDetailInner = () => {
     reader.onload = (ev) => setCoverImage(ev.target?.result as string);
     reader.readAsDataURL(file);
     const url = await uploadImage(file);
-    console.log("[cover] upload result — url:", url);
     if (url) {
       setCoverImage(url);
-      const { error, status } = await supabase.from("entities").update({ cover_image_url: url }).eq("id", id);
-      console.log("[cover] db save — status:", status, "error:", error);
+      const { error } = await supabase.from("entities").update({ cover_image_url: url }).eq("id", id);
+      if (error) console.error("Failed to save cover image:", error);
     }
   }, [id, uploadImage]);
 
@@ -489,12 +451,11 @@ const EntityDetailInner = () => {
       setGalleryImages((prev) => [...prev, previewUrl]);
 
       const url = await uploadImage(file);
-      console.log("[gallery] upload result — url:", url);
       if (url) {
         setGalleryImages((prev) => {
           const updated = prev.map((p) => (p === previewUrl ? url : p));
           supabase.from("entities").update({ gallery_image_urls: updated }).eq("id", id)
-            .then(({ error, status }) => console.log("[gallery] db save — status:", status, "error:", error));
+            .then(({ error }) => { if (error) console.error("Failed to save gallery:", error); });
           return updated;
         });
       }
