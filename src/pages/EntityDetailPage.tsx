@@ -316,11 +316,13 @@ const EntityDetailInner = () => {
     if (!id) return;
     const fetchEntity = async () => {
       setLoading(true);
+      console.log("[entity] fetching id:", id);
       const { data: dbEntity, error } = await supabase
         .from("entities")
         .select("*")
         .eq("id", id)
         .maybeSingle();
+      console.log("[entity] fetch result — found:", !!dbEntity, "error:", error);
 
       if (dbEntity) {
         setEntity(dbEntity);
@@ -383,12 +385,13 @@ const EntityDetailInner = () => {
   const sectionsRef = useRef<Record<string, string>>({});
 
   const saveSectionsToDb = useDebouncedCallback(async (newSections: Record<string, string>) => {
-    if (!id) return;
-    const { error } = await supabase
+    console.log("[sections] save triggered — id:", id, "data:", newSections);
+    if (!id) { console.warn("[sections] aborted — no id"); return; }
+    const { error, status } = await supabase
       .from("entities")
       .update({ sections: newSections as unknown as Json })
       .eq("id", id);
-    if (error) console.error("Failed to save sections:", error);
+    console.log("[sections] response — status:", status, "error:", error);
   }, 1000);
 
   const handleSectionInput = useCallback((sectionName: string, content: string) => {
@@ -399,22 +402,24 @@ const EntityDetailInner = () => {
 
   // ─── Save summary on blur ──────────────────────────────
   const saveSummary = useCallback(async () => {
-    if (!id) return;
-    const { error } = await supabase
+    console.log("[summary] save triggered — id:", id, "value:", summary);
+    if (!id) { console.warn("[summary] aborted — no id"); return; }
+    const { error, status } = await supabase
       .from("entities")
       .update({ summary })
       .eq("id", id);
-    if (error) console.error("Failed to save summary:", error);
+    console.log("[summary] response — status:", status, "error:", error);
   }, [id, summary]);
 
   // ─── Save fields on blur ──────────────────────────────
   const saveFields = useCallback(async (updatedFields: Record<string, string>) => {
-    if (!id) return;
-    const { error } = await supabase
+    console.log("[fields] save triggered — id:", id, "data:", updatedFields);
+    if (!id) { console.warn("[fields] aborted — no id"); return; }
+    const { error, status } = await supabase
       .from("entities")
       .update({ fields: updatedFields as unknown as Json })
       .eq("id", id);
-    if (error) console.error("Failed to save fields:", error);
+    console.log("[fields] response — status:", status, "error:", error);
   }, [id]);
 
   const handleSaveFieldEdit = useCallback((key: string) => {
@@ -463,15 +468,15 @@ const EntityDetailInner = () => {
   const handleCoverUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !id) return;
-    // Show preview immediately
     const reader = new FileReader();
     reader.onload = (ev) => setCoverImage(ev.target?.result as string);
     reader.readAsDataURL(file);
-    // Upload and save URL
     const url = await uploadImage(file);
+    console.log("[cover] upload result — url:", url);
     if (url) {
       setCoverImage(url);
-      await supabase.from("entities").update({ cover_image_url: url }).eq("id", id);
+      const { error, status } = await supabase.from("entities").update({ cover_image_url: url }).eq("id", id);
+      console.log("[cover] db save — status:", status, "error:", error);
     }
   }, [id, uploadImage]);
 
@@ -480,16 +485,16 @@ const EntityDetailInner = () => {
     if (!files || !id) return;
 
     for (const file of Array.from(files)) {
-      // Preview
       const previewUrl = URL.createObjectURL(file);
       setGalleryImages((prev) => [...prev, previewUrl]);
 
       const url = await uploadImage(file);
+      console.log("[gallery] upload result — url:", url);
       if (url) {
         setGalleryImages((prev) => {
           const updated = prev.map((p) => (p === previewUrl ? url : p));
-          // Save to DB
-          supabase.from("entities").update({ gallery_image_urls: updated }).eq("id", id);
+          supabase.from("entities").update({ gallery_image_urls: updated }).eq("id", id)
+            .then(({ error, status }) => console.log("[gallery] db save — status:", status, "error:", error));
           return updated;
         });
       }
