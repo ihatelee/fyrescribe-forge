@@ -134,8 +134,14 @@ const ManuscriptPage = () => {
   const [thesaurusWord, setThesaurusWord] = useState("");
   const [thesaurusSynonyms, setThesaurusSynonyms] = useState<string[]>([]);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+
   const editorRef = useRef<HTMLDivElement>(null);
   const focusEditorRef = useRef<HTMLDivElement>(null);
+  // Set to true when we auto-create the first chapter+scene so the editor
+  // gets focused automatically once it mounts.
+  const pendingAutoFocus = useRef(false);
 
   // Stores the latest in-editor content per scene ID so switching scenes
   // before the debounce fires doesn't lose edits, and switching back shows
@@ -158,8 +164,30 @@ const ManuscriptPage = () => {
       if (chaptersRes.error) console.error("Failed to fetch chapters:", chaptersRes.error);
       if (scenesRes.error) console.error("Failed to fetch scenes:", scenesRes.error);
 
-      const chapterData: Chapter[] = chaptersRes.data || [];
-      const sceneData: Scene[] = scenesRes.data || [];
+      let chapterData: Chapter[] = chaptersRes.data || [];
+      let sceneData: Scene[] = scenesRes.data || [];
+
+      // Auto-create Chapter 1 + Scene 1 when the project is brand new
+      if (chapterData.length === 0) {
+        const { data: ch, error: chErr } = await supabase
+          .from("chapters")
+          .insert({ project_id: projectId, title: "Chapter 1", order: 1 })
+          .select("*")
+          .single();
+        if (!chErr && ch) {
+          const { data: sc, error: scErr } = await supabase
+            .from("scenes")
+            .insert({ project_id: projectId, chapter_id: ch.id, title: "Scene 1", order: 1, content: "" })
+            .select("*")
+            .single();
+          if (!scErr && sc) {
+            chapterData = [ch];
+            sceneData = [sc];
+            pendingAutoFocus.current = true;
+          }
+        }
+      }
+
       setChapters(chapterData);
       setScenes(sceneData);
 
@@ -273,6 +301,28 @@ const ManuscriptPage = () => {
     setWordCount(0);
   };
 
+  // ─── Inline rename ──────────────────────────────────────────────────
+
+  const startEditing = (id: string, currentTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(id);
+    setEditingTitle(currentTitle);
+  };
+
+  const saveTitle = async (type: "chapter" | "scene", id: string, title: string) => {
+    const trimmed = title.trim();
+    setEditingId(null);
+    if (!trimmed) return;
+    const table = type === "chapter" ? "chapters" : "scenes";
+    const { error } = await supabase.from(table).update({ title: trimmed }).eq("id", id);
+    if (error) { console.error(`Failed to rename ${type}:`, error); return; }
+    if (type === "chapter") {
+      setChapters((prev) => prev.map((c) => (c.id === id ? { ...c, title: trimmed } : c)));
+    } else {
+      setScenes((prev) => prev.map((s) => (s.id === id ? { ...s, title: trimmed } : s)));
+    }
+  };
+
   // ─── Formatting / thesaurus ─────────────────────────────────────────
 
   const applyFormat = useCallback((command: string) => {
@@ -314,6 +364,10 @@ const ManuscriptPage = () => {
       if (el && !el.dataset.initialized && activeScene) {
         el.innerHTML = getInitialContent(activeScene);
         el.dataset.initialized = "true";
+        if (pendingAutoFocus.current) {
+          el.focus();
+          pendingAutoFocus.current = false;
+        }
       }
     };
 
@@ -407,39 +461,93 @@ const ManuscriptPage = () => {
 
             return (
               <div key={chapter.id} className="mb-1">
-                <button
-                  onClick={() => {
-                    toggleChapter(chapter.id);
-                    setActiveChapterId(chapter.id);
-                  }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 text-[13px] rounded-sm transition-colors ${
+                <div
+                  className={`w-full flex items-center gap-1 px-2 py-1.5 text-[13px] rounded-sm transition-colors ${
                     activeChapterId === chapter.id
                       ? "text-foreground"
                       : "text-text-secondary hover:text-foreground"
                   }`}
                 >
-                  <ChevronRight
-                    size={12}
-                    className={`transition-transform flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`}
-                  />
-                  <span className="truncate flex-1 text-left">{chapter.title}</span>
-                </button>
+                  {/* Chevron — collapse/expand only */}
+                  <button
+                    onClick={() => { toggleChapter(chapter.id); setActiveChapterId(chapter.id); }}
+                    className="flex-shrink-0 p-0.5"
+                  >
+                    <ChevronRight
+                      size={12}
+                      className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                    />
+                  </button>
+
+                  {/* Chapter title — click to rename */}
+                  {editingId === chapter.id ? (
+                    <input
+                      autoFocus
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={() => saveTitle("chapter", chapter.id, editingTitle)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); saveTitle("chapter", chapter.id, editingTitle); }
+                        if (e.key === "Escape") { e.preventDefault(); setEditingId(null); }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 min-w-0 bg-transparent outline-none border-b border-gold/50 text-[13px] text-foreground"
+                    />
+                  ) : (
+                    <span
+                      className="truncate flex-1 cursor-text"
+                      onClick={(e) => {
+                        setActiveChapterId(chapter.id);
+                        if (!isExpanded) toggleChapter(chapter.id);
+                        startEditing(chapter.id, chapter.title, e);
+                      }}
+                    >
+                      {chapter.title}
+                    </span>
+                  )}
+                </div>
 
                 {isExpanded && (
                   <div className="ml-4 mt-0.5 space-y-0.5">
                     {chapterScenes.map((scene) => (
-                      <button
+                      <div
                         key={scene.id}
                         onClick={() => selectScene(scene)}
-                        className={`w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm transition-colors ${
+                        className={`w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm cursor-pointer transition-colors ${
                           activeSceneId === scene.id
                             ? "text-gold-bright bg-gold-glow"
                             : "text-text-secondary hover:text-foreground"
                         }`}
                       >
                         <FileText size={10} className="flex-shrink-0" />
-                        <span className="truncate">{scene.title}</span>
-                      </button>
+
+                        {/* Scene title — click when active to rename */}
+                        {editingId === scene.id ? (
+                          <input
+                            autoFocus
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onBlur={() => saveTitle("scene", scene.id, editingTitle)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") { e.preventDefault(); saveTitle("scene", scene.id, editingTitle); }
+                              if (e.key === "Escape") { e.preventDefault(); setEditingId(null); }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex-1 min-w-0 bg-transparent outline-none border-b border-gold/50 text-[12px]"
+                          />
+                        ) : (
+                          <span
+                            className="truncate flex-1"
+                            onClick={(e) => {
+                              if (activeSceneId === scene.id) {
+                                startEditing(scene.id, scene.title, e);
+                              }
+                            }}
+                          >
+                            {scene.title}
+                          </span>
+                        )}
+                      </div>
                     ))}
                     <button
                       onClick={(e) => handleAddScene(chapter.id, e)}
