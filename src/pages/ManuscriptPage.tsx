@@ -4,6 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
+import { stripRtf, splitIntoScenes } from "@/lib/manuscriptParser";
 import {
   Bold,
   Italic,
@@ -126,6 +127,7 @@ const ManuscriptPage = () => {
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState(0);
   const [saving, setSaving] = useState(false);
 
@@ -167,23 +169,89 @@ const ManuscriptPage = () => {
       let chapterData: Chapter[] = chaptersRes.data || [];
       let sceneData: Scene[] = scenesRes.data || [];
 
-      // Auto-create Chapter 1 + Scene 1 when the project is brand new
       if (chapterData.length === 0) {
-        const { data: ch, error: chErr } = await supabase
-          .from("chapters")
-          .insert({ project_id: projectId, title: "Chapter 1", order: 1 })
-          .select("*")
+        // Check whether this project has a manuscript file waiting to be imported
+        const { data: projectRow } = await supabase
+          .from("projects")
+          .select("manuscript_path")
+          .eq("id", projectId)
           .single();
-        if (!chErr && ch) {
-          const { data: sc, error: scErr } = await supabase
-            .from("scenes")
-            .insert({ project_id: projectId, chapter_id: ch.id, title: "Scene 1", order: 1, content: "" })
+
+        const manuscriptPath = projectRow?.manuscript_path ?? null;
+
+        if (manuscriptPath) {
+          // ── Import pipeline ──────────────────────────────────────────
+          setImportStatus("Reading manuscript file…");
+
+          const { data: blob, error: dlErr } = await supabase.storage
+            .from("manuscripts")
+            .download(manuscriptPath);
+
+          if (dlErr || !blob) {
+            console.error("Failed to download manuscript:", dlErr);
+            setImportStatus(null);
+          } else {
+            setImportStatus("Parsing text…");
+            const rawText = await blob.text();
+            const ext = manuscriptPath.split(".").pop()?.toLowerCase() ?? "txt";
+            const plainText = ext === "rtf" ? stripRtf(rawText) : rawText;
+            const parsedScenes = splitIntoScenes(plainText);
+
+            setImportStatus("Saving scenes…");
+
+            // Create the single chapter
+            const { data: ch, error: chErr } = await supabase
+              .from("chapters")
+              .insert({ project_id: projectId, title: "Chapter 1", order: 1 })
+              .select("*")
+              .single();
+
+            if (!chErr && ch) {
+              // Batch-insert all scenes
+              const sceneRows = parsedScenes.map((ps, i) => ({
+                project_id: projectId,
+                chapter_id: ch.id,
+                title: ps.title,
+                content: ps.content,
+                order: i + 1,
+                word_count: ps.content.trim().split(/\s+/).filter(Boolean).length,
+              }));
+
+              const { data: insertedScenes, error: scenesErr } = await supabase
+                .from("scenes")
+                .insert(sceneRows)
+                .select("*");
+
+              if (!scenesErr && insertedScenes) {
+                chapterData = [ch];
+                sceneData = insertedScenes as Scene[];
+              } else {
+                console.error("Failed to insert scenes:", scenesErr);
+              }
+            } else {
+              console.error("Failed to create chapter:", chErr);
+            }
+
+            setImportStatus(null);
+          }
+        } else {
+          // ── Blank project — auto-create Chapter 1 / Scene 1 ─────────
+          const { data: ch, error: chErr } = await supabase
+            .from("chapters")
+            .insert({ project_id: projectId, title: "Chapter 1", order: 1 })
             .select("*")
             .single();
-          if (!scErr && sc) {
-            chapterData = [ch];
-            sceneData = [sc];
-            pendingAutoFocus.current = true;
+          if (!chErr && ch) {
+            const { data: sc, error: scErr } = await supabase
+              .from("scenes")
+              .insert({ project_id: projectId, chapter_id: ch.id, title: "Scene 1", order: 1, content: "" })
+              .select("*")
+              .single();
+            if (!scErr && sc) {
+              chapterData = [ch];
+              sceneData = [sc];
+              pendingAutoFocus.current = true;
+            }
           }
         }
       }
@@ -604,8 +672,11 @@ const ManuscriptPage = () => {
           <div className="flex-1 overflow-y-auto flex justify-center py-10">
             <div className="w-full max-w-2xl px-8">
               {loading ? (
-                <div className="flex items-center justify-center py-20">
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <Loader2 size={20} className="animate-spin text-text-dimmed" />
+                  {importStatus && (
+                    <p className="text-text-dimmed text-xs">{importStatus}</p>
+                  )}
                 </div>
               ) : !activeScene ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
