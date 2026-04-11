@@ -368,7 +368,10 @@ const EntityDetailInner = () => {
   }, [id]);
 
   // ─── Auto-save sections (debounced) ─────────────────────
-  const saveSections = useDebouncedCallback(async (newSections: Record<string, string>) => {
+  const sectionsRef = useRef(sections);
+  sectionsRef.current = sections;
+
+  const saveSectionsToDb = useDebouncedCallback(async (newSections: Record<string, string>) => {
     if (!id) return;
     const { error } = await supabase
       .from("entities")
@@ -378,12 +381,10 @@ const EntityDetailInner = () => {
   }, 1000);
 
   const handleSectionInput = useCallback((sectionName: string, content: string) => {
-    setSections((prev) => {
-      const updated = { ...prev, [sectionName]: content };
-      saveSections(updated);
-      return updated;
-    });
-  }, [saveSections]);
+    const updated = { ...sectionsRef.current, [sectionName]: content };
+    sectionsRef.current = updated;
+    saveSectionsToDb(updated);
+  }, [saveSectionsToDb]);
 
   // ─── Save summary on blur ──────────────────────────────
   const saveSummary = useCallback(async () => {
