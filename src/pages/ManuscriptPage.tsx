@@ -141,60 +141,6 @@ const ManuscriptPage = () => {
   return (
     <AppLayout projectName="The Shattered Vigil">
       <div className="flex h-[calc(100vh-48px)]">
-        {/* Chapter/Scene sidebar */}
-        <div className="w-[240px] bg-fyrescribe-base border-r border-border overflow-y-auto flex-shrink-0">
-          <div className="p-3">
-            <div className="text-[10px] font-medium uppercase tracking-widest text-text-dimmed mb-3 px-2">
-              Chapters
-            </div>
-            {PLACEHOLDER_CHAPTERS.map((chapter) => (
-              <div key={chapter.id} className="mb-1">
-                <button
-                  onClick={() => {
-                    toggleChapter(chapter.id);
-                    setActiveChapter(chapter.id);
-                  }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 text-[13px] rounded-sm transition-colors ${
-                    activeChapter === chapter.id
-                      ? "text-foreground"
-                      : "text-text-secondary hover:text-foreground"
-                  }`}
-                >
-                  <ChevronRight
-                    size={12}
-                    className={`transition-transform flex-shrink-0 ${
-                      expandedChapters.includes(chapter.id) ? "rotate-90" : ""
-                    }`}
-                  />
-                  <span className="truncate">{chapter.title}</span>
-                </button>
-
-                {expandedChapters.includes(chapter.id) && (
-                  <div className="ml-4 mt-0.5 space-y-0.5">
-                    {chapter.scenes.map((scene) => (
-                      <button
-                        key={scene.id}
-                        onClick={() => {
-                          setActiveChapter(chapter.id);
-                          setActiveScene(scene.id);
-                        }}
-                        className={`w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm transition-colors ${
-                          activeScene === scene.id
-                            ? "text-gold-bright bg-gold-glow"
-                            : "text-text-secondary hover:text-foreground"
-                        }`}
-                      >
-                        <FileText size={10} className="flex-shrink-0" />
-                        <span className="truncate">{scene.title}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Editor area */}
         <div className="flex-1 flex flex-col bg-fyrescribe-deepest overflow-hidden relative">
           {/* Toolbar */}
@@ -266,6 +212,60 @@ const ManuscriptPage = () => {
               POV: {currentScene?.pov || "—"}
             </span>
             <span>{currentScene?.wordCount?.toLocaleString() || 0} words</span>
+          </div>
+        </div>
+
+        {/* Chapter/Scene sidebar — RIGHT side */}
+        <div className="w-[240px] bg-fyrescribe-base border-l border-border overflow-y-auto flex-shrink-0">
+          <div className="p-3">
+            <div className="text-[10px] font-medium uppercase tracking-widest text-text-dimmed mb-3 px-2">
+              Chapters
+            </div>
+            {PLACEHOLDER_CHAPTERS.map((chapter) => (
+              <div key={chapter.id} className="mb-1">
+                <button
+                  onClick={() => {
+                    toggleChapter(chapter.id);
+                    setActiveChapter(chapter.id);
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 text-[13px] rounded-sm transition-colors ${
+                    activeChapter === chapter.id
+                      ? "text-foreground"
+                      : "text-text-secondary hover:text-foreground"
+                  }`}
+                >
+                  <ChevronRight
+                    size={12}
+                    className={`transition-transform flex-shrink-0 ${
+                      expandedChapters.includes(chapter.id) ? "rotate-90" : ""
+                    }`}
+                  />
+                  <span className="truncate">{chapter.title}</span>
+                </button>
+
+                {expandedChapters.includes(chapter.id) && (
+                  <div className="ml-4 mt-0.5 space-y-0.5">
+                    {chapter.scenes.map((scene) => (
+                      <button
+                        key={scene.id}
+                        onClick={() => {
+                          setActiveChapter(chapter.id);
+                          setActiveScene(scene.id);
+                        }}
+                        className={`w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm transition-colors ${
+                          activeScene === scene.id
+                            ? "text-gold-bright bg-gold-glow"
+                            : "text-text-secondary hover:text-foreground"
+                        }`}
+                      >
+                        <FileText size={10} className="flex-shrink-0" />
+                        <span className="truncate">{scene.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
