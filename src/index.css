@@ -95,3 +95,10 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(228 18% 28%);
 }
+
+/* Placeholder for empty contentEditable sections */
+[contenteditable]:empty::before {
+  content: attr(data-placeholder);
+  color: hsl(228 18% 28%);
+  pointer-events: none;
+}
