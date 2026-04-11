@@ -159,6 +159,7 @@ const OnboardingPage = () => {
           onClose={() => setShowImport(false)}
         />
       )}
+      </div>
     </div>
   );
 };
