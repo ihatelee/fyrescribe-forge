@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { PLACEHOLDER_ENTITIES } from "@/lib/placeholder-data";
@@ -32,10 +32,24 @@ const EntityGalleryPage = () => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState(category || "all");
 
+  // Sync filter when URL param changes
+  useEffect(() => {
+    setActiveFilter(category || "all");
+  }, [category]);
+
   const filteredEntities =
     activeFilter === "all"
       ? PLACEHOLDER_ENTITIES
       : PLACEHOLDER_ENTITIES.filter((e) => e.category === activeFilter);
+
+  const handleFilterChange = (value: string) => {
+    setActiveFilter(value);
+    if (value === "all") {
+      navigate("/world");
+    } else {
+      navigate(`/world/${value}`);
+    }
+  };
 
   return (
     <AppLayout projectName="The Shattered Vigil">
@@ -57,7 +71,7 @@ const EntityGalleryPage = () => {
           {CATEGORIES.map((cat) => (
             <button
               key={cat.value}
-              onClick={() => setActiveFilter(cat.value)}
+              onClick={() => handleFilterChange(cat.value)}
               className={`px-3 py-1 text-xs rounded-full border transition-colors ${
                 activeFilter === cat.value
                   ? "border-gold text-gold bg-gold-glow"
