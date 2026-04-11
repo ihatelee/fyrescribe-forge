@@ -368,7 +368,10 @@ const EntityDetailInner = () => {
   }, [id]);
 
   // ─── Auto-save sections (debounced) ─────────────────────
-  const saveSections = useDebouncedCallback(async (newSections: Record<string, string>) => {
+  const sectionsRef = useRef(sections);
+  sectionsRef.current = sections;
+
+  const saveSectionsToDb = useDebouncedCallback(async (newSections: Record<string, string>) => {
     if (!id) return;
     const { error } = await supabase
       .from("entities")
@@ -378,12 +381,10 @@ const EntityDetailInner = () => {
   }, 1000);
 
   const handleSectionInput = useCallback((sectionName: string, content: string) => {
-    setSections((prev) => {
-      const updated = { ...prev, [sectionName]: content };
-      saveSections(updated);
-      return updated;
-    });
-  }, [saveSections]);
+    const updated = { ...sectionsRef.current, [sectionName]: content };
+    sectionsRef.current = updated;
+    saveSectionsToDb(updated);
+  }, [saveSectionsToDb]);
 
   // ─── Save summary on blur ──────────────────────────────
   const saveSummary = useCallback(async () => {
@@ -638,7 +639,12 @@ const EntityDetailInner = () => {
                       className="font-prose text-sm leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
                       data-placeholder={SECTION_PLACEHOLDER_TEXT[section] || "Write here…"}
                       onInput={(e) => handleSectionInput(section, (e.target as HTMLDivElement).innerHTML)}
-                      dangerouslySetInnerHTML={{ __html: sections[section] || "" }}
+                      ref={(el) => {
+                        if (el && !el.dataset.initialized) {
+                          el.innerHTML = sections[section] || "";
+                          el.dataset.initialized = "true";
+                        }
+                      }}
                     />
                   </div>
                 </div>
