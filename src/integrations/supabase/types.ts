@@ -52,10 +52,12 @@ export type Database = {
           cover_image_url: string | null
           created_at: string
           fields: Json | null
+          gallery_image_urls: string[] | null
           id: string
           is_dirty: boolean | null
           name: string
           project_id: string
+          sections: Json | null
           summary: string | null
           updated_at: string
         }
@@ -64,10 +66,12 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           fields?: Json | null
+          gallery_image_urls?: string[] | null
           id?: string
           is_dirty?: boolean | null
           name: string
           project_id: string
+          sections?: Json | null
           summary?: string | null
           updated_at?: string
         }
@@ -76,10 +80,12 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           fields?: Json | null
+          gallery_image_urls?: string[] | null
           id?: string
           is_dirty?: boolean | null
           name?: string
           project_id?: string
+          sections?: Json | null
           summary?: string | null
           updated_at?: string
         }
