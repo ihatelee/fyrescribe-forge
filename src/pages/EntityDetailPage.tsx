@@ -639,7 +639,12 @@ const EntityDetailInner = () => {
                       className="font-prose text-sm leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
                       data-placeholder={SECTION_PLACEHOLDER_TEXT[section] || "Write here…"}
                       onInput={(e) => handleSectionInput(section, (e.target as HTMLDivElement).innerHTML)}
-                      dangerouslySetInnerHTML={{ __html: sections[section] || "" }}
+                      ref={(el) => {
+                        if (el && !el.dataset.initialized) {
+                          el.innerHTML = sections[section] || "";
+                          el.dataset.initialized = "true";
+                        }
+                      }}
                     />
                   </div>
                 </div>
