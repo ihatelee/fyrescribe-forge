@@ -486,7 +486,7 @@ const EntityDetailInner = () => {
 
   if (loading) {
     return (
-      <AppLayout projectName="The Shattered Vigil">
+      <AppLayout>
         <div className="p-6 text-text-secondary text-sm">Loading entity…</div>
       </AppLayout>
     );
@@ -494,14 +494,14 @@ const EntityDetailInner = () => {
 
   if (!entity) {
     return (
-      <AppLayout projectName="The Shattered Vigil">
+      <AppLayout>
         <div className="p-6 text-text-secondary">Entity not found.</div>
       </AppLayout>
     );
   }
 
   return (
-    <AppLayout projectName="The Shattered Vigil">
+    <AppLayout>
       <div className="p-6 max-w-5xl">
         {/* Breadcrumb */}
         <button

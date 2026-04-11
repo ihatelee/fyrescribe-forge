@@ -1,21 +1,19 @@
 import { Settings, User } from "lucide-react";
+import logoSrc from "@/assets/fyrescribe_logo_white.svg";
+import { useActiveProject } from "@/contexts/ProjectContext";
 
-interface TitlebarProps {
-  projectName?: string;
-}
+const Titlebar = () => {
+  const { activeProject } = useActiveProject();
 
-const Titlebar = ({ projectName }: TitlebarProps) => {
   return (
     <div className="fixed top-0 left-0 right-0 h-12 bg-fyrescribe-base border-b border-border flex items-center justify-between px-4 z-50">
       <div className="flex items-center gap-3">
-        <span className="font-display text-[22px] leading-none tracking-wide text-foreground select-none">
-          Fyrescribe
-        </span>
+        <img src={logoSrc} alt="Fyrescribe" className="h-[22px] w-auto" />
       </div>
 
-      {projectName && (
+      {activeProject && (
         <span className="text-text-secondary text-sm hidden sm:block">
-          {projectName}
+          {activeProject.title}
         </span>
       )}
 

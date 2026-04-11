@@ -10,7 +10,7 @@ const POV_COLORS: Record<string, string> = {
 
 const POVTrackerPage = () => {
   return (
-    <AppLayout projectName="The Shattered Vigil">
+    <AppLayout>
       <div className="p-6">
         <h1 className="font-display text-xl text-foreground tracking-wide mb-6">
           POV Tracker

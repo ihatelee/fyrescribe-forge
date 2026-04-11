@@ -139,7 +139,7 @@ const ManuscriptPage = () => {
   }
 
   return (
-    <AppLayout projectName="The Shattered Vigil">
+    <AppLayout>
       <div className="flex h-[calc(100vh-48px)]">
         {/* Editor area */}
         <div className="flex-1 flex flex-col bg-fyrescribe-deepest overflow-hidden relative">

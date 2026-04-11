@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProject } from "@/contexts/ProjectContext";
 import { Plus, Loader2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -139,8 +140,8 @@ const NewEntityModal = ({ projectId, defaultCategory, onCreated, onClose }: NewE
 const EntityGalleryPage = () => {
   const { category } = useParams();
   const navigate = useNavigate();
+  const { activeProject } = useActiveProject();
   const [activeFilter, setActiveFilter] = useState(category || "all");
-  const [projectId, setProjectId] = useState<string | null>(null);
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -149,40 +150,29 @@ const EntityGalleryPage = () => {
     setActiveFilter(category || "all");
   }, [category]);
 
-  // Fetch the user's first project to establish context
+  // Redirect to projects page if no active project is set
   useEffect(() => {
-    const fetchProject = async () => {
-      const { data } = await supabase
-        .from("projects")
-        .select("id")
-        .order("created_at")
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        setProjectId(data.id);
-      } else {
-        setLoading(false);
-      }
-    };
-    fetchProject();
-  }, []);
+    if (!activeProject) {
+      navigate("/");
+    }
+  }, [activeProject, navigate]);
 
-  // Fetch entities (with tags) whenever the project is known
+  // Fetch entities (with tags) for the active project
   useEffect(() => {
-    if (!projectId) return;
+    if (!activeProject) return;
     const fetchEntities = async () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("entities")
         .select("id, name, category, summary, entity_tags(tags(id, name, color))")
-        .eq("project_id", projectId)
+        .eq("project_id", activeProject.id)
         .order("name");
       if (error) console.error("Failed to fetch entities:", error);
       setEntities((data as any) || []);
       setLoading(false);
     };
     fetchEntities();
-  }, [projectId]);
+  }, [activeProject]);
 
   const filteredEntities =
     activeFilter === "all"
@@ -203,11 +193,11 @@ const EntityGalleryPage = () => {
     : "World & Lore";
 
   return (
-    <AppLayout projectName="The Shattered Vigil">
+    <AppLayout>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="font-display text-xl text-foreground tracking-wide">{heading}</h1>
-          {projectId && (
+          {activeProject && (
             <button
               onClick={() => setShowNewModal(true)}
               className="flex items-center gap-2 px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
@@ -239,13 +229,6 @@ const EntityGalleryPage = () => {
         {loading ? (
           <div className="flex items-center justify-center py-24">
             <Loader2 size={20} className="animate-spin text-text-dimmed" />
-          </div>
-        ) : !projectId ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <p className="text-text-secondary text-sm mb-1">No project found.</p>
-            <p className="text-text-dimmed text-xs">
-              Create a project first to start building your world.
-            </p>
           </div>
         ) : filteredEntities.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -316,9 +299,9 @@ const EntityGalleryPage = () => {
         )}
       </div>
 
-      {showNewModal && projectId && (
+      {showNewModal && activeProject && (
         <NewEntityModal
-          projectId={projectId}
+          projectId={activeProject.id}
           defaultCategory={defaultNewCategory}
           onCreated={(entity) => navigate(`/entity/${entity.id}`)}
           onClose={() => setShowNewModal(false)}

@@ -1,10 +1,40 @@
-import { Plus } from "lucide-react";
-import Titlebar from "@/components/Titlebar";
-import { PLACEHOLDER_PROJECTS } from "@/lib/placeholder-data";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Plus, Loader2 } from "lucide-react";
+import Titlebar from "@/components/Titlebar";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveProject } from "@/contexts/ProjectContext";
+
+interface Project {
+  id: string;
+  title: string;
+  description: string | null;
+  created_at: string;
+}
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
+  const { setActiveProject } = useActiveProject();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, title, description, created_at")
+        .order("created_at", { ascending: false });
+      if (error) console.error("Failed to fetch projects:", error);
+      setProjects(data || []);
+      setLoading(false);
+    };
+    fetchProjects();
+  }, []);
+
+  const handleProjectClick = (project: Project) => {
+    setActiveProject({ id: project.id, title: project.title });
+    navigate("/world");
+  };
 
   return (
     <div className="min-h-screen bg-fyrescribe-deepest">
@@ -21,32 +51,38 @@ const ProjectsPage = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {PLACEHOLDER_PROJECTS.map((project) => (
-              <button
-                key={project.id}
-                onClick={() => navigate("/manuscript")}
-                className="text-left bg-fyrescribe-raised border border-border rounded-xl p-5 hover:border-gold/20 transition-all group animate-fade-in"
-              >
-                <h2 className="font-display text-lg text-foreground group-hover:text-gold-bright transition-colors mb-1">
-                  {project.title}
-                </h2>
-                <p className="text-text-secondary text-sm mb-4 line-clamp-2">
-                  {project.description}
-                </p>
-                <div className="flex items-center justify-between text-text-dimmed text-xs">
-                  <span>{project.last_edited}</span>
-                  <span>{project.word_count.toLocaleString()} words</span>
-                </div>
-              </button>
-            ))}
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 size={20} className="animate-spin text-text-dimmed" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {projects.map((project) => (
+                <button
+                  key={project.id}
+                  onClick={() => handleProjectClick(project)}
+                  className="text-left bg-fyrescribe-raised border border-border rounded-xl p-5 hover:border-gold/20 transition-all group animate-fade-in"
+                >
+                  <h2 className="font-display text-lg text-foreground group-hover:text-gold-bright transition-colors mb-1">
+                    {project.title}
+                  </h2>
+                  {project.description && (
+                    <p className="text-text-secondary text-sm mb-4 line-clamp-2">
+                      {project.description}
+                    </p>
+                  )}
+                  <div className="text-text-dimmed text-xs">
+                    {new Date(project.created_at).toLocaleDateString()}
+                  </div>
+                </button>
+              ))}
 
-            {/* New project ghost card */}
-            <button className="border border-dashed border-border rounded-xl p-5 flex flex-col items-center justify-center gap-2 text-text-dimmed hover:text-text-secondary hover:border-text-dimmed transition-colors min-h-[140px]">
-              <Plus size={24} />
-              <span className="text-sm">Create new project</span>
-            </button>
-          </div>
+              <button className="border border-dashed border-border rounded-xl p-5 flex flex-col items-center justify-center gap-2 text-text-dimmed hover:text-text-secondary hover:border-text-dimmed transition-colors min-h-[140px]">
+                <Plus size={24} />
+                <span className="text-sm">Create new project</span>
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>

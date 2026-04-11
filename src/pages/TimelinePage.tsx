@@ -12,7 +12,7 @@ const TimelinePage = () => {
       : PLACEHOLDER_TIMELINE.filter((e) => e.type === filter);
 
   return (
-    <AppLayout projectName="The Shattered Vigil">
+    <AppLayout>
       <div className="p-6 max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="font-display text-xl text-foreground tracking-wide">

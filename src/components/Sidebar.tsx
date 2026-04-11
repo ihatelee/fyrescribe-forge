@@ -88,7 +88,7 @@ const Sidebar = ({ loreSuggestionCount = 4 }: SidebarProps) => {
 
         <div>
           <div className="px-3 mb-2 text-[10px] font-medium uppercase tracking-widest text-text-dimmed">
-            World
+            World & Lore
           </div>
           <div className="space-y-0.5">
             {WORLD_ITEMS.map((item) => (

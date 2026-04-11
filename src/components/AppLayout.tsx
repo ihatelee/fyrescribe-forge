@@ -4,14 +4,13 @@ import Sidebar from "./Sidebar";
 
 interface AppLayoutProps {
   children: ReactNode;
-  projectName?: string;
   showSidebar?: boolean;
 }
 
-const AppLayout = ({ children, projectName, showSidebar = true }: AppLayoutProps) => {
+const AppLayout = ({ children, showSidebar = true }: AppLayoutProps) => {
   return (
     <div className="min-h-screen bg-fyrescribe-deepest">
-      <Titlebar projectName={projectName} />
+      <Titlebar />
       {showSidebar && <Sidebar />}
       <main
         className={`pt-12 ${showSidebar ? "pl-[190px]" : ""} min-h-screen`}

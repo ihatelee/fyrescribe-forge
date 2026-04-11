@@ -19,7 +19,7 @@ const LoreInboxPage = () => {
   };
 
   return (
-    <AppLayout projectName="The Shattered Vigil">
+    <AppLayout>
       <div className="p-6 max-w-2xl mx-auto">
         <h1 className="font-display text-xl text-foreground tracking-wide mb-6">
           Lore Inbox
