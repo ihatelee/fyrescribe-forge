@@ -29,6 +29,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<AuthPage />} />
               <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+              <Route path="/project/:projectId/manuscript" element={<ProtectedRoute><ManuscriptPage /></ProtectedRoute>} />
               <Route path="/manuscript" element={<ProtectedRoute><ManuscriptPage /></ProtectedRoute>} />
               <Route path="/world/:category" element={<ProtectedRoute><EntityGalleryPage /></ProtectedRoute>} />
               <Route path="/world" element={<ProtectedRoute><EntityGalleryPage /></ProtectedRoute>} />

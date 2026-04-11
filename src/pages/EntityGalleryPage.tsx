@@ -153,7 +153,7 @@ const EntityGalleryPage = () => {
   // Redirect to projects page if no active project is set
   useEffect(() => {
     if (!activeProject) {
-      navigate("/");
+      navigate("/projects");
     }
   }, [activeProject, navigate]);
 
