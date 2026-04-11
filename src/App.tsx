@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthPage from "./pages/AuthPage";
 import ProjectsPage from "./pages/ProjectsPage";
+import OnboardingPage from "./pages/OnboardingPage";
 import ManuscriptPage from "./pages/ManuscriptPage";
 import EntityGalleryPage from "./pages/EntityGalleryPage";
 import EntityDetailPage from "./pages/EntityDetailPage";
