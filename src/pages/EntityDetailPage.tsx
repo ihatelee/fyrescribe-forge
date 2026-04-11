@@ -4,7 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import { PLACEHOLDER_ENTITIES } from "@/lib/placeholder-data";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, Check } from "lucide-react";
+import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search } from "lucide-react";
 import type { Json } from "@/integrations/supabase/types";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -83,19 +83,32 @@ const ENTITY_FIELDS_FALLBACK: Record<string, Record<string, string>> = {
 interface TagAutocompleteProps {
   entityId: string;
   projectId: string;
-  tags: { id: string; name: string; color: string | null }[];
   appliedTagIds: string[];
   onTagApplied: (tag: { id: string; name: string; color: string | null }) => void;
   onClose: () => void;
 }
 
-const TagAutocomplete = ({ entityId, projectId, tags, appliedTagIds, onTagApplied, onClose }: TagAutocompleteProps) => {
+const TagAutocomplete = ({ entityId, projectId, appliedTagIds, onTagApplied, onClose }: TagAutocompleteProps) => {
   const [query, setQuery] = useState("");
+  const [projectTags, setProjectTags] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
+
+    // Fetch all project tags fresh each time the autocomplete opens
+    if (projectId) {
+      supabase
+        .from("tags")
+        .select("id, name, color")
+        .eq("project_id", projectId)
+        .order("name")
+        .then(({ data }) => {
+          if (data) setProjectTags(data);
+        });
+    }
+
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         onClose();
@@ -103,12 +116,12 @@ const TagAutocomplete = ({ entityId, projectId, tags, appliedTagIds, onTagApplie
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
+  }, [onClose, projectId]);
 
-  const filtered = tags.filter(
+  const filtered = projectTags.filter(
     (t) => !appliedTagIds.includes(t.id) && t.name.toLowerCase().includes(query.toLowerCase())
   );
-  const exactMatch = tags.some((t) => t.name.toLowerCase() === query.trim().toLowerCase());
+  const exactMatch = projectTags.some((t) => t.name.toLowerCase() === query.trim().toLowerCase());
 
   const handleCreateAndApply = async () => {
     const name = query.trim();
@@ -119,8 +132,10 @@ const TagAutocomplete = ({ entityId, projectId, tags, appliedTagIds, onTagApplie
       .select()
       .single();
     if (error) { console.error("Failed to create tag:", error); return; }
-    // Link to entity
-    await supabase.from("entity_tags").insert({ entity_id: entityId, tag_id: data.id });
+    const { error: linkError } = await supabase
+      .from("entity_tags")
+      .insert({ entity_id: entityId, tag_id: data.id });
+    if (linkError) { console.error("Failed to link tag:", linkError); return; }
     onTagApplied(data);
     onClose();
   };
@@ -282,7 +297,6 @@ const EntityDetailInner = () => {
   const [fields, setFields] = useState<Record<string, string>>({});
   const [sections, setSections] = useState<Record<string, string>>({});
   const [tags, setTags] = useState<{ id: string; name: string; color: string | null }[]>([]);
-  const [allProjectTags, setAllProjectTags] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [linkedEntities, setLinkedEntities] = useState<{ id: string; name: string; category: string }[]>([]);
@@ -313,7 +327,9 @@ const EntityDetailInner = () => {
         setProjectId(dbEntity.project_id);
         setSummary(dbEntity.summary || "");
         setFields((dbEntity.fields as Record<string, string>) || {});
-        setSections((dbEntity.sections as Record<string, string>) || {});
+        const initialSections = (dbEntity.sections as Record<string, string>) || {};
+        setSections(initialSections);
+        sectionsRef.current = initialSections;
         setCoverImage(dbEntity.cover_image_url || null);
         setGalleryImages(dbEntity.gallery_image_urls || []);
 
@@ -325,13 +341,6 @@ const EntityDetailInner = () => {
         if (entityTags) {
           setTags(entityTags.map((et: any) => et.tags).filter(Boolean));
         }
-
-        // Fetch all project tags for autocomplete
-        const { data: projTags } = await supabase
-          .from("tags")
-          .select("id, name, color")
-          .eq("project_id", dbEntity.project_id);
-        if (projTags) setAllProjectTags(projTags);
 
         // Fetch linked entities (both directions)
         const { data: linksA } = await supabase
@@ -368,8 +377,10 @@ const EntityDetailInner = () => {
   }, [id]);
 
   // ─── Auto-save sections (debounced) ─────────────────────
-  const sectionsRef = useRef(sections);
-  sectionsRef.current = sections;
+  // NOTE: sectionsRef is initialized from DB in fetchEntity and mutated directly
+  // in handleSectionInput. Do NOT sync it from `sections` state here — that would
+  // reset accumulated edits on every re-render before the debounce fires.
+  const sectionsRef = useRef<Record<string, string>>({});
 
   const saveSectionsToDb = useDebouncedCallback(async (newSections: Record<string, string>) => {
     if (!id) return;
@@ -500,10 +511,6 @@ const EntityDetailInner = () => {
 
   const handleTagApplied = useCallback((tag: { id: string; name: string; color: string | null }) => {
     setTags((prev) => [...prev, tag]);
-    setAllProjectTags((prev) => {
-      if (prev.some((t) => t.id === tag.id)) return prev;
-      return [...prev, tag];
-    });
   }, []);
 
   // ─── Linked entities ─────────────────────────────────────
@@ -604,7 +611,6 @@ const EntityDetailInner = () => {
                 <TagAutocomplete
                   entityId={id!}
                   projectId={projectId}
-                  tags={allProjectTags}
                   appliedTagIds={tags.map((t) => t.id)}
                   onTagApplied={handleTagApplied}
                   onClose={() => setIsAddingTag(false)}
