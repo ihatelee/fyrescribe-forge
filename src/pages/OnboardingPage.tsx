@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Upload, X, Loader2 } from "lucide-react";
 import logoSrc from "@/assets/fyrescribe_logo_white.svg";
@@ -7,6 +7,78 @@ import { useActiveProject } from "@/contexts/ProjectContext";
 import NewProjectModal from "@/components/NewProjectModal";
 
 const ACCEPTED_TYPES = ".txt,.rtf,.docx";
+
+/* ── Starfield background ──────────────────────────────────────── */
+
+const STAR_COUNT = 80;
+const SPARKLE_COUNT = 12;
+
+const randomBetween = (a: number, b: number) => Math.random() * (b - a) + a;
+
+const StarfieldBackground = () => {
+  const [stars] = useState(() =>
+    Array.from({ length: STAR_COUNT }, (_, i) => ({
+      id: i,
+      x: randomBetween(0, 100),
+      y: randomBetween(0, 100),
+      size: randomBetween(1, 2.5),
+      delay: randomBetween(0, 8),
+      duration: randomBetween(3, 7),
+    }))
+  );
+
+  const [sparkles] = useState(() =>
+    Array.from({ length: SPARKLE_COUNT }, (_, i) => ({
+      id: i,
+      x: randomBetween(5, 95),
+      y: randomBetween(5, 95),
+      delay: randomBetween(0, 12),
+      duration: randomBetween(4, 8),
+      size: randomBetween(8, 14),
+    }))
+  );
+
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+      {/* Stars */}
+      <svg className="absolute inset-0 w-full h-full">
+        {stars.map((s) => (
+          <circle
+            key={s.id}
+            cx={`${s.x}%`}
+            cy={`${s.y}%`}
+            r={s.size}
+            fill="white"
+            className="animate-twinkle"
+            style={{
+              animationDelay: `${s.delay}s`,
+              animationDuration: `${s.duration}s`,
+            }}
+          />
+        ))}
+      </svg>
+
+      {/* Sparkles (4-pointed stars) */}
+      {sparkles.map((sp) => (
+        <span
+          key={`sp-${sp.id}`}
+          className="absolute animate-sparkle text-white/60"
+          style={{
+            left: `${sp.x}%`,
+            top: `${sp.y}%`,
+            fontSize: sp.size,
+            animationDelay: `${sp.delay}s`,
+            animationDuration: `${sp.duration}s`,
+          }}
+        >
+          ✦
+        </span>
+      ))}
+    </div>
+  );
+};
+
+/* ── Onboarding page ───────────────────────────────────────────── */
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
@@ -20,8 +92,19 @@ const OnboardingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0c12] flex flex-col items-center justify-center px-4">
-      <img src={logoSrc} alt="Fyrescribe" className="h-8 mb-8" />
+    <div className="min-h-screen bg-[#0a0c12] flex flex-col items-center justify-center px-4 relative">
+      <StarfieldBackground />
+
+      <div className="relative z-10 flex flex-col items-center">
+        <img
+          src={logoSrc}
+          alt="Fyrescribe"
+          className="w-[300px] mb-10"
+          style={{
+            filter:
+              "brightness(0) saturate(100%) invert(72%) sepia(30%) saturate(700%) hue-rotate(10deg) brightness(95%) contrast(90%)",
+          }}
+        />
 
       <h1 className="font-display text-3xl text-foreground tracking-wide mb-2">
         Welcome to Fyrescribe
