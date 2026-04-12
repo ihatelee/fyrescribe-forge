@@ -224,7 +224,7 @@ const LinkEntityModal = ({
         .eq("project_id", projectId)
         .neq("id", currentEntityId)
         .order("name");
-      if (filterCategory) q = q.eq("category", filterCategory);
+      if (filterCategory) q = q.eq("category", filterCategory as any);
       const { data } = await q;
       if (data) setCandidates(data);
     };
