@@ -78,7 +78,7 @@
 }
 
 .font-prose {
-  font-family: var(--font-ui, 'EB Garamond', serif);
+  font-family: var(--font-prose, 'EB Garamond', serif);
 }
 
 /* Scrollbar styling */
