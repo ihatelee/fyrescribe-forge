@@ -28,7 +28,7 @@ const StarfieldBackground = () => {
   );
 
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-[1]" aria-hidden="true">
       <svg className="absolute inset-0 w-full h-full">
         {stars.map((s) => (
           <circle

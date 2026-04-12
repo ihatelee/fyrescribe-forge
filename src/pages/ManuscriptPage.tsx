@@ -486,7 +486,7 @@ const ManuscriptPage = () => {
 
   if (focusMode) {
     return (
-      <div className="fixed inset-0 bg-fyrescribe-deepest z-[100] flex flex-col">
+      <div className="fixed inset-0 bg-background z-[100] flex flex-col">
         <div className="flex items-center justify-between p-3">
           {toolbar}
           <button
@@ -502,7 +502,7 @@ const ManuscriptPage = () => {
             <div
               key={activeSceneId ?? "empty"}
               ref={makeEditorRef(focusEditorRef)}
-              className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-[#b8c0d4] whitespace-pre-wrap outline-none min-h-[60vh]`}
+                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
               contentEditable
               suppressContentEditableWarning
               onInput={handleEditorInput}
@@ -616,11 +616,11 @@ const ManuscriptPage = () => {
                               if (e.key === "Escape") { e.preventDefault(); setEditingId(null); }
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="flex-1 min-w-0 bg-transparent outline-none border-b border-gold/50 text-[12px]"
+                            className="flex-1 min-w-0 bg-transparent outline-none border-b border-gold/50 text-[12px] text-foreground"
                           />
                         ) : (
                           <span
-                            className="truncate flex-1"
+                            className="truncate flex-1 cursor-text"
                             onClick={(e) => {
                               e.stopPropagation();
                               selectScene(scene);
@@ -663,7 +663,7 @@ const ManuscriptPage = () => {
     <AppLayout>
       <div className="flex h-[calc(100vh-48px)]">
         {/* Editor area */}
-        <div className="flex-1 flex flex-col bg-fyrescribe-deepest overflow-hidden relative">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Toolbar */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-fyrescribe-base">
             <div className="flex items-center gap-1">
@@ -727,7 +727,7 @@ const ManuscriptPage = () => {
                   <div
                     key={activeSceneId}
                     ref={makeEditorRef(editorRef)}
-                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-[#b8c0d4] whitespace-pre-wrap outline-none min-h-[60vh]`}
+                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}

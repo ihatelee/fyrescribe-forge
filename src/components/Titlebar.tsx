@@ -2,6 +2,7 @@ import { useState } from "react";
 import { User, LogOut, FolderOpen, Pencil } from "lucide-react";
 import logoSrc from "@/assets/fyrescribe_logo_white.svg";
 import { useActiveProject } from "@/contexts/ProjectContext";
+import { useTheme, isDaylightTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,7 @@ import {
 const Titlebar = () => {
   const { activeProject, setActiveProject } = useActiveProject();
   const { signOut } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -44,7 +46,7 @@ const Titlebar = () => {
     <div className="fixed top-0 left-0 right-0 h-12 bg-fyrescribe-base border-b border-border flex items-center justify-between px-4 z-50">
       <div className="flex items-center gap-3">
         <button onClick={() => navigate("/projects")} className="hover:opacity-80 transition-opacity">
-          <img src={logoSrc} alt="Fyrescribe" className="h-[22px] w-auto" />
+          <img src={logoSrc} alt="Fyrescribe" className="h-[22px] w-auto" style={isDaylightTheme(theme) ? { filter: "brightness(0)" } : undefined} />
         </button>
       </div>
 
