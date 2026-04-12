@@ -270,6 +270,12 @@ function applyTheme(theme: ThemeName) {
   for (const [key, val] of Object.entries(vars)) {
     root.style.setProperty(key, val);
   }
+  // Apply Silkscreen font for Futureworld theme
+  if (theme === "futureworld") {
+    root.style.setProperty("--font-ui", "'Silkscreen', monospace");
+  } else {
+    root.style.removeProperty("--font-ui");
+  }
 }
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
