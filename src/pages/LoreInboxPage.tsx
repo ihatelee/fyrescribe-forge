@@ -350,6 +350,7 @@ const SuggestionCard = ({ suggestion, onAccept, onReject, selected, onToggleSele
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };
