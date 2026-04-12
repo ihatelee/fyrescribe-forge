@@ -40,29 +40,38 @@ export interface ParsedChapter {
 // Lines that look like chapter/part headings
 const HEADING_RE = /^(chapter|part|prologue|epilogue|interlude)\b/i;
 
+// Invisible characters that can prefix a line and break regex anchors:
+// BOM (U+FEFF), zero-width space (U+200B), non-breaking space (U+00A0)
+const INVISIBLE_PREFIX_RE = /^[\uFEFF\u200B\u00A0]+/;
+
 /**
  * Parse plain text into chapters and scenes.
  *
- * Rules:
- *  - A block whose first line matches a heading keyword starts a new chapter.
- *    The heading line becomes the chapter title.
- *  - If the heading block contains body text after the heading line, that body
- *    becomes the chapter's first scene.
- *  - Subsequent content blocks become Scene 1, Scene 2… within that chapter
- *    (counter resets per chapter).
- *  - Content before the first heading goes into a default "Chapter 1".
- *  - Chapters that end up with no scenes (heading-only, no following content)
- *    are dropped.
- *  - If no headings are found at all, the whole text becomes one chapter.
+ * Two cases:
+ *  1. First content block is a chapter heading → that heading becomes the
+ *     first chapter's title; no default "Chapter 1" is created.
+ *  2. Content exists before the first heading → that content goes into a
+ *     default "Chapter 1"; the heading then starts a new chapter.
+ *
+ * Within each chapter, content blocks become Scene 1, Scene 2… (counter
+ * resets per chapter). Chapters with no scenes are dropped. If no headings
+ * are found the whole text becomes one chapter.
  */
 export function parseManuscript(text: string): ParsedChapter[] {
+  // Normalize line endings (handles Windows \r\n and old Mac \r)
+  // and strip a leading BOM that some editors prepend to UTF-8 files.
+  const normalized = text
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+
   const chapters: ParsedChapter[] = [];
   let currentChapter: ParsedChapter | null = null;
   let sceneNum = 1;
 
   const pushScene = (content: string) => {
     if (!currentChapter) {
-      // Content before the first heading → create a default chapter
+      // Content before the first heading → default chapter
       currentChapter = { title: "Chapter 1", scenes: [] };
       chapters.push(currentChapter);
     }
@@ -70,12 +79,15 @@ export function parseManuscript(text: string): ParsedChapter[] {
     sceneNum++;
   };
 
-  for (const block of text.split(/\n{2,}/)) {
+  for (const block of normalized.split(/\n{2,}/)) {
     const trimmed = block.trim();
     if (!trimmed) continue;
 
-    const firstLine = trimmed.split("\n")[0].trim();
-    const isHeading = HEADING_RE.test(firstLine) && firstLine.length < 80;
+    // Strip invisible prefix chars before testing the heading regex so that
+    // a BOM or zero-width space at the start of the first block doesn't
+    // prevent the heading from being detected.
+    const firstLine = trimmed.split("\n")[0].trim().replace(INVISIBLE_PREFIX_RE, "");
+    const isHeading = HEADING_RE.test(firstLine) && firstLine.length < 100;
 
     if (isHeading) {
       // Start a new chapter; reset per-chapter scene counter
@@ -83,7 +95,7 @@ export function parseManuscript(text: string): ParsedChapter[] {
       currentChapter = { title: firstLine, scenes: [] };
       chapters.push(currentChapter);
 
-      // Body text attached to the heading block becomes its first scene
+      // Body text in the same block as the heading becomes its first scene
       const newlineIdx = trimmed.indexOf("\n");
       if (newlineIdx > -1) {
         const body = trimmed.slice(newlineIdx).trim();
@@ -98,12 +110,12 @@ export function parseManuscript(text: string): ParsedChapter[] {
     }
   }
 
-  // Drop any chapters that have no scenes (heading with nothing after it)
+  // Drop chapters with no scenes (standalone heading, nothing after it)
   const result = chapters.filter((ch) => ch.scenes.length > 0);
 
-  // Fallback: nothing parsed → single chapter with the whole text
+  // Fallback: nothing parsed → single chapter with the full text
   if (result.length === 0) {
-    return [{ title: "Chapter 1", scenes: [{ title: "Scene 1", content: text.trim() }] }];
+    return [{ title: "Chapter 1", scenes: [{ title: "Scene 1", content: normalized.trim() }] }];
   }
 
   return result;
