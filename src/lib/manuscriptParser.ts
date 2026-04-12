@@ -45,6 +45,37 @@ const HEADING_RE = /^(chapter|part|prologue|epilogue|interlude)\b/i;
 const INVISIBLE_PREFIX_RE = /^[\uFEFF\u200B\u00A0]+/;
 
 /**
+ * If a block contains chapter/part/etc. heading lines embedded among
+ * single-newline-separated paragraphs, split the block at those heading
+ * lines so each heading starts its own sub-block.
+ *
+ * Example: "The Ember Crown\nChapter One: …\nContent…"
+ * becomes: ["The Ember Crown", "Chapter One: …\nContent…"]
+ */
+function splitBlockAtEmbeddedHeadings(block: string): string[] {
+  const lines = block.split("\n");
+  const result: string[] = [];
+  let current: string[] = [];
+
+  for (const line of lines) {
+    const cleaned = line.trim().replace(INVISIBLE_PREFIX_RE, "");
+    if (HEADING_RE.test(cleaned) && cleaned.length < 100) {
+      // Flush accumulated lines before this heading
+      const flushed = current.join("\n").trim();
+      if (flushed) result.push(flushed);
+      current = [line]; // heading starts a new sub-block
+    } else {
+      current.push(line);
+    }
+  }
+
+  const last = current.join("\n").trim();
+  if (last) result.push(last);
+
+  return result.length > 0 ? result : [block];
+}
+
+/**
  * Parse plain text into chapters and scenes.
  *
  * Case 1: The first content block is a chapter heading → it becomes the
@@ -65,22 +96,13 @@ export function parseManuscript(text: string): ParsedChapter[] {
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n");
 
-  // ── DEBUG LOGGING ────────────────────────────────────────────────────
-  console.log("[parseManuscript] first 500 chars of normalised text:");
-  console.log(JSON.stringify(normalised.slice(0, 500)));
-
-  // Pre-split and trim so every block we iterate is clean.
+  // Split on double newlines, then re-split any block that contains an
+  // embedded heading on its own line (handles single-newline manuscripts).
   const blocks = normalised
     .split(/\n{2,}/)
     .map((b) => b.trim())
-    .filter((b) => b.length > 0);
-
-  console.log(`[parseManuscript] total blocks after split: ${blocks.length}`);
-  console.log("[parseManuscript] first 3 blocks:");
-  blocks.slice(0, 3).forEach((b, i) => {
-    console.log(`  block[${i}] (${b.length} chars): ${JSON.stringify(b.slice(0, 120))}`);
-  });
-  // ── END DEBUG ────────────────────────────────────────────────────────
+    .filter((b) => b.length > 0)
+    .flatMap(splitBlockAtEmbeddedHeadings);
 
   if (blocks.length === 0) {
     return [{ title: "Chapter 1", scenes: [{ title: "Scene 1", content: text.trim() }] }];
@@ -119,6 +141,10 @@ export function parseManuscript(text: string): ParsedChapter[] {
     } else {
       // ── Content block ──────────────────────────────────────────────
       if (block.length < 30) continue; // skip short separators / artefacts
+
+      // Skip single-line blocks that appear before the first heading —
+      // these are typically the book title, not story content.
+      if (currentChapter === null && !block.includes("\n")) continue;
 
       if (currentChapter === null) {
         // Content before the first heading → default chapter
