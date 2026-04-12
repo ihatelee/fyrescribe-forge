@@ -299,6 +299,7 @@ const ManuscriptPage = () => {
                 content: ps.content,
                 order: si + 1,
                 word_count: ps.content.trim().split(/\s+/).filter(Boolean).length,
+                is_dirty: true,
               }));
 
               const { data: insertedScenes, error: scenesErr } = await supabase
@@ -325,7 +326,7 @@ const ManuscriptPage = () => {
           if (!chErr && ch) {
             const { data: sc, error: scErr } = await supabase
               .from("scenes")
-              .insert({ project_id: projectId, chapter_id: ch.id, title: "Scene 1", order: 1, content: "" })
+              .insert({ project_id: projectId, chapter_id: ch.id, title: "Scene 1", order: 1, content: "", is_dirty: true })
               .select("*")
               .single();
             if (!scErr && sc) {

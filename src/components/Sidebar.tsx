@@ -144,12 +144,11 @@ const Sidebar = () => {
         {/* Sync Now */}
         <button
           onClick={handleSync}
-          disabled={!activeProject || syncing}
-          className="w-full flex items-center justify-between px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-dimmed hover:text-text-secondary hover:bg-fyrescribe-hover disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-between px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover"
         >
           <div className="flex items-center gap-2">
             <RefreshCw size={12} className={syncing ? "animate-spin" : ""} />
-            {syncing ? "Syncing…" : "Sync Now"}
+            {syncing ? "Syncing…" : "Sync Lore"}
           </div>
           {syncMessage && (
             <span className="text-[10px] text-text-dimmed truncate max-w-[80px]">{syncMessage}</span>
