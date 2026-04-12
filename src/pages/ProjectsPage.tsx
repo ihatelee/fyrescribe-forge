@@ -171,7 +171,7 @@ const ProjectsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-fyrescribe-deepest">
+    <div className="min-h-screen">
       <Titlebar />
       <main className="pt-12">
         <div className="max-w-5xl mx-auto px-8 py-12">
@@ -342,7 +342,7 @@ const ProjectsPage = () => {
             value={deleteConfirmText}
             onChange={(e) => setDeleteConfirmText(e.target.value)}
             placeholder="Type PERMANENTLY DELETE"
-            className="w-full px-3 py-2 bg-fyrescribe-deepest border border-border rounded-lg text-foreground text-sm placeholder:text-text-dimmed focus:outline-none focus:ring-1 focus:ring-destructive"
+            className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-foreground text-sm placeholder:text-text-dimmed focus:outline-none focus:ring-1 focus:ring-destructive"
           />
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-fyrescribe-raised border-border text-foreground hover:bg-fyrescribe-base">
