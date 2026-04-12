@@ -272,6 +272,28 @@ const EntityGalleryPage = () => {
     setDeleteConfirmText("");
   };
 
+  const toggleSelectEntity = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    const ids = [...selectedIds];
+    for (const eid of ids) {
+      await supabase.from("entity_links").delete().or(`entity_a_id.eq.${eid},entity_b_id.eq.${eid}`);
+      await supabase.from("entity_tags").delete().eq("entity_id", eid);
+      await supabase.from("entities").delete().eq("id", eid);
+    }
+    setEntities((prev) => prev.filter((ent) => !selectedIds.has(ent.id)));
+    setSelectedIds(new Set());
+    setBulkBusy(false);
+  };
+
   // Apply category + optional tag filters, exclude archived
   const activeEntities = entities.filter((e) => !e.archived_at);
   const archivedEntities = entities.filter((e) => !!e.archived_at);
