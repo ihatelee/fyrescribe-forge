@@ -211,7 +211,7 @@ const EntityGalleryPage = () => {
     : null;
 
   const handleFilterChange = (value: string) => {
-    setActiveFilter(value);
+    setActiveFilter(value as EntityCategory | "all");
     if (value === "all") navigate("/world");
     else navigate(`/world/${value}`);
   };

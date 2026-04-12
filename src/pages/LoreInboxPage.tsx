@@ -276,7 +276,7 @@ const LoreInboxPage = () => {
     setSuggestions(
       (data ?? []).map((row) => ({
         ...row,
-        payload: (row.payload ?? {}) as SuggestionPayload,
+        payload: (row.payload ?? {}) as unknown as SuggestionPayload,
       })),
     );
     setLoading(false);
