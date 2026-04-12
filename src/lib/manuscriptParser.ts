@@ -32,58 +32,79 @@ export interface ParsedScene {
   content: string;
 }
 
+export interface ParsedChapter {
+  title: string;
+  scenes: ParsedScene[];
+}
+
 // Lines that look like chapter/part headings
 const HEADING_RE = /^(chapter|part|prologue|epilogue|interlude)\b/i;
 
 /**
- * Split plain text into scenes.
+ * Parse plain text into chapters and scenes.
  *
- * Rules (in priority order):
- *  1. A block that starts with a chapter/part heading AND has body text → scene
- *     titled after the heading.
- *  2. A heading-only block (no body) → its text becomes the title of the *next*
- *     content block.
- *  3. Any other block ≥ 30 chars → "Scene N".
- *
- * Blocks are separated by two or more newlines.
+ * Rules:
+ *  - A block whose first line matches a heading keyword starts a new chapter.
+ *    The heading line becomes the chapter title.
+ *  - If the heading block contains body text after the heading line, that body
+ *    becomes the chapter's first scene.
+ *  - Subsequent content blocks become Scene 1, Scene 2… within that chapter
+ *    (counter resets per chapter).
+ *  - Content before the first heading goes into a default "Chapter 1".
+ *  - Chapters that end up with no scenes (heading-only, no following content)
+ *    are dropped.
+ *  - If no headings are found at all, the whole text becomes one chapter.
  */
-export function splitIntoScenes(text: string): ParsedScene[] {
-  const scenes: ParsedScene[] = [];
-  let pendingTitle: string | null = null;
+export function parseManuscript(text: string): ParsedChapter[] {
+  const chapters: ParsedChapter[] = [];
+  let currentChapter: ParsedChapter | null = null;
   let sceneNum = 1;
+
+  const pushScene = (content: string) => {
+    if (!currentChapter) {
+      // Content before the first heading → create a default chapter
+      currentChapter = { title: "Chapter 1", scenes: [] };
+      chapters.push(currentChapter);
+    }
+    currentChapter.scenes.push({ title: `Scene ${sceneNum}`, content });
+    sceneNum++;
+  };
 
   for (const block of text.split(/\n{2,}/)) {
     const trimmed = block.trim();
-    if (trimmed.length < 30) continue;
+    if (!trimmed) continue;
 
     const firstLine = trimmed.split("\n")[0].trim();
     const isHeading = HEADING_RE.test(firstLine) && firstLine.length < 80;
 
     if (isHeading) {
-      const newlineIdx = trimmed.indexOf("\n");
-      const body = newlineIdx > -1 ? trimmed.slice(newlineIdx).trim() : "";
+      // Start a new chapter; reset per-chapter scene counter
+      sceneNum = 1;
+      currentChapter = { title: firstLine, scenes: [] };
+      chapters.push(currentChapter);
 
-      if (body.length >= 30) {
-        // Heading + body in same block → one scene
-        scenes.push({ title: firstLine, content: body });
-        pendingTitle = null;
-        sceneNum++;
-      } else {
-        // Heading only → carry as title for the next block
-        pendingTitle = firstLine;
+      // Body text attached to the heading block becomes its first scene
+      const newlineIdx = trimmed.indexOf("\n");
+      if (newlineIdx > -1) {
+        const body = trimmed.slice(newlineIdx).trim();
+        if (body.length >= 30) {
+          currentChapter.scenes.push({ title: "Scene 1", content: body });
+          sceneNum = 2;
+        }
       }
     } else {
-      const title = pendingTitle ?? `Scene ${sceneNum}`;
-      scenes.push({ title, content: trimmed });
-      pendingTitle = null;
-      sceneNum++;
+      if (trimmed.length < 30) continue;
+      pushScene(trimmed);
     }
   }
 
-  // Fallback: if nothing passed the length filter, use the raw text as one scene
-  if (scenes.length === 0) {
-    scenes.push({ title: "Scene 1", content: text.trim() });
+  // Drop any chapters that have no scenes (heading with nothing after it)
+  const result = chapters.filter((ch) => ch.scenes.length > 0);
+
+  // Fallback: nothing parsed → single chapter with the whole text
+  if (result.length === 0) {
+    return [{ title: "Chapter 1", scenes: [{ title: "Scene 1", content: text.trim() }] }];
   }
 
-  return scenes;
+  return result;
 }

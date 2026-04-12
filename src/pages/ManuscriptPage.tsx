@@ -4,7 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import { stripRtf, splitIntoScenes } from "@/lib/manuscriptParser";
+import { stripRtf, parseManuscript } from "@/lib/manuscriptParser";
 import {
   Bold,
   Italic,
@@ -195,25 +195,35 @@ const ManuscriptPage = () => {
             const rawText = await blob.text();
             const ext = manuscriptPath.split(".").pop()?.toLowerCase() ?? "txt";
             const plainText = ext === "rtf" ? stripRtf(rawText) : rawText;
-            const parsedScenes = splitIntoScenes(plainText);
+            const parsedChapters = parseManuscript(plainText);
 
-            setImportStatus("Saving scenes…");
+            // Insert chapters sequentially so each chapter ID is available
+            // before its scenes are inserted.
+            for (let ci = 0; ci < parsedChapters.length; ci++) {
+              const pc = parsedChapters[ci];
+              setImportStatus(
+                `Saving chapter ${ci + 1} of ${parsedChapters.length}…`
+              );
 
-            // Create the single chapter
-            const { data: ch, error: chErr } = await supabase
-              .from("chapters")
-              .insert({ project_id: projectId, title: "Chapter 1", order: 1 })
-              .select("*")
-              .single();
+              const { data: ch, error: chErr } = await supabase
+                .from("chapters")
+                .insert({ project_id: projectId, title: pc.title, order: ci + 1 })
+                .select("*")
+                .single();
 
-            if (!chErr && ch) {
-              // Batch-insert all scenes
-              const sceneRows = parsedScenes.map((ps, i) => ({
+              if (chErr || !ch) {
+                console.error("Failed to create chapter:", chErr);
+                continue;
+              }
+
+              chapterData.push(ch);
+
+              const sceneRows = pc.scenes.map((ps, si) => ({
                 project_id: projectId,
                 chapter_id: ch.id,
                 title: ps.title,
                 content: ps.content,
-                order: i + 1,
+                order: si + 1,
                 word_count: ps.content.trim().split(/\s+/).filter(Boolean).length,
               }));
 
@@ -223,13 +233,10 @@ const ManuscriptPage = () => {
                 .select("*");
 
               if (!scenesErr && insertedScenes) {
-                chapterData = [ch];
-                sceneData = insertedScenes as Scene[];
+                sceneData.push(...(insertedScenes as Scene[]));
               } else {
-                console.error("Failed to insert scenes:", scenesErr);
+                console.error("Failed to insert scenes for chapter:", chErr);
               }
-            } else {
-              console.error("Failed to create chapter:", chErr);
             }
 
             setImportStatus(null);
