@@ -588,6 +588,13 @@ const EntityGalleryPage = () => {
                         i !== 0 ? "border-t border-border" : ""
                       }`}
                     >
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(entity.id)}
+                        onChange={(e) => { e.stopPropagation(); toggleSelectEntity(entity.id); }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer flex-shrink-0"
+                      />
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 w-[80px] text-center ${
                           CATEGORY_COLORS[entity.category] || ""
