@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Loader2, MoreVertical, Copy, Archive, Trash2, ChevronDown } from "lucide-react";
+import { Plus, Loader2, MoreVertical, Copy, Archive, Trash2, ChevronDown, Pencil } from "lucide-react";
 import Titlebar from "@/components/Titlebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
