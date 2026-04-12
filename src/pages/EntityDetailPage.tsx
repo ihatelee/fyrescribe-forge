@@ -502,14 +502,22 @@ const EntityDetailInner = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 max-w-5xl">
+      <div className="p-6 max-w-5xl relative">
+        {/* Close button top right */}
+        <button
+          onClick={() => navigate(`/world/${entity.category}`)}
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-fyrescribe-raised border border-border flex items-center justify-center text-text-dimmed hover:text-foreground transition-colors"
+        >
+          <X size={16} />
+        </button>
+
         {/* Breadcrumb */}
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-1.5 text-text-secondary text-xs hover:text-foreground transition-colors mb-6"
         >
           <ArrowLeft size={12} />
-          Back to gallery
+          Back
         </button>
 
         {/* ===== 1. HEADER BLOCK ===== */}

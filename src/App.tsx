@@ -5,7 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProjectProvider } from "./contexts/ProjectContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import GlobalSparkle from "./components/GlobalSparkle";
 import AuthPage from "./pages/AuthPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import OnboardingPage from "./pages/OnboardingPage";
@@ -22,8 +24,10 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <ThemeProvider>
       <ProjectProvider>
         <TooltipProvider>
+          <GlobalSparkle />
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -44,6 +48,7 @@ const App = () => (
           </BrowserRouter>
         </TooltipProvider>
       </ProjectProvider>
+      </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

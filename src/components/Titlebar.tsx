@@ -1,8 +1,11 @@
-import { Settings, User, LogOut, FolderOpen } from "lucide-react";
+import { useState } from "react";
+import { User, LogOut, FolderOpen, Pencil } from "lucide-react";
 import logoSrc from "@/assets/fyrescribe_logo_white.svg";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import ThemeSwitcher from "./ThemeSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,13 +15,29 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Titlebar = () => {
-  const { activeProject } = useActiveProject();
+  const { activeProject, setActiveProject } = useActiveProject();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/", { replace: true });
+  };
+
+  const startEdit = () => {
+    if (!activeProject) return;
+    setEditTitle(activeProject.title);
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    setEditing(false);
+    const trimmed = editTitle.trim();
+    if (!trimmed || !activeProject || trimmed === activeProject.title) return;
+    setActiveProject({ ...activeProject, title: trimmed });
+    await supabase.from("projects").update({ title: trimmed }).eq("id", activeProject.id);
   };
 
   return (
@@ -30,12 +49,35 @@ const Titlebar = () => {
       </div>
 
       {activeProject && (
-        <span className="text-text-secondary text-sm hidden sm:block">
-          {activeProject.title}
-        </span>
+        <div className="hidden sm:flex items-center gap-1.5 group">
+          {editing ? (
+            <input
+              autoFocus
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onBlur={saveEdit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveEdit();
+                if (e.key === "Escape") setEditing(false);
+              }}
+              className="text-sm text-foreground bg-transparent border-b border-gold/50 outline-none px-1"
+            />
+          ) : (
+            <>
+              <span className="text-text-secondary text-sm">{activeProject.title}</span>
+              <button
+                onClick={startEdit}
+                className="text-text-dimmed hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <Pencil size={12} />
+              </button>
+            </>
+          )}
+        </div>
       )}
 
       <div className="flex items-center gap-2">
+        <ThemeSwitcher />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="w-7 h-7 rounded-full bg-fyrescribe-raised border border-border flex items-center justify-center text-text-secondary hover:text-foreground transition-colors">

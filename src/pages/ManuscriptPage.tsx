@@ -139,6 +139,15 @@ const ManuscriptPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
 
+  type TextSize = "small" | "medium" | "large" | "xl";
+  const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
+    small: "text-sm leading-[1.8]",
+    medium: "text-base leading-[1.9]",
+    large: "text-lg leading-[2.0]",
+    xl: "text-xl leading-[2.1]",
+  };
+  const [textSize, setTextSize] = useState<TextSize>("medium");
+
   const editorRef = useRef<HTMLDivElement>(null);
   const focusEditorRef = useRef<HTMLDivElement>(null);
   // Set to true when we auto-create the first chapter+scene so the editor
@@ -493,7 +502,7 @@ const ManuscriptPage = () => {
             <div
               key={activeSceneId ?? "empty"}
               ref={makeEditorRef(focusEditorRef)}
-              className="font-prose text-base leading-[1.9] text-[#b8c0d4] whitespace-pre-wrap outline-none min-h-[60vh]"
+              className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-[#b8c0d4] whitespace-pre-wrap outline-none min-h-[60vh]`}
               contentEditable
               suppressContentEditableWarning
               onInput={handleEditorInput}
@@ -596,7 +605,6 @@ const ManuscriptPage = () => {
                       >
                         <FileText size={10} className="flex-shrink-0" />
 
-                        {/* Scene title — click when active to rename */}
                         {editingId === scene.id ? (
                           <input
                             autoFocus
@@ -614,9 +622,9 @@ const ManuscriptPage = () => {
                           <span
                             className="truncate flex-1"
                             onClick={(e) => {
-                              if (activeSceneId === scene.id) {
-                                startEditing(scene.id, scene.title, e);
-                              }
+                              e.stopPropagation();
+                              selectScene(scene);
+                              startEditing(scene.id, scene.title, e);
                             }}
                           >
                             {scene.title}
@@ -660,6 +668,23 @@ const ManuscriptPage = () => {
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-fyrescribe-base">
             <div className="flex items-center gap-1">
               {toolbar}
+              <div className="w-px h-4 bg-border mx-1" />
+              <div className="flex items-center gap-0.5 bg-fyrescribe-hover rounded-md p-0.5">
+                {(["small", "medium", "large", "xl"] as TextSize[]).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setTextSize(s)}
+                    className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
+                      textSize === s
+                        ? "bg-fyrescribe-raised text-foreground"
+                        : "text-text-dimmed hover:text-text-secondary"
+                    }`}
+                  >
+                    {s === "xl" ? "XL" : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="w-px h-4 bg-border mx-1" />
               <button
                 onClick={() => setFocusMode(true)}
                 className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
@@ -702,7 +727,7 @@ const ManuscriptPage = () => {
                   <div
                     key={activeSceneId}
                     ref={makeEditorRef(editorRef)}
-                    className="font-prose text-base leading-[1.9] text-[#b8c0d4] whitespace-pre-wrap outline-none min-h-[60vh]"
+                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-[#b8c0d4] whitespace-pre-wrap outline-none min-h-[60vh]`}
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
