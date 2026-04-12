@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -67,7 +66,6 @@ const Sidebar = () => {
     if (!activeProject || syncing) return;
     setSyncing(true);
     setSyncMessage(null);
-    const toastId = toast.loading("Syncing…");
     try {
       const { data, error } = await supabase.functions.invoke("sync-lore", {
         body: { project_id: activeProject.id, trigger: "manual", force },
@@ -79,20 +77,16 @@ const Sidebar = () => {
       const scenesProcessed = results.reduce((s, r) => s + (r.scenes_processed ?? 0), 0);
       const created = results.reduce((s, r) => s + (r.suggestions_created ?? 0), 0);
 
-      let msg: string;
       if (scenesProcessed === 0) {
-        msg = "Nothing new found";
+        setSyncMessage("No edited scenes");
       } else if (created > 0) {
-        msg = `Sync complete — ${created} new suggestion${created !== 1 ? "s" : ""}`;
+        setSyncMessage(`${created} new suggestion${created !== 1 ? "s" : ""}`);
       } else {
-        msg = "Nothing new found";
+        setSyncMessage(`${scenesProcessed} scene${scenesProcessed !== 1 ? "s" : ""} processed, 0 suggestions`);
       }
-      setSyncMessage(msg);
-      toast.success(msg, { id: toastId, duration: 3000 });
       await fetchPendingCount();
     } catch {
       setSyncMessage("Sync failed");
-      toast.error("Sync failed", { id: toastId, duration: 3000 });
     } finally {
       setSyncing(false);
       setTimeout(() => setSyncMessage(null), 4000);
