@@ -67,6 +67,7 @@ const Sidebar = () => {
     if (!activeProject || syncing) return;
     setSyncing(true);
     setSyncMessage(null);
+    if (force) setFullSyncNote(true);
     try {
       const { data, error } = await supabase.functions.invoke("sync-lore", {
         body: { project_id: activeProject.id, trigger: "manual", force },
@@ -90,6 +91,7 @@ const Sidebar = () => {
       setSyncMessage("Sync failed");
     } finally {
       setSyncing(false);
+      setFullSyncNote(false);
       setTimeout(() => setSyncMessage(null), 4000);
     }
   };
