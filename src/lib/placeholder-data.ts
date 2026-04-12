@@ -64,7 +64,7 @@ export const PLACEHOLDER_ENTITIES = [
   { id: "e7", name: "The Last Siege", category: "events" as const, summary: "The catastrophic battle that shattered the northern wall fifteen years ago.", tags: ["war", "history"] },
   { id: "e8", name: "The Pale Crown", category: "artifacts" as const, summary: "A crown of white bone that grants its wearer dominion over the dead.", tags: ["cursed", "royalty"] },
   { id: "e9", name: "Duskwraiths", category: "creatures" as const, summary: "Spectral predators that emerge during the twilight hours, drawn to strong emotions.", tags: ["undead", "nocturnal"] },
-  { id: "e10", name: "Bloodweaving", category: "abilities" as const, summary: "A forbidden school of magic that uses the caster's vitality as fuel.", tags: ["magic", "forbidden"] },
+  { id: "e10", name: "Bloodweaving", category: "magic" as const, summary: "A forbidden school of magic that uses the caster's vitality as fuel.", tags: ["magic", "forbidden"] },
   { id: "e11", name: "The Vigil", category: "factions" as const, summary: "An order of wardens sworn to defend the wall. Diminished but unbowed.", tags: ["military", "north"] },
   { id: "e12", name: "The Three Truths", category: "doctrine" as const, summary: "The central tenets of the Ashenmere faith: all power is borrowed, all debts are paid, all fires die.", tags: ["religion", "philosophy"] },
 ];

@@ -4,6 +4,48 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-11 (session 3)
+
+### Entity system — 10-feature batch
+
+**DB / Types**
+- Renamed `abilities` enum value to `magic`; added `history` as a new `entity_category` value (`supabase/migrations/20260413000000_entity_category_updates.sql`).
+- Updated `src/integrations/supabase/types.ts` to match.
+
+**Sidebar**
+- Removed POV Tracker from nav (route kept).
+- Added History entry (BookMarked icon) between Events and Artifacts.
+- Renamed Abilities → Magic (Wand2 icon).
+
+**EntityGalleryPage**
+- History and Magic categories added to filter pills.
+- Smart tag clicking: 1 matching entity → navigate directly; >1 → `/world?tag=<id>`.
+- Tag filter via `?tag=<id>` search param with "× Clear tag filter" pill.
+- Heading shows "Tagged: [name]" when tag filter active.
+
+**EntityDetailPage** — major rewrite
+- `CATEGORY_FIELDS`: structured At a Glance keys per category; seeded on load if fields empty.
+- Field values that exactly match a project tag name render as clickable gold pills.
+- Character entities: "Magic & Abilities" section (rich text + linked magic pills) + "Related Artifacts" linked section.
+- Creature entities: "Characters of this Species" (entity_links with `relationship="species"`).
+- Magic sections: Description, Regional Origin, Known Users, Imbued Weapons & Artifacts.
+- History sections: Overview, Causes, Key Figures, Consequences, Legacy.
+- Delete entity: three-dot actions menu → `DeleteModal` → deletes entity + entity_links (both directions) + entity_tags → navigate to gallery.
+- Smart tag clicking on entity detail header tags (same 1-entity / >1-entities logic).
+- `LinkEntityModal` extended with `filterCategory` and `relationship` props.
+
+### Drag and drop scenes (ManuscriptPage)
+- Scenes in the chapter/scene sidebar are `draggable`.
+- Dragging a scene onto another chapter's container calls `handleDropSceneOnChapter`: updates `chapter_id` and `order` in Supabase, expands the target chapter.
+- Scene being dragged renders at 40% opacity; target chapter highlights with gold glow.
+
+### Timeline — generate from lore
+- `TimelinePage.tsx` now reads from `timeline_events` Supabase table (real data).
+- "Generate from Lore" button invokes new `supabase/functions/generate-timeline/index.ts` Supabase Edge Function.
+- Edge function: fetches Event/History entities + scene excerpts, calls Anthropic claude-sonnet-4-6, inserts `{label, date_label, date_sort, type}[]` into `timeline_events`.
+- Events show a hover-reveal Trash2 delete button.
+- Error banner shown if edge function call fails (e.g. missing ANTHROPIC_API_KEY secret).
+
 ## 2026-04-11 (session 2)
 
 ### Theme system — pulled from upstream

@@ -3,13 +3,13 @@ import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
   Clock,
-  Eye,
   Users,
   MapPin,
   Calendar,
+  BookMarked,
   Gem,
   Bug,
-  Zap,
+  Wand2,
   Shield,
   ScrollText,
   Inbox,
@@ -18,16 +18,16 @@ import {
 const WRITE_ITEMS = [
   { label: "Manuscript", path: "/manuscript", icon: BookOpen },
   { label: "Timeline", path: "/timeline", icon: Clock },
-  { label: "POV Tracker", path: "/pov-tracker", icon: Eye },
 ];
 
 const WORLD_ITEMS = [
   { label: "Characters", path: "/world/characters", icon: Users },
   { label: "Places", path: "/world/places", icon: MapPin },
   { label: "Events", path: "/world/events", icon: Calendar },
+  { label: "History", path: "/world/history", icon: BookMarked },
   { label: "Artifacts", path: "/world/artifacts", icon: Gem },
   { label: "Creatures", path: "/world/creatures", icon: Bug },
-  { label: "Abilities", path: "/world/abilities", icon: Zap },
+  { label: "Magic", path: "/world/magic", icon: Wand2 },
   { label: "Factions", path: "/world/factions", icon: Shield },
   { label: "Doctrine", path: "/world/doctrine", icon: ScrollText },
 ];

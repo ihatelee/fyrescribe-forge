@@ -193,6 +193,9 @@ const ManuscriptPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
 
+  const [dragSceneId, setDragSceneId] = useState<string | null>(null);
+  const [dragOverChapterId, setDragOverChapterId] = useState<string | null>(null);
+
   type TextSize = "small" | "medium" | "large" | "xl";
   const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
     small: "text-[16px] leading-[1.8]",
@@ -474,6 +477,39 @@ const ManuscriptPage = () => {
     }
   };
 
+  // ─── Drag and drop scenes ───────────────────────────────────────────
+
+  const handleDropSceneOnChapter = async (targetChapterId: string) => {
+    if (!dragSceneId) return;
+    const scene = scenes.find((s) => s.id === dragSceneId);
+    if (!scene || scene.chapter_id === targetChapterId) {
+      setDragSceneId(null);
+      setDragOverChapterId(null);
+      return;
+    }
+    const targetChapterScenes = scenes.filter((s) => s.chapter_id === targetChapterId);
+    const newOrder =
+      targetChapterScenes.length > 0
+        ? Math.max(...targetChapterScenes.map((s) => s.order)) + 1
+        : 1;
+    const { error } = await supabase
+      .from("scenes")
+      .update({ chapter_id: targetChapterId, order: newOrder })
+      .eq("id", dragSceneId);
+    if (!error) {
+      setScenes((prev) =>
+        prev.map((s) =>
+          s.id === dragSceneId ? { ...s, chapter_id: targetChapterId, order: newOrder } : s
+        )
+      );
+      setExpandedChapters((prev) =>
+        prev.includes(targetChapterId) ? prev : [...prev, targetChapterId]
+      );
+    }
+    setDragSceneId(null);
+    setDragOverChapterId(null);
+  };
+
   // ─── Formatting / thesaurus ─────────────────────────────────────────
 
   const applyFormat = useCallback((command: string) => {
@@ -611,7 +647,15 @@ const ManuscriptPage = () => {
             const isExpanded = expandedChapters.includes(chapter.id);
 
             return (
-              <div key={chapter.id} className="mb-1">
+              <div
+                key={chapter.id}
+                className={`mb-1 rounded-sm transition-colors ${
+                  dragOverChapterId === chapter.id ? "bg-gold-glow ring-1 ring-gold/30" : ""
+                }`}
+                onDragOver={(e) => { e.preventDefault(); setDragOverChapterId(chapter.id); }}
+                onDragLeave={() => setDragOverChapterId(null)}
+                onDrop={() => handleDropSceneOnChapter(chapter.id)}
+              >
                 <div
                   className={`w-full flex items-center gap-1 px-2 py-1.5 text-[13px] rounded-sm transition-colors ${
                     activeChapterId === chapter.id
@@ -663,10 +707,15 @@ const ManuscriptPage = () => {
                     {chapterScenes.map((scene) => (
                       <div
                         key={scene.id}
+                        draggable
+                        onDragStart={(e) => { e.stopPropagation(); setDragSceneId(scene.id); }}
+                        onDragEnd={() => { setDragSceneId(null); setDragOverChapterId(null); }}
                         onClick={() => selectScene(scene)}
                         className={`w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm cursor-pointer transition-colors ${
                           activeSceneId === scene.id
                             ? "text-gold-bright bg-gold-glow"
+                            : dragSceneId === scene.id
+                            ? "opacity-40"
                             : "text-text-secondary hover:text-foreground"
                         }`}
                       >
