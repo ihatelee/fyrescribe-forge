@@ -33,7 +33,7 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 - **Theme system** — `ThemeContext` + `ThemeSwitcher`. Six themes: Midnight, Fireside, Lavender Haze, Enchanted, Futureworld, Daylight. Preferences persisted to `user_preferences` Supabase table. Futureworld uses Silkscreen + Fira Code fonts; all other themes use Cinzel (display) + EB Garamond (prose) + system sans-serif (body). All theme styles — including fonts — flow exclusively through CSS variables (`--font-body`, `--font-display`, `--font-prose`, plus the full set of color tokens). `applyTheme` clears all managed variables before setting the new theme, guaranteeing no bleed-through.
 - **Sparkle toggle** — `GlobalSparkle` + `StarfieldBackground` render an animated star/sparkle overlay, persisted alongside theme preference.
 - **Entity system** — `EntityGalleryPage` + `EntityDetailPage` with 9 categories: characters, places, events, history, artifacts, creatures, magic, factions, doctrine.
-  - `abilities` enum value renamed to `magic`; `history` added as a new enum value (`supabase/migrations/20260413000000_entity_category_updates.sql`). **Note:** this migration has NOT yet been applied to production. The generated `types.ts` still reflects the live DB (`abilities`, no `history`). TypeScript `as EntityCategory` / `as any` casts in `EntityGalleryPage` and `EntityDetailPage` paper over the mismatch until the migration runs.
+  - `abilities` enum value renamed to `magic`; `history` added as a new enum value (`supabase/migrations/20260413000000_entity_category_updates.sql`). Migration applied to production; `types.ts` updated to match.
   - POV Tracker removed from sidebar (route kept in App.tsx).
   - Each category has structured "At a Glance" fields (seeded from `CATEGORY_FIELDS` constant if empty). Field values that exactly match a project tag name render as clickable gold pills.
   - `sections` JSONB stores rich article sections; each category has a predefined section list.
@@ -62,20 +62,21 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ## Where We Left Off
 
-**Session: 2026-04-12**
+**Session: 2026-04-12 (session 4)**
 
-Deployment and type-sync cleanup after the session-3 feature batch:
+Post-migration cleanup:
 
-- **`generate-timeline` edge function deployed** to production Supabase. `ANTHROPIC_API_KEY` secret must still be confirmed set in the Supabase project dashboard.
-- **Supabase types synced** (`src/integrations/supabase/types.ts`) to match the live production DB. This revealed that migration `20260413000000_entity_category_updates.sql` (rename `abilities`→`magic`, add `history`) has **not** been applied to production yet. The types reverted to show `abilities` (no `magic`, no `history`).
-- **TypeScript workaround casts** added in `EntityGalleryPage.tsx` and `EntityDetailPage.tsx` (`value: "history" as EntityCategory`, `value: "magic" as EntityCategory`, `filterCategory as any`) to keep the build passing despite the type mismatch. These should be removed once the migration runs.
+- `20260413000000_entity_category_updates.sql` applied to production — `abilities`→`magic`, `history` added.
+- `types.ts` updated to match post-migration enum; all `as EntityCategory` / `as any` workaround casts removed.
+- `EntityGalleryPage`: `activeFilter` state typed as `EntityCategory | "all"`; URL param initialised via `ENTITY_CATEGORIES.find()` (no cast); select `onChange` uses `find()` on `ENTITY_CATEGORIES` (no cast); Supabase result narrowed to `EntityRow[]` instead of `any`.
+- `sync-lore` edge function and `pg_cron` daily schedule committed (see session-3 commit).
 
 **Next logical steps:**
-- Run DB migration `20260413000000_entity_category_updates.sql` against production (`supabase db push` or Supabase dashboard SQL editor), then regenerate types to remove the `as` casts.
+- Deploy `sync-lore` edge function: `supabase functions deploy sync-lore`.
 - Confirm `ANTHROPIC_API_KEY` secret is set in the Supabase project (Settings → Edge Functions → Secrets).
-- Test "Generate from Lore" end-to-end in production.
-- Test the manuscript import end-to-end with a real file.
-- Begin Part 2: AI-powered lore extraction from manuscript scenes into `lore_suggestions`.
+- Test "Generate from Lore" (timeline) and "Lore Sync" (sync-lore) end-to-end in production.
+- Test manuscript import end-to-end with a real file.
+- Build the Lore Inbox review flow (accept/reject/edit `lore_suggestions`).
 
 ---
 

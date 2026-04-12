@@ -4,6 +4,16 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-12 (session 4)
+
+### Post-migration cast cleanup
+
+- `20260413000000_entity_category_updates.sql` confirmed applied to production.
+- `types.ts` `entity_category` enum now authoritative: `abilities`→`magic`, `history` present. All `as EntityCategory` / `as any` workaround casts removed.
+- `EntityGalleryPage`: `activeFilter` state typed as `EntityCategory | "all"`; URL param (`useParams`) and select `onChange` both resolved via `ENTITY_CATEGORIES.find()` — no casts needed; Supabase query result narrowed to `EntityRow[]` instead of `any`.
+
+---
+
 ## 2026-04-12
 
 ### Deployment and type-sync cleanup

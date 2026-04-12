@@ -12,10 +12,10 @@ const ENTITY_CATEGORIES: { value: EntityCategory; label: string }[] = [
   { value: "characters", label: "Characters" },
   { value: "places", label: "Places" },
   { value: "events", label: "Events" },
-  { value: "history" as EntityCategory, label: "History" },
+  { value: "history", label: "History" },
   { value: "artifacts", label: "Artifacts" },
   { value: "creatures", label: "Creatures" },
-  { value: "magic" as EntityCategory, label: "Magic" },
+  { value: "magic", label: "Magic" },
   { value: "factions", label: "Factions" },
   { value: "doctrine", label: "Doctrine" },
 ];
@@ -105,7 +105,10 @@ const NewEntityModal = ({ projectId, defaultCategory, onCreated, onClose }: NewE
           </label>
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value as EntityCategory)}
+            onChange={(e) => {
+                const found = ENTITY_CATEGORIES.find((c) => c.value === e.target.value);
+                if (found) setCategory(found.value);
+              }}
             className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40"
           >
             {ENTITY_CATEGORIES.map((cat) => (
@@ -144,7 +147,9 @@ const EntityGalleryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { activeProject } = useActiveProject();
-  const [activeFilter, setActiveFilter] = useState(category || "all");
+  const [activeFilter, setActiveFilter] = useState<EntityCategory | "all">(
+    ENTITY_CATEGORIES.find((c) => c.value === category)?.value ?? "all",
+  );
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -152,7 +157,7 @@ const EntityGalleryPage = () => {
   const tagFilter = searchParams.get("tag");
 
   useEffect(() => {
-    setActiveFilter(category || "all");
+    setActiveFilter(ENTITY_CATEGORIES.find((c) => c.value === category)?.value ?? "all");
   }, [category]);
 
   useEffect(() => {
@@ -171,7 +176,7 @@ const EntityGalleryPage = () => {
         .eq("project_id", activeProject.id)
         .order("name");
       if (error) console.error("Failed to fetch entities:", error);
-      setEntities((data as any) || []);
+      setEntities((data as EntityRow[]) || []);
       setLoading(false);
     };
     fetchEntities();
@@ -212,7 +217,7 @@ const EntityGalleryPage = () => {
   };
 
   const defaultNewCategory: EntityCategory =
-    (activeFilter !== "all" ? activeFilter : "characters") as EntityCategory;
+    activeFilter !== "all" ? activeFilter : "characters";
 
   const heading = activeTagName
     ? `Tagged: ${activeTagName}`
