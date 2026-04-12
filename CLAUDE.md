@@ -46,9 +46,11 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
   - Entity gallery supports tag filtering via `?tag=<id>` search param with "× Clear tag filter" pill.
 - **Manuscript drag and drop** — scenes in the chapter/scene sidebar are `draggable`. Dragging a scene onto a different chapter's container moves it to that chapter in Supabase and updates the `order` field. Dropped-into chapters auto-expand. Visual highlight (gold glow + ring) on drag-over chapter.
 - **Timeline** — `TimelinePage` reads from `timeline_events` Supabase table (real data, no placeholder). "Generate from Lore" button invokes the `generate-timeline` Supabase Edge Function which reads Event/History entities + scene excerpts, calls claude-sonnet-4-6 via Anthropic API, and inserts the returned `{label, date_label, date_sort, type}[]` events. Events can be deleted (hover reveals trash icon). Edge function is deployed to production.
-- **Lore sync pipeline** — `supabase/functions/sync-lore/index.ts` edge function reads scenes where `is_dirty = true` for a project, calls claude-sonnet-4-6, and writes structured `new_entity` suggestions to `lore_suggestions`. Each suggestion payload contains: `name`, `category`, `description`, `confidence`, `source_scene_title`, `fields` (all At a Glance keys for the category, AI-populated where inferable), `sections` (non-empty article sections with substantive AI-written content), `tags` (lowercase cross-reference strings). Clears `is_dirty` on processed scenes, updates `projects.last_sync_at`, and logs to `sync_log`. Deployed to production. Daily pg_cron job (`daily-lore-sync`, 03:00 UTC) calls the function for all projects via `net.http_post`.
+- **Lore sync pipeline** — `supabase/functions/sync-lore/index.ts` edge function reads scenes where `is_dirty = true` for a project and calls claude-sonnet-4-6 **once per scene** (one API call per scene, single JSON object response). This eliminates JSON truncation that occurred when all scenes were batched into one call. Each suggestion payload contains: `name`, `category`, `description`, `confidence`, `source_scene_title`, `fields` (all At a Glance keys for the category, AI-populated where inferable, matched case-insensitively), `sections` (non-empty article sections, case-insensitive key match), `tags` (lowercase cross-reference strings). Deduplicates by name across scenes (highest confidence wins). Clears `is_dirty` on processed scenes, updates `projects.last_sync_at`, and logs to `sync_log`. Deployed to production. Daily pg_cron job (`daily-lore-sync`, 03:00 UTC) calls the function for all projects via `net.http_post`. Force sync mode (`force=true`) ignores `is_dirty` and processes all scenes — accessible via the "all" button in the sidebar.
 - **Lore Inbox** (`LoreInboxPage`) — fully wired to Supabase. Shows pending `lore_suggestions` for the active project. Each card displays: type badge, category badge, entity name, description, populated At a Glance fields (two-column grid), article section names (pills), suggested tags (gold pills), confidence bar, source scene. **Accept**: inserts entity with pre-populated `fields` and `sections` JSONBs; upserts new tags into `tags` table and links via `entity_tags`; shows "Entity created → View" banner. **Edit**: inline name/description edit before accepting (sets status `edited`). **Reject**: marks `rejected` with `reviewed_at`.
-- **Sidebar — Sync Lore** — `Sidebar.tsx` fetches live pending count from `lore_suggestions` (replacing hardcoded prop). "Sync Lore" button invokes `sync-lore` for the active project, shows spinner, displays brief result message ("N new suggestions" / "Up to date"), then refreshes the count. Button has no `disabled` state (handler guards internally); uses `text-text-secondary` so it's always visibly actionable.
+- **Sidebar — Sync Lore** — `Sidebar.tsx` fetches live pending count from `lore_suggestions` (replacing hardcoded prop). "Sync Lore" button invokes `sync-lore` for the active project, shows spinner, displays brief result message ("N new suggestions" / "No edited scenes" / "N scenes processed, 0 suggestions"), then refreshes the count. Small "all" button triggers force sync. Button has no `disabled` state (handler guards internally).
+- **Entity gallery — view toggle** — card/list toggle in the gallery header, persisted to `localStorage` (`fyrescribe_entity_view_mode`). List view shows category badge, name, summary, tags (up to 3 + overflow count), and 3-dot menu per row.
+- **Entity gallery — 3-dot menu** — Archive (soft-delete via `archived_at`) and Delete (PERMANENTLY DELETE confirmation, cascades `entity_links` + `entity_tags`) on every entity card and list row, matching the projects page interaction pattern. Archived entities appear in a collapsible section at the bottom; click to unarchive. Migration: `20260412210000_entity_archived_at.sql`.
 - **Storage buckets** — `entity-images` (entity gallery images), `manuscripts` (uploaded manuscript files). Both use RLS policies keyed on `storage.foldername(name)[1] = auth.uid()`.
 - **Other pages** — `POVTrackerPage` exists (scaffolded).
 
@@ -59,23 +61,27 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 - Project archiving (column `archived_at` exists on `projects`, not yet used in UI).
 - Timeline: manual "Add Event" button (button exists in UI but is not wired up).
 - Lore Inbox: `field_update`, `contradiction`, and `new_tag` suggestion types are displayed but the sync function only produces `new_entity` suggestions today.
+- Sync Lore progress UI — no per-scene progress feedback while sync is running; sidebar just shows a spinner for the full duration.
+- Character detection prompt tuning — the AI tends to under-detect character entities relative to places/factions; needs prompt experimentation.
 
 ---
 
 ## Where We Left Off
 
-**Session: 2026-04-12 (session 6)**
+**Session: 2026-04-12 (session 7)**
 
-Bug fixes in the lore sync pipeline:
+Lore sync pipeline is working end-to-end. Fields, sections, and tags are populating correctly in accepted entities. Key work this session:
 
-- **Sync Lore button greyed out**: removed `disabled` attribute and `disabled:opacity-40` styling from the Sidebar button; renamed "Sync Now" → "Sync Lore"; raised base color to `text-text-secondary`. The handler already guards against no active project.
-- **Sync only worked once**: `is_dirty` was never set on scene inserts. The `saveScene` debounce correctly sets `is_dirty: true` on edits, but imported scenes and the auto-created Scene 1 were inserted with the DB default (`false`), so sync-lore never found them after the first run. Fixed by adding `is_dirty: true` to both insert paths in `ManuscriptPage.tsx`.
-- `is_dirty` lifecycle is now: `true` on insert → sync reads and clears to `false` → editor save sets back to `true` → next sync picks up changes.
+- **Entity gallery view toggle + 3-dot menu**: card/list toggle (localStorage), Archive + Delete actions matching the projects page pattern.
+- **sync-lore architecture overhaul**: moved from a single all-scenes API call → 5-scene chunks → one call per scene (single JSON object). Each approach was deployed and tested; truncation errors at positions ~7583/7668 confirmed the batch approaches were still hitting token limits. One-call-per-scene with `max_tokens: 1000` eliminates truncation entirely.
+- **Fields/sections fix**: case-insensitive key matching for both `fields` and `sections` so AI casing variations don't silently drop data.
+- **Force sync mode**: "all" button bypasses `is_dirty` filter — useful for re-syncing existing scenes after prompt changes.
 
-**Next logical steps:**
-- Test Sync Lore end-to-end with real manuscript content.
-- Consider extending the sync prompt to also produce `field_update` and `contradiction` suggestion types.
-- Word count tracking — wire up `scenes.word_count` to the editor's save path (already written; just needs wiring).
+**Pending / next logical steps:**
+- Tune the prompt to improve character entity detection (currently under-detects named characters relative to places/factions).
+- Add a progress toast or per-scene counter to the sidebar sync flow so users can see it working on large manuscripts.
+- Consider extending sync to produce `field_update` and `contradiction` suggestion types.
+- Word count tracking — wire up `scenes.word_count` to the editor's save path.
 
 ---
 

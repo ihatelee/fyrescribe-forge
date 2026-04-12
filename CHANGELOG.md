@@ -4,6 +4,46 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-12 (session 7)
+
+### Entity gallery improvements
+
+**`EntityGalleryPage.tsx`**
+- Added card/list view toggle in the gallery header. Preference persisted to `localStorage` (`fyrescribe_entity_view_mode`). List view shows category badge, name, summary, and up to 3 tags per row.
+- Added 3-dot menu on every entity card and list row with **Archive** and **Delete** actions, matching the projects page interaction pattern.
+  - Archive: sets `archived_at` on the entity; entity moves to a collapsible "Archived (N)" section at the bottom. Click to unarchive.
+  - Delete: requires typing `PERMANENTLY DELETE`; cascades to `entity_links` (both directions) and `entity_tags`.
+- `archived_at` added to the `entities` query select.
+
+**`supabase/migrations/20260412210000_entity_archived_at.sql`**
+- Adds `archived_at timestamptz` column to `public.entities`.
+
+**`src/integrations/supabase/types.ts`**
+- Added `archived_at: string | null` to entities Row / Insert / Update.
+
+### Lore sync pipeline — architecture overhaul
+
+**`supabase/functions/sync-lore/index.ts`**
+
+The function went through three iterations this session to fix persistent `Unterminated string in JSON` errors caused by the Anthropic response being truncated at the `max_tokens` ceiling:
+
+1. **Attempt 1 — increase tokens + tighten prompt**: raised `max_tokens` to 4000, capped suggestions at 3, shortened description/section word limits. Still truncating on real manuscript content.
+2. **Attempt 2 — 5-scene chunks**: split scenes into batches of 5, one API call per batch, dedup across batches. Still truncating because even a 5-scene batch with rich sections exceeded output budget.
+3. **Final fix — one call per scene**: `callAnthropicForScene()` makes one Anthropic call per scene, asking for a **single JSON object** (or `null`). `max_tokens` dropped to 1000. One entity object is ~200–400 tokens; truncation is now impossible regardless of manuscript size.
+
+Key properties of the final architecture:
+- `callAnthropicForScene()` never throws — every failure mode (HTTP error, JSON parse error, non-object response) logs the raw text and returns `null`, so one bad scene never aborts the sync.
+- Deduplication by name (case-insensitive) across all scenes; highest-confidence version wins.
+- `is_dirty` lifecycle unchanged: set on insert/edit, cleared after sync.
+- Force sync mode (`force=true`, triggered by the "all" button in the sidebar) still works — processes all scenes regardless of `is_dirty`.
+
+**Also fixed (earlier in session):**
+- `handleAddScene` in `ManuscriptPage.tsx` was missing `is_dirty: true` on manual scene creation.
+- Field and section key matching changed to case-insensitive so AI casing variations (e.g. `"place of birth"` vs `"Place of Birth"`) no longer silently drop data.
+- Added array/type guard (`parsed === null || typeof parsed !== "object"`) to catch malformed AI responses before they crash the function.
+
+---
+
 ## 2026-04-12 (session 6)
 
 ### Bug fixes — lore sync pipeline
