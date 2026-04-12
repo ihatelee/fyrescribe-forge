@@ -191,13 +191,18 @@ async function syncProject(
       .replace(/```\s*$/i, "")
       .trim();
 
-    let suggestions: AISuggestion[];
+    let parsed: unknown;
     try {
-      suggestions = JSON.parse(jsonText);
+      parsed = JSON.parse(jsonText);
     } catch (parseErr) {
       console.error(`[sync-lore] JSON parse error for project ${projectId}. Raw text:`, rawText.slice(0, 800));
       throw parseErr;
     }
+    if (!Array.isArray(parsed)) {
+      console.error(`[sync-lore] Expected JSON array from AI but got ${typeof parsed}. Raw text:`, rawText.slice(0, 800));
+      throw new Error(`AI returned non-array JSON (type=${typeof parsed})`);
+    }
+    const suggestions = parsed as AISuggestion[];
     console.log(`[sync-lore] project=${projectId} suggestions_from_ai=${suggestions.length}`, JSON.stringify(suggestions.map((s) => ({ name: s.name, category: s.category, fieldKeys: Object.keys(s.fields ?? {}), sectionKeys: Object.keys(s.sections ?? {}), confidence: s.confidence }))));
 
     // Map to lore_suggestions rows.
