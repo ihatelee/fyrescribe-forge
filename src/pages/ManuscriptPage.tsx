@@ -498,7 +498,7 @@ const ManuscriptPage = () => {
         </div>
         <div className="flex-1 flex justify-center overflow-y-auto pb-24 relative">
           <div className="w-full max-w-2xl px-8">
-            <div className="font-display text-sm text-gold mb-6">{activeScene?.title}</div>
+            <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} />
             <div
               key={activeSceneId ?? "empty"}
               ref={makeEditorRef(focusEditorRef)}
@@ -721,9 +721,7 @@ const ManuscriptPage = () => {
                 </div>
               ) : (
                 <>
-                  <div className="font-display text-sm text-gold mb-6 tracking-wide">
-                    {activeScene.title}
-                  </div>
+                  <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} />
                   <div
                     key={activeSceneId}
                     ref={makeEditorRef(editorRef)}
