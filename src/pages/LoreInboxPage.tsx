@@ -113,11 +113,9 @@ interface SuggestionCardProps {
   suggestion: LoreSuggestion;
   onAccept: (suggestion: LoreSuggestion, overrides?: { name: string; description: string }) => Promise<void>;
   onReject: (id: string) => Promise<void>;
-  selected?: boolean;
-  onToggleSelect?: (id: string) => void;
 }
 
-const SuggestionCard = ({ suggestion, onAccept, onReject, selected, onToggleSelect }: SuggestionCardProps) => {
+const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps) => {
   const payload = suggestion.payload;
   const config = TYPE_CONFIG[suggestion.type];
   const Icon = config.icon;
@@ -147,19 +145,8 @@ const SuggestionCard = ({ suggestion, onAccept, onReject, selected, onToggleSele
   };
 
   return (
-    <div className="bg-fyrescribe-raised border border-border rounded-lg p-4 flex gap-3">
-      {/* Checkbox */}
-      {onToggleSelect && (
-        <div className="pt-1 flex-shrink-0">
-          <input
-            type="checkbox"
-            checked={selected ?? false}
-            onChange={() => onToggleSelect(suggestion.id)}
-            className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer"
-          />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
+    <div className="bg-fyrescribe-raised border border-border rounded-lg p-4">
+      <div className="min-w-0">
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
         <div className="flex-1 min-w-0">
