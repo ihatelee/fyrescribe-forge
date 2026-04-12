@@ -114,6 +114,60 @@ const ThesaurusPanel = ({
   </div>
 );
 
+// ─── Editable Scene Title (in editor area) ───────────────────────────
+
+const EditableSceneTitle = ({
+  scene,
+  onSave,
+}: {
+  scene: Scene | undefined;
+  onSave: (id: string, title: string) => void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+
+  if (!scene) return null;
+
+  const start = () => {
+    setValue(scene.title);
+    setEditing(true);
+  };
+
+  const commit = () => {
+    setEditing(false);
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== scene.title) {
+      onSave(scene.id, trimmed);
+    }
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        className="font-display text-sm text-gold mb-6 tracking-wide bg-transparent border-b border-gold/50 outline-none w-full"
+      />
+    );
+  }
+
+  return (
+    <div
+      onClick={start}
+      className="font-display text-sm text-gold mb-6 tracking-wide cursor-text hover:border-b hover:border-gold/30 inline-block"
+      title="Click to rename"
+    >
+      {scene.title}
+    </div>
+  );
+};
+
 // ─── Manuscript Page ──────────────────────────────────────────────────
 
 const ManuscriptPage = () => {
