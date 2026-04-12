@@ -9,9 +9,6 @@ const corsHeaders = {
 // Maximum characters of scene content to include per scene in the AI prompt.
 const SCENE_CONTENT_LIMIT = 1200;
 
-// Number of scenes to send per Anthropic API call.
-const SCENES_PER_CHUNK = 5;
-
 // ── Category metadata (mirrors frontend EntityDetailPage constants) ──────────
 
 const CATEGORY_FIELDS: Record<string, string[]> = {
@@ -46,11 +43,8 @@ interface AISuggestion {
   description: string;
   confidence: number;
   source_scene_title?: string;
-  /** At a Glance values — only keys the AI can infer from the text */
   fields?: Record<string, string>;
-  /** Article section content — only sections the AI has evidence for */
   sections?: Record<string, string>;
-  /** Short tag strings for cross-referencing */
   tags?: string[];
 }
 
@@ -64,7 +58,6 @@ serve(async (req) => {
     const { project_id, trigger = "manual", force = false } = body as {
       project_id?: string;
       trigger?: "scheduled" | "manual";
-      /** When true, ignore is_dirty and sync all scenes with content. */
       force?: boolean;
     };
 
@@ -158,69 +151,35 @@ async function syncProject(
       )
       .join("\n");
 
-    // Split scenes into chunks and call Anthropic once per chunk.
-    const chunks: typeof scenes[] = [];
-    for (let i = 0; i < scenes.length; i += SCENES_PER_CHUNK) {
-      chunks.push(scenes.slice(i, i + SCENES_PER_CHUNK));
-    }
+    // ── One API call per scene ───────────────────────────────────────────────
+    // Each call asks for a single JSON object (or null). This keeps output
+    // tokens tiny (~200–400) and makes truncation impossible.
 
     const allSuggestions: AISuggestion[] = [];
 
-    for (const chunk of chunks) {
-      const sceneContext = chunk
-        .map(
-          (s: { title: string; content: string }) =>
-            `Scene "${s.title}":\n${(s.content ?? "").slice(0, SCENE_CONTENT_LIMIT).trim()}`,
-        )
-        .join("\n\n---\n\n");
+    for (const scene of scenes as { id: string; title: string; content: string }[]) {
+      const sceneText = (scene.content ?? "").slice(0, SCENE_CONTENT_LIMIT).trim();
+      if (!sceneText) continue;
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": anthropicKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 4000,
-          messages: [{ role: "user", content: buildPrompt(sceneContext, entityContext) }],
-        }),
-      });
+      const suggestion = await callAnthropicForScene(
+        anthropicKey,
+        scene.title,
+        sceneText,
+        entityContext,
+      );
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Anthropic API error:", errText);
-        await finaliseLog(supabase, logId, "failed", scenes.length, 0);
-        throw new Error("Anthropic API call failed");
+      if (suggestion) {
+        // Stamp the source scene title in case the AI omitted it.
+        suggestion.source_scene_title = suggestion.source_scene_title || scene.title;
+        allSuggestions.push(suggestion);
       }
-
-      const aiResult = await response.json();
-      const rawText: string = aiResult.content?.[0]?.text ?? "[]";
-      const jsonText = rawText
-        .replace(/^```json?\s*/i, "")
-        .replace(/```\s*$/i, "")
-        .trim();
-
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(jsonText);
-      } catch (parseErr) {
-        console.error(`[sync-lore] JSON parse error (chunk). Raw text:`, rawText.slice(0, 800));
-        // Skip this chunk rather than aborting the entire sync.
-        continue;
-      }
-      if (!Array.isArray(parsed)) {
-        console.error(`[sync-lore] Expected JSON array from AI but got ${typeof parsed}. Raw text:`, rawText.slice(0, 800));
-        continue;
-      }
-      allSuggestions.push(...(parsed as AISuggestion[]));
     }
 
-    console.log(`[sync-lore] project=${projectId} chunks=${chunks.length} raw_suggestions=${allSuggestions.length}`);
+    console.log(`[sync-lore] project=${projectId} scenes=${scenes.length} raw_suggestions=${allSuggestions.length}`);
 
-    // Deduplicate by name (case-insensitive) — keep highest-confidence version
-    // when the same entity appears in multiple chunks.
+    // ── Deduplicate by name (case-insensitive) ───────────────────────────────
+    // Keep the highest-confidence version when the same entity appears in
+    // multiple scenes.
     const seenNames = new Map<string, AISuggestion>();
     for (const s of allSuggestions) {
       const key = s.name.trim().toLowerCase();
@@ -232,17 +191,10 @@ async function syncProject(
     const suggestions = [...seenNames.values()];
     console.log(`[sync-lore] after dedup: ${suggestions.length} unique suggestions`);
 
-    // Map to lore_suggestions rows.
+    // ── Map to lore_suggestions rows ─────────────────────────────────────────
     const validCategories = new Set([
-      "characters",
-      "places",
-      "events",
-      "history",
-      "artifacts",
-      "creatures",
-      "magic",
-      "factions",
-      "doctrine",
+      "characters", "places", "events", "history", "artifacts",
+      "creatures", "magic", "factions", "doctrine",
     ]);
 
     const rows = suggestions
@@ -254,37 +206,27 @@ async function syncProject(
           s.confidence >= 0.6,
       )
       .map((s) => {
-        // Build a case-insensitive lookup of AI-returned field values so key
-        // casing differences (e.g. "place of birth" vs "Place of Birth") don't
-        // silently drop data.
+        // Case-insensitive field key lookup so casing variations don't drop data.
         const aiFieldsLower: Record<string, string> = {};
         for (const [k, v] of Object.entries(s.fields ?? {})) {
           if (typeof v === "string") aiFieldsLower[k.toLowerCase()] = v;
         }
-
-        // Populate all expected At a Glance keys; AI values (matched
-        // case-insensitively) override blanks.
         const expectedFields = CATEGORY_FIELDS[s.category] ?? [];
         const fields = Object.fromEntries(
           expectedFields.map((key) => [key, aiFieldsLower[key.toLowerCase()] ?? ""]),
         );
 
-        // Build a case-insensitive lookup of AI-returned section values.
+        // Case-insensitive section key lookup.
         const aiSectionsLower: Record<string, string> = {};
         for (const [k, v] of Object.entries(s.sections ?? {})) {
           if (typeof v === "string" && v.trim()) aiSectionsLower[k.toLowerCase()] = v.trim();
         }
-
-        // Keep only non-empty section values, matched against expected section
-        // names (case-insensitively) so key casing mismatches don't lose data.
         const expectedSections = CATEGORY_SECTIONS[s.category] ?? [];
         const sections: Record<string, string> = {};
         for (const sectionKey of expectedSections) {
           const val = aiSectionsLower[sectionKey.toLowerCase()];
           if (val) sections[sectionKey] = val;
         }
-        // Also capture any AI-returned sections not in the expected list
-        // (future-proofing; won't break the frontend).
         for (const [k, v] of Object.entries(s.sections ?? {})) {
           if (typeof v === "string" && v.trim() && !sections[k]) {
             sections[k] = v.trim();
@@ -339,6 +281,74 @@ async function syncProject(
   }
 }
 
+// ── Per-scene Anthropic call ─────────────────────────────────────────────────
+// Returns a single AISuggestion or null. Never throws — logs and returns null
+// on any error so one bad scene never aborts the whole sync.
+
+async function callAnthropicForScene(
+  anthropicKey: string,
+  sceneTitle: string,
+  sceneText: string,
+  entityContext: string,
+): Promise<AISuggestion | null> {
+  let response: Response;
+  try {
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": anthropicKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: buildPrompt(sceneTitle, sceneText, entityContext) }],
+      }),
+    });
+  } catch (err) {
+    console.error(`[sync-lore] fetch error for scene "${sceneTitle}":`, err);
+    return null;
+  }
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "(unreadable)");
+    console.error(`[sync-lore] Anthropic HTTP ${response.status} for scene "${sceneTitle}":`, errText.slice(0, 400));
+    return null;
+  }
+
+  let aiResult: { content?: { text?: string }[] };
+  try {
+    aiResult = await response.json();
+  } catch (err) {
+    console.error(`[sync-lore] Failed to parse Anthropic response JSON for scene "${sceneTitle}":`, err);
+    return null;
+  }
+
+  const rawText = aiResult.content?.[0]?.text ?? "null";
+  const jsonText = rawText
+    .replace(/^```json?\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    console.error(`[sync-lore] JSON.parse failed for scene "${sceneTitle}". Raw:`, rawText.slice(0, 600));
+    return null;
+  }
+
+  // AI signals "nothing to suggest" with null.
+  if (parsed === null) return null;
+
+  if (typeof parsed !== "object" || Array.isArray(parsed)) {
+    console.error(`[sync-lore] Unexpected JSON type (${typeof parsed}) for scene "${sceneTitle}". Raw:`, rawText.slice(0, 400));
+    return null;
+  }
+
+  return parsed as AISuggestion;
+}
 
 // deno-lint-ignore no-explicit-any
 async function finaliseLog(supabase: any, logId: string | undefined, status: string, scenesProcessed: number, suggestionsCreated: number) {
@@ -350,43 +360,37 @@ async function finaliseLog(supabase: any, logId: string | undefined, status: str
 }
 
 function buildCategoryReference(): string {
-  const lines: string[] = ["CATEGORY REFERENCE — use these when building fields/sections:"];
+  const lines: string[] = ["CATEGORY REFERENCE:"];
   for (const cat of Object.keys(CATEGORY_FIELDS)) {
     const fields = CATEGORY_FIELDS[cat].join(", ");
     const sections = (CATEGORY_SECTIONS[cat] ?? []).join(", ");
-    lines.push(`  ${cat}:`);
-    lines.push(`    At a Glance fields: ${fields}`);
-    lines.push(`    Article sections:   ${sections}`);
+    lines.push(`  ${cat}: fields=[${fields}] sections=[${sections}]`);
   }
   return lines.join("\n");
 }
 
-function buildPrompt(sceneContext: string, entityContext: string): string {
-  return `You are a world-building analyst for a fantasy novel. Extract the 3 most important named entities from the scene excerpts that are worth tracking in a world-building database.
+function buildPrompt(sceneTitle: string, sceneText: string, entityContext: string): string {
+  return `You are a world-building analyst for a fantasy novel. Identify the single most important named entity in the scene below that is worth tracking in a world-building database.
 
-EXISTING ENTITIES — do NOT re-suggest these:
+EXISTING ENTITIES — do NOT suggest these:
 ${entityContext || "(none yet)"}
 
 ${buildCategoryReference()}
 
-SCENE EXCERPTS:
-${sceneContext}
+SCENE "${sceneTitle}":
+${sceneText}
 
-Return a JSON array of exactly 1–3 objects. No prose, no markdown fences. Each object must have these keys:
+Return a single JSON object for the most important entity, or null if there is nothing worth tracking (confidence below 0.6 or no proper nouns).
 
-- "name": string — proper name (1–5 words)
+The JSON object must have exactly these keys:
+- "name": string — proper name, 1–5 words
 - "category": one of "characters"|"places"|"events"|"history"|"artifacts"|"creatures"|"magic"|"factions"|"doctrine"
-- "description": string — max 80 words
+- "description": string — max 60 words
 - "confidence": number 0.0–1.0
-- "source_scene_title": string
-- "fields": object — only include keys from CATEGORY REFERENCE whose values you can infer; omit the rest
-- "sections": object — max 1–2 sections, max 60 words each; use exact section names from CATEGORY REFERENCE
-- "tags": array of 2–4 lowercase strings
+- "source_scene_title": string — use "${sceneTitle}"
+- "fields": object — only keys from CATEGORY REFERENCE you can infer from the text
+- "sections": object — at most 1 section, max 50 words; use exact section name from CATEGORY REFERENCE
+- "tags": array of 2–3 lowercase strings
 
-Rules:
-- Return only the top 3 highest-confidence entities. Quality over quantity.
-- Confidence >= 0.6 only.
-- Proper nouns only. No generic concepts.
-- Do not re-suggest entities already in EXISTING ENTITIES.
-- Output only the JSON array, nothing else.`;
+Output only the JSON object or the word null. No prose, no markdown fences.`;
 }
