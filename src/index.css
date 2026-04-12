@@ -69,16 +69,16 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif);
   }
 }
 
 .font-display {
-  font-family: 'Cinzel', serif;
+  font-family: var(--font-ui, 'Cinzel', serif);
 }
 
 .font-prose {
-  font-family: 'EB Garamond', serif;
+  font-family: var(--font-ui, 'EB Garamond', serif);
 }
 
 /* Scrollbar styling */
