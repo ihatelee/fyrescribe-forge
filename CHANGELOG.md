@@ -4,6 +4,20 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-11 (session 2)
+
+### Theme system — pulled from upstream
+- Six themes (Midnight, Fireside, Lavender Haze, Enchanted, Futureworld, Daylight) via `ThemeContext` + `ThemeSwitcher`. Preferences persisted to `user_preferences` Supabase table (`supabase/migrations/20260412005546_...sql`).
+- Sparkle toggle (`GlobalSparkle` + `StarfieldBackground`) — animated star overlay, persisted alongside theme.
+- Titlebar updated with `ThemeSwitcher` and profile dropdown; inline project title rename.
+- `ProjectsPage` gains duplicate, archive/unarchive, and delete-with-confirmation actions.
+
+### Theme switching bug fix
+- **Problem**: switching away from Futureworld left green text and Silkscreen font visible on some elements.
+- **Root cause**: `--font-ui` was handled via `removeProperty` (unreliable) rather than explicit values, and it served two conflicting roles (system-sans fallback for `body` vs. Cinzel fallback for `.font-display`).
+- **Fix**: split `--font-ui` into `--font-body` + `--font-display`; added all three font vars (`--font-body`, `--font-display`, `--font-prose`) to every theme's `THEME_VARS` with explicit values. `applyTheme` now clears all managed variables before setting the incoming theme (clear-then-set), guaranteeing no value from a previous theme survives. Removed the `if (theme === "futureworld")` special-case block entirely.
+- Updated `index.css`: `body`, `.font-display`, `.font-prose` reference `var(--font-body)`, `var(--font-display)`, `var(--font-prose)` with no fallbacks (always defined). Scrollbar and contenteditable placeholder now use `hsl(var(--bg-hover))` / `hsl(var(--text-dimmed))` instead of hardcoded midnight values.
+
 ## 2026-04-11
 
 ### Manuscript editor UX

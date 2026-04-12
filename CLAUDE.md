@@ -17,7 +17,7 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 ### What is built and working
 
 - **Auth** — Supabase email/password auth via `AuthPage`. `AuthContext` + `ProtectedRoute` gate all app routes.
-- **Projects** — `ProjectsPage` lists all projects for the user. `ProjectContext` + localStorage persist the active project across navigation.
+- **Projects** — `ProjectsPage` lists all projects for the user. `ProjectContext` + localStorage persist the active project across navigation. Projects support inline title rename, duplicate, archive/unarchive, and delete (with typed confirmation).
 - **Onboarding** — `OnboardingPage` offers "Start fresh" (opens `NewProjectModal`) or "Import a manuscript" (opens `ImportModal`). Import uploads the file to the `manuscripts` Supabase storage bucket and saves the storage path to `projects.manuscript_path`.
 - **Manuscript editor** (`ManuscriptPage`) — Three-panel layout: sidebar (chapter/scene tree), editor (contentEditable), detail panel.
   - On first visit with no chapters, auto-creates Chapter 1 + Scene 1.
@@ -30,6 +30,8 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
   - On first load with `manuscript_path` set but no chapters yet, the page downloads the file from storage, strips RTF if `.rtf`, then calls `parseManuscript`.
   - `parseManuscript` splits on double newlines, then re-splits each block at embedded heading lines (handles single-newline manuscripts). Book title (single-line pre-heading block) is skipped.
   - Chapters and scenes are inserted into Supabase sequentially.
+- **Theme system** — `ThemeContext` + `ThemeSwitcher`. Six themes: Midnight, Fireside, Lavender Haze, Enchanted, Futureworld, Daylight. Preferences persisted to `user_preferences` Supabase table. Futureworld uses Silkscreen + Fira Code fonts; all other themes use Cinzel (display) + EB Garamond (prose) + system sans-serif (body). All theme styles — including fonts — flow exclusively through CSS variables (`--font-body`, `--font-display`, `--font-prose`, plus the full set of color tokens). `applyTheme` clears all managed variables before setting the new theme, guaranteeing no bleed-through.
+- **Sparkle toggle** — `GlobalSparkle` + `StarfieldBackground` render an animated star/sparkle overlay, persisted alongside theme preference.
 - **Entity system** — `EntityGalleryPage` + `EntityDetailPage` with categories: characters, places, events, artifacts, creatures, abilities, factions, doctrine. Entities have a `sections` JSONB field for rich article body content and a `gallery_image_urls` array.
 - **Storage buckets** — `entity-images` (entity gallery images), `manuscripts` (uploaded manuscript files). Both use RLS policies keyed on `storage.foldername(name)[1] = auth.uid()`.
 - **Other pages** — `TimelinePage`, `POVTrackerPage`, `LoreInboxPage` exist (scaffolded, content unknown).
@@ -47,11 +49,14 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ## Where We Left Off
 
-**Session: 2026-04-11**
+**Session: 2026-04-11 (continued)**
 
-Fixed the manuscript parser to handle single-newline manuscripts (where the entire file arrives as one block). Added `splitBlockAtEmbeddedHeadings` which re-splits each double-newline block at any embedded heading line, then wired it into the `parseManuscript` pipeline with `.flatMap()`. Also added a rule to skip single-line pre-heading blocks (the book title). Removed debug `console.log` statements. Committed and pushed as `c10d499`.
+Pulled in a batch of upstream changes (theme system, sparkle overlay, project management improvements, Titlebar/Onboarding refactors). Then fixed a theme-switching regression where Futureworld colors (green) and Silkscreen font were not fully clearing when switching to another theme.
 
-The manuscript import pipeline (Part 1) should now correctly detect chapter headings and build the chapter/scene tree from a real novel manuscript.
+Root cause: `--font-ui` and `--font-prose` were handled with `removeProperty` rather than explicit values, and the `--font-ui` variable was serving two divergent roles (body fallback vs. display/Cinzel fallback). Fixed by:
+1. Splitting `--font-ui` into `--font-body` and `--font-display`, both added to every theme's `THEME_VARS` with explicit values.
+2. `applyTheme` now clears ALL managed variables before setting the new theme (clear-then-set pattern).
+3. Scrollbar and contenteditable placeholder in `index.css` updated to use `hsl(var(--bg-hover))` / `hsl(var(--text-dimmed))` instead of hardcoded midnight values.
 
 **Next logical steps:**
 - Test the import end-to-end with a real manuscript file to confirm chapters parse correctly.

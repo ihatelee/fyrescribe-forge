@@ -69,16 +69,16 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif);
+    font-family: var(--font-body);
   }
 }
 
 .font-display {
-  font-family: var(--font-ui, 'Cinzel', serif);
+  font-family: var(--font-display);
 }
 
 .font-prose {
-  font-family: var(--font-prose, 'EB Garamond', serif);
+  font-family: var(--font-prose);
 }
 
 /* Scrollbar styling */
@@ -89,16 +89,16 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(228 18% 20%);
+  background: hsl(var(--bg-hover));
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(228 18% 28%);
+  background: hsl(var(--text-dimmed));
 }
 
 /* Placeholder for empty contentEditable sections */
 [contenteditable]:empty::before {
   content: attr(data-placeholder);
-  color: hsl(228 18% 28%);
+  color: hsl(var(--text-dimmed));
   pointer-events: none;
 }

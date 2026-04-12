@@ -21,8 +21,14 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const useTheme = () => useContext(ThemeContext);
 
+// All variable keys that applyTheme manages — used to clear previous theme before setting new one.
+const ALL_THEME_VAR_KEYS = new Set<string>();
+
 const THEME_VARS: Record<ThemeName, Record<string, string>> = {
   midnight: {
+    "--font-body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+    "--font-display": "'Cinzel', serif",
+    "--font-prose": "'EB Garamond', serif",
     "--background": "228 30% 5%",
     "--foreground": "225 30% 90%",
     "--card": "228 25% 9%",
@@ -63,6 +69,9 @@ const THEME_VARS: Record<ThemeName, Record<string, string>> = {
     "--sidebar-ring": "44 52% 54%",
   },
   fireside: {
+    "--font-body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+    "--font-display": "'Cinzel', serif",
+    "--font-prose": "'EB Garamond', serif",
     "--background": "30 30% 4%",
     "--foreground": "35 40% 88%",
     "--card": "30 30% 7%",
@@ -103,6 +112,9 @@ const THEME_VARS: Record<ThemeName, Record<string, string>> = {
     "--sidebar-ring": "24 75% 52%",
   },
   futureworld: {
+    "--font-body": "'Silkscreen', monospace",
+    "--font-display": "'Silkscreen', monospace",
+    "--font-prose": "'Fira Code', monospace",
     "--background": "0 0% 0%",
     "--foreground": "135 100% 50%",
     "--card": "0 0% 4%",
@@ -143,6 +155,9 @@ const THEME_VARS: Record<ThemeName, Record<string, string>> = {
     "--sidebar-ring": "168 100% 50%",
   },
   lavender: {
+    "--font-body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+    "--font-display": "'Cinzel', serif",
+    "--font-prose": "'EB Garamond', serif",
     "--background": "270 30% 6%",
     "--foreground": "270 20% 90%",
     "--card": "270 28% 9%",
@@ -183,6 +198,9 @@ const THEME_VARS: Record<ThemeName, Record<string, string>> = {
     "--sidebar-ring": "260 45% 66%",
   },
   daylight: {
+    "--font-body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+    "--font-display": "'Cinzel', serif",
+    "--font-prose": "'EB Garamond', serif",
     "--background": "40 25% 96%",
     "--foreground": "0 0% 10%",
     "--card": "0 0% 100%",
@@ -223,6 +241,9 @@ const THEME_VARS: Record<ThemeName, Record<string, string>> = {
     "--sidebar-ring": "30 55% 34%",
   },
   enchanted: {
+    "--font-body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+    "--font-display": "'Cinzel', serif",
+    "--font-prose": "'EB Garamond', serif",
     "--background": "140 25% 4%",
     "--foreground": "170 30% 88%",
     "--card": "140 22% 7%",
@@ -264,19 +285,23 @@ const THEME_VARS: Record<ThemeName, Record<string, string>> = {
   },
 };
 
+// Populate ALL_THEME_VAR_KEYS once at module load so applyTheme can do a full clear.
+for (const vars of Object.values(THEME_VARS)) {
+  for (const key of Object.keys(vars)) {
+    ALL_THEME_VAR_KEYS.add(key);
+  }
+}
+
 function applyTheme(theme: ThemeName) {
   const vars = THEME_VARS[theme];
   const root = document.documentElement;
+  // Clear every managed variable first so no value from the previous theme bleeds through.
+  for (const key of ALL_THEME_VAR_KEYS) {
+    root.style.removeProperty(key);
+  }
+  // Set all variables for the incoming theme.
   for (const [key, val] of Object.entries(vars)) {
     root.style.setProperty(key, val);
-  }
-  // Apply Silkscreen font for Futureworld theme
-  if (theme === "futureworld") {
-    root.style.setProperty("--font-ui", "'Silkscreen', monospace");
-    root.style.setProperty("--font-prose", "'Fira Code', monospace");
-  } else {
-    root.style.removeProperty("--font-ui");
-    root.style.removeProperty("--font-prose");
   }
 }
 
