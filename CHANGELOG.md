@@ -4,6 +4,23 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-12 (session 6)
+
+### Bug fixes — lore sync pipeline
+
+**Sidebar (`Sidebar.tsx`)**
+- Removed `disabled` attribute and `disabled:opacity-40 disabled:cursor-not-allowed` styling from the Sync button — it appeared permanently greyed-out because the base color (`text-text-dimmed`) matched the disabled appearance. The `handleSync` handler already returns early if there is no active project.
+- Renamed "Sync Now" → "Sync Lore".
+- Base color raised to `text-text-secondary` so the button is visibly actionable at all times.
+
+**ManuscriptPage (`ManuscriptPage.tsx`)**
+- Added `is_dirty: true` to the manuscript import scene insert batch. Previously scenes were inserted without the flag, inheriting the DB default `false`, so `sync-lore` never found them unless the user manually edited each scene first.
+- Added `is_dirty: true` to the blank-project auto-create Scene 1 insert for the same reason.
+- Root cause of "sync only works once": `is_dirty` was `false` on all freshly-inserted scenes. The debounced `saveScene` already correctly sets `is_dirty: true` on every edit; that path was not the bug.
+- `is_dirty` lifecycle is now fully correct: `true` on insert → sync reads and clears to `false` → any subsequent edit sets it back to `true` → next sync picks up changes.
+
+---
+
 ## 2026-04-12 (session 5)
 
 ### Lore sync pipeline

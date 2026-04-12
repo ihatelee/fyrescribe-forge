@@ -48,7 +48,7 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 - **Timeline** — `TimelinePage` reads from `timeline_events` Supabase table (real data, no placeholder). "Generate from Lore" button invokes the `generate-timeline` Supabase Edge Function which reads Event/History entities + scene excerpts, calls claude-sonnet-4-6 via Anthropic API, and inserts the returned `{label, date_label, date_sort, type}[]` events. Events can be deleted (hover reveals trash icon). Edge function is deployed to production.
 - **Lore sync pipeline** — `supabase/functions/sync-lore/index.ts` edge function reads scenes where `is_dirty = true` for a project, calls claude-sonnet-4-6, and writes structured `new_entity` suggestions to `lore_suggestions`. Each suggestion payload contains: `name`, `category`, `description`, `confidence`, `source_scene_title`, `fields` (all At a Glance keys for the category, AI-populated where inferable), `sections` (non-empty article sections with substantive AI-written content), `tags` (lowercase cross-reference strings). Clears `is_dirty` on processed scenes, updates `projects.last_sync_at`, and logs to `sync_log`. Deployed to production. Daily pg_cron job (`daily-lore-sync`, 03:00 UTC) calls the function for all projects via `net.http_post`.
 - **Lore Inbox** (`LoreInboxPage`) — fully wired to Supabase. Shows pending `lore_suggestions` for the active project. Each card displays: type badge, category badge, entity name, description, populated At a Glance fields (two-column grid), article section names (pills), suggested tags (gold pills), confidence bar, source scene. **Accept**: inserts entity with pre-populated `fields` and `sections` JSONBs; upserts new tags into `tags` table and links via `entity_tags`; shows "Entity created → View" banner. **Edit**: inline name/description edit before accepting (sets status `edited`). **Reject**: marks `rejected` with `reviewed_at`.
-- **Sidebar — Sync Now** — `Sidebar.tsx` fetches live pending count from `lore_suggestions` (replacing hardcoded prop). "Sync Now" button invokes `sync-lore` for the active project, shows spinner, displays brief result message ("N new suggestions" / "Up to date"), then refreshes the count.
+- **Sidebar — Sync Lore** — `Sidebar.tsx` fetches live pending count from `lore_suggestions` (replacing hardcoded prop). "Sync Lore" button invokes `sync-lore` for the active project, shows spinner, displays brief result message ("N new suggestions" / "Up to date"), then refreshes the count. Button has no `disabled` state (handler guards internally); uses `text-text-secondary` so it's always visibly actionable.
 - **Storage buckets** — `entity-images` (entity gallery images), `manuscripts` (uploaded manuscript files). Both use RLS policies keyed on `storage.foldername(name)[1] = auth.uid()`.
 - **Other pages** — `POVTrackerPage` exists (scaffolded).
 
@@ -64,20 +64,18 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ## Where We Left Off
 
-**Session: 2026-04-12 (session 5)**
+**Session: 2026-04-12 (session 6)**
 
-Completed the lore sync pipeline and Lore Inbox end-to-end:
+Bug fixes in the lore sync pipeline:
 
-- **`sync-lore` edge function** built and deployed. Reads dirty scenes, calls claude-sonnet-4-6 with a category-reference block so the AI populates exact At a Glance field keys and article section names. Payload stores `fields`, `sections`, `tags` alongside the existing `name`/`category`/`description`/`confidence`. Daily pg_cron job wired up.
-- **Lore Inbox UI** (`LoreInboxPage`) fully wired. Accept flow creates the entity with pre-populated `fields` + `sections` JSONBs and upserts/links tags. Edit mode allows name/description correction before accepting. Card preview shows all AI-extracted data.
-- **Sidebar Sync Now** button added; live pending count replaces hardcoded prop.
+- **Sync Lore button greyed out**: removed `disabled` attribute and `disabled:opacity-40` styling from the Sidebar button; renamed "Sync Now" → "Sync Lore"; raised base color to `text-text-secondary`. The handler already guards against no active project.
+- **Sync only worked once**: `is_dirty` was never set on scene inserts. The `saveScene` debounce correctly sets `is_dirty: true` on edits, but imported scenes and the auto-created Scene 1 were inserted with the DB default (`false`), so sync-lore never found them after the first run. Fixed by adding `is_dirty: true` to both insert paths in `ManuscriptPage.tsx`.
+- `is_dirty` lifecycle is now: `true` on insert → sync reads and clears to `false` → editor save sets back to `true` → next sync picks up changes.
 
 **Next logical steps:**
-- Deploy `sync-lore`: `supabase functions deploy sync-lore` (if not already done via dashboard).
-- Confirm `ANTHROPIC_API_KEY` secret is set (Settings → Edge Functions → Secrets).
-- Test Sync Now end-to-end with real manuscript content.
+- Test Sync Lore end-to-end with real manuscript content.
 - Consider extending the sync prompt to also produce `field_update` and `contradiction` suggestion types.
-- Word count tracking — wire up `scenes.word_count` to the editor's save path.
+- Word count tracking — wire up `scenes.word_count` to the editor's save path (already written; just needs wiring).
 
 ---
 
