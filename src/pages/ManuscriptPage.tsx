@@ -386,6 +386,11 @@ const ManuscriptPage = () => {
     setWordCount(scene.word_count ?? 0);
   };
 
+  const handleSceneTitleSave = async (sceneId: string, newTitle: string) => {
+    setScenes((prev) => prev.map((s) => s.id === sceneId ? { ...s, title: newTitle } : s));
+    await supabase.from("scenes").update({ title: newTitle }).eq("id", sceneId);
+  };
+
   const toggleChapter = (id: string) => {
     setExpandedChapters((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
