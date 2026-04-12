@@ -173,7 +173,7 @@ const ProjectsPage = () => {
   return (
     <div className="min-h-screen">
       <Titlebar />
-      <main className="pt-12">
+      <main className="pt-20">
         <div className="max-w-5xl mx-auto px-8 py-12">
           <div className="flex items-center justify-between mb-8">
             <h1 className="font-display text-2xl text-foreground tracking-wide">
