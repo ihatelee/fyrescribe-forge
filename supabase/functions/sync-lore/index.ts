@@ -43,6 +43,8 @@ interface AISuggestion {
   description: string;
   confidence: number;
   source_scene_title?: string;
+  /** Verbatim sentence from the scene where the entity first appears */
+  source_sentence?: string;
   fields?: Record<string, string>;
   sections?: Record<string, string>;
   tags?: string[];
@@ -161,17 +163,17 @@ async function syncProject(
       const sceneText = (scene.content ?? "").slice(0, SCENE_CONTENT_LIMIT).trim();
       if (!sceneText) continue;
 
-      const suggestion = await callAnthropicForScene(
+      const sceneSuggestions = await callAnthropicForScene(
         anthropicKey,
         scene.title,
         sceneText,
         entityContext,
       );
 
-      if (suggestion) {
+      for (const s of sceneSuggestions) {
         // Stamp the source scene title in case the AI omitted it.
-        suggestion.source_scene_title = suggestion.source_scene_title || scene.title;
-        allSuggestions.push(suggestion);
+        s.source_scene_title = s.source_scene_title || scene.title;
+        allSuggestions.push(s);
       }
     }
 
@@ -203,7 +205,7 @@ async function syncProject(
           s.name &&
           validCategories.has(s.category) &&
           typeof s.confidence === "number" &&
-          s.confidence >= 0.6,
+          s.confidence >= 0.4,
       )
       .map((s) => {
         // Case-insensitive field key lookup so casing variations don't drop data.
@@ -242,6 +244,9 @@ async function syncProject(
             description: s.description ?? "",
             confidence: Math.min(1, Math.max(0, s.confidence)),
             source_scene_title: s.source_scene_title ?? null,
+            source_sentence: typeof s.source_sentence === "string" && s.source_sentence.trim()
+              ? s.source_sentence.trim()
+              : null,
             fields,
             sections,
             tags: Array.isArray(s.tags)
@@ -282,15 +287,15 @@ async function syncProject(
 }
 
 // ── Per-scene Anthropic call ─────────────────────────────────────────────────
-// Returns a single AISuggestion or null. Never throws — logs and returns null
-// on any error so one bad scene never aborts the whole sync.
+// Returns an array of AISuggestions (empty array on any error). Never throws —
+// a bad scene is logged and skipped so it never aborts the whole sync.
 
 async function callAnthropicForScene(
   anthropicKey: string,
   sceneTitle: string,
   sceneText: string,
   entityContext: string,
-): Promise<AISuggestion | null> {
+): Promise<AISuggestion[]> {
   let response: Response;
   try {
     response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -302,19 +307,19 @@ async function callAnthropicForScene(
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 1000,
+        max_tokens: 1500,
         messages: [{ role: "user", content: buildPrompt(sceneTitle, sceneText, entityContext) }],
       }),
     });
   } catch (err) {
     console.error(`[sync-lore] fetch error for scene "${sceneTitle}":`, err);
-    return null;
+    return [];
   }
 
   if (!response.ok) {
     const errText = await response.text().catch(() => "(unreadable)");
     console.error(`[sync-lore] Anthropic HTTP ${response.status} for scene "${sceneTitle}":`, errText.slice(0, 400));
-    return null;
+    return [];
   }
 
   let aiResult: { content?: { text?: string }[] };
@@ -322,10 +327,10 @@ async function callAnthropicForScene(
     aiResult = await response.json();
   } catch (err) {
     console.error(`[sync-lore] Failed to parse Anthropic response JSON for scene "${sceneTitle}":`, err);
-    return null;
+    return [];
   }
 
-  const rawText = aiResult.content?.[0]?.text ?? "null";
+  const rawText = aiResult.content?.[0]?.text ?? "[]";
   const jsonText = rawText
     .replace(/^```json?\s*/i, "")
     .replace(/```\s*$/i, "")
@@ -336,18 +341,15 @@ async function callAnthropicForScene(
     parsed = JSON.parse(jsonText);
   } catch {
     console.error(`[sync-lore] JSON.parse failed for scene "${sceneTitle}". Raw:`, rawText.slice(0, 600));
-    return null;
+    return [];
   }
 
-  // AI signals "nothing to suggest" with null.
-  if (parsed === null) return null;
-
-  if (typeof parsed !== "object" || Array.isArray(parsed)) {
-    console.error(`[sync-lore] Unexpected JSON type (${typeof parsed}) for scene "${sceneTitle}". Raw:`, rawText.slice(0, 400));
-    return null;
+  if (!Array.isArray(parsed)) {
+    console.error(`[sync-lore] Expected array for scene "${sceneTitle}", got ${typeof parsed}. Raw:`, rawText.slice(0, 400));
+    return [];
   }
 
-  return parsed as AISuggestion;
+  return parsed as AISuggestion[];
 }
 
 // deno-lint-ignore no-explicit-any
@@ -370,9 +372,9 @@ function buildCategoryReference(): string {
 }
 
 function buildPrompt(sceneTitle: string, sceneText: string, entityContext: string): string {
-  return `You are a world-building analyst for a fantasy novel. Identify the single most important named entity in the scene below that is worth tracking in a world-building database.
+  return `You are a world-building database for a fantasy novel. Your job is to extract EVERY named entity from the scene — err heavily on the side of inclusion. If something has a name, suggest it.
 
-EXISTING ENTITIES — do NOT suggest these:
+EXISTING ENTITIES — do NOT re-suggest these:
 ${entityContext || "(none yet)"}
 
 ${buildCategoryReference()}
@@ -380,17 +382,20 @@ ${buildCategoryReference()}
 SCENE "${sceneTitle}":
 ${sceneText}
 
-Return a single JSON object for the most important entity, or null if there is nothing worth tracking (confidence below 0.6 or no proper nouns).
+Extract ALL named entities: every named character (including minor ones), every named place (cities, regions, buildings, streets), every named organisation or faction, every named object or artifact, every named creature species, every named event, every named belief system or doctrine, every named magic system. If it has a proper noun, it belongs in the database.
 
-The JSON object must have exactly these keys:
-- "name": string — proper name, 1–5 words
+Return a JSON array of up to 5 objects — one per entity. Return an empty array [] if the scene has no proper nouns at all.
+
+Each object must have exactly these keys:
+- "name": string — the proper name, 1–5 words
 - "category": one of "characters"|"places"|"events"|"history"|"artifacts"|"creatures"|"magic"|"factions"|"doctrine"
-- "description": string — max 60 words
-- "confidence": number 0.0–1.0
-- "source_scene_title": string — use "${sceneTitle}"
-- "fields": object — only keys from CATEGORY REFERENCE you can infer from the text
-- "sections": object — at most 1 section, max 50 words; use exact section name from CATEGORY REFERENCE
+- "description": string — max 40 words, factual, based only on what the scene says
+- "confidence": number 0.4–1.0 — use 0.4–0.6 for entities mentioned only briefly, 0.7–1.0 for entities with meaningful detail
+- "source_scene_title": string — always "${sceneTitle}"
+- "source_sentence": string — the single sentence from the scene where this entity first appears, copied verbatim
+- "fields": object — only include keys from CATEGORY REFERENCE whose values you can infer from the text
+- "sections": object — at most 1 section, max 40 words; use exact section name from CATEGORY REFERENCE
 - "tags": array of 2–3 lowercase strings
 
-Output only the JSON object or the word null. No prose, no markdown fences.`;
+Output only the JSON array. No prose, no markdown fences.`;
 }
