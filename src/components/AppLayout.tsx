@@ -9,7 +9,7 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children, showSidebar = true }: AppLayoutProps) => {
   return (
-    <div className="min-h-screen bg-fyrescribe-deepest">
+    <div className="min-h-screen">
       <Titlebar />
       {showSidebar && <Sidebar />}
       <main

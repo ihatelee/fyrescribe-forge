@@ -486,7 +486,7 @@ const ManuscriptPage = () => {
 
   if (focusMode) {
     return (
-      <div className="fixed inset-0 bg-fyrescribe-deepest z-[100] flex flex-col">
+      <div className="fixed inset-0 bg-background z-[100] flex flex-col">
         <div className="flex items-center justify-between p-3">
           {toolbar}
           <button
@@ -663,7 +663,7 @@ const ManuscriptPage = () => {
     <AppLayout>
       <div className="flex h-[calc(100vh-48px)]">
         {/* Editor area */}
-        <div className="flex-1 flex flex-col bg-fyrescribe-deepest overflow-hidden relative">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Toolbar */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-fyrescribe-base">
             <div className="flex items-center gap-1">
