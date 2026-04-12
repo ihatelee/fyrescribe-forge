@@ -4,6 +4,16 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-12
+
+### Deployment and type-sync cleanup
+
+- Deployed `generate-timeline` Supabase Edge Function to production.
+- Synced `src/integrations/supabase/types.ts` to match the live production DB. Discovered that migration `20260413000000_entity_category_updates.sql` (rename `abilities`→`magic`, add `history`) has not been applied to production; types reflect the real DB state (`abilities`, no `history`).
+- Added `as EntityCategory` casts on `"history"` and `"magic"` values in `EntityGalleryPage.tsx`, and `as any` cast on `filterCategory` in `EntityDetailPage.tsx` (`LinkEntityModal`) to keep the build passing until the migration is applied to production.
+
+---
+
 ## 2026-04-11 (session 3)
 
 ### Entity system — 10-feature batch

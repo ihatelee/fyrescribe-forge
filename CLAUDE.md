@@ -33,7 +33,7 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 - **Theme system** — `ThemeContext` + `ThemeSwitcher`. Six themes: Midnight, Fireside, Lavender Haze, Enchanted, Futureworld, Daylight. Preferences persisted to `user_preferences` Supabase table. Futureworld uses Silkscreen + Fira Code fonts; all other themes use Cinzel (display) + EB Garamond (prose) + system sans-serif (body). All theme styles — including fonts — flow exclusively through CSS variables (`--font-body`, `--font-display`, `--font-prose`, plus the full set of color tokens). `applyTheme` clears all managed variables before setting the new theme, guaranteeing no bleed-through.
 - **Sparkle toggle** — `GlobalSparkle` + `StarfieldBackground` render an animated star/sparkle overlay, persisted alongside theme preference.
 - **Entity system** — `EntityGalleryPage` + `EntityDetailPage` with 9 categories: characters, places, events, history, artifacts, creatures, magic, factions, doctrine.
-  - `abilities` enum value renamed to `magic`; `history` added as a new enum value (`supabase/migrations/20260413000000_entity_category_updates.sql`).
+  - `abilities` enum value renamed to `magic`; `history` added as a new enum value (`supabase/migrations/20260413000000_entity_category_updates.sql`). **Note:** this migration has NOT yet been applied to production. The generated `types.ts` still reflects the live DB (`abilities`, no `history`). TypeScript `as EntityCategory` / `as any` casts in `EntityGalleryPage` and `EntityDetailPage` paper over the mismatch until the migration runs.
   - POV Tracker removed from sidebar (route kept in App.tsx).
   - Each category has structured "At a Glance" fields (seeded from `CATEGORY_FIELDS` constant if empty). Field values that exactly match a project tag name render as clickable gold pills.
   - `sections` JSONB stores rich article sections; each category has a predefined section list.
@@ -45,7 +45,7 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
   - Smart tag clicking: 1 matching entity → navigate directly; >1 → filtered gallery at `/world?tag=tagId`. Applies on gallery cards and entity detail header tags.
   - Entity gallery supports tag filtering via `?tag=<id>` search param with "× Clear tag filter" pill.
 - **Manuscript drag and drop** — scenes in the chapter/scene sidebar are `draggable`. Dragging a scene onto a different chapter's container moves it to that chapter in Supabase and updates the `order` field. Dropped-into chapters auto-expand. Visual highlight (gold glow + ring) on drag-over chapter.
-- **Timeline** — `TimelinePage` reads from `timeline_events` Supabase table (real data, no placeholder). "Generate from Lore" button invokes the `generate-timeline` Supabase Edge Function which reads Event/History entities + scene excerpts, calls claude-sonnet-4-6 via Anthropic API, and inserts the returned `{label, date_label, date_sort, type}[]` events. Events can be deleted (hover reveals trash icon).
+- **Timeline** — `TimelinePage` reads from `timeline_events` Supabase table (real data, no placeholder). "Generate from Lore" button invokes the `generate-timeline` Supabase Edge Function which reads Event/History entities + scene excerpts, calls claude-sonnet-4-6 via Anthropic API, and inserts the returned `{label, date_label, date_sort, type}[]` events. Events can be deleted (hover reveals trash icon). Edge function is deployed to production.
 - **Storage buckets** — `entity-images` (entity gallery images), `manuscripts` (uploaded manuscript files). Both use RLS policies keyed on `storage.foldername(name)[1] = auth.uid()`.
 - **Other pages** — `POVTrackerPage`, `LoreInboxPage` exist (scaffolded).
 
@@ -62,19 +62,19 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ## Where We Left Off
 
-**Session: 2026-04-11 (session 3)**
+**Session: 2026-04-12**
 
-Completed a 10-feature batch. Features 1–7 were implemented in the entity system (see Current State above). Features 8 and 10 were completed this session:
+Deployment and type-sync cleanup after the session-3 feature batch:
 
-- **Feature 8 — Drag and drop scenes**: `ManuscriptPage.tsx` — scenes are now `draggable`; `handleDropSceneOnChapter` moves the scene to the target chapter in Supabase and reorders; visual gold-glow highlight on drag-over chapter.
-- **Feature 10 — Timeline generate from lore**: `TimelinePage.tsx` replaced placeholder data with real `timeline_events` Supabase queries; "Generate from Lore" button invokes new `supabase/functions/generate-timeline/index.ts` edge function (Deno, calls Anthropic claude-sonnet-4-6, inserts results into `timeline_events`). Events are deletable via a hover-reveal trash icon.
-
-Feature 9 (hide POV Tracker from sidebar) was part of the previous batch — already done.
+- **`generate-timeline` edge function deployed** to production Supabase. `ANTHROPIC_API_KEY` secret must still be confirmed set in the Supabase project dashboard.
+- **Supabase types synced** (`src/integrations/supabase/types.ts`) to match the live production DB. This revealed that migration `20260413000000_entity_category_updates.sql` (rename `abilities`→`magic`, add `history`) has **not** been applied to production yet. The types reverted to show `abilities` (no `magic`, no `history`).
+- **TypeScript workaround casts** added in `EntityGalleryPage.tsx` and `EntityDetailPage.tsx` (`value: "history" as EntityCategory`, `value: "magic" as EntityCategory`, `filterCategory as any`) to keep the build passing despite the type mismatch. These should be removed once the migration runs.
 
 **Next logical steps:**
-- Deploy the `generate-timeline` edge function and set `ANTHROPIC_API_KEY` secret in Supabase project.
-- Run DB migration `20260413000000_entity_category_updates.sql` against production to rename `abilities`→`magic` and add `history`.
-- Test the import end-to-end with a real manuscript file.
+- Run DB migration `20260413000000_entity_category_updates.sql` against production (`supabase db push` or Supabase dashboard SQL editor), then regenerate types to remove the `as` casts.
+- Confirm `ANTHROPIC_API_KEY` secret is set in the Supabase project (Settings → Edge Functions → Secrets).
+- Test "Generate from Lore" end-to-end in production.
+- Test the manuscript import end-to-end with a real file.
 - Begin Part 2: AI-powered lore extraction from manuscript scenes into `lore_suggestions`.
 
 ---

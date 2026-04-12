@@ -12,10 +12,10 @@ const ENTITY_CATEGORIES: { value: EntityCategory; label: string }[] = [
   { value: "characters", label: "Characters" },
   { value: "places", label: "Places" },
   { value: "events", label: "Events" },
-  { value: "history" as EntityCategory, label: "History" },
+  { value: "history", label: "History" },
   { value: "artifacts", label: "Artifacts" },
   { value: "creatures", label: "Creatures" },
-  { value: "magic" as EntityCategory, label: "Magic" },
+  { value: "magic", label: "Magic" },
   { value: "factions", label: "Factions" },
   { value: "doctrine", label: "Doctrine" },
 ];
