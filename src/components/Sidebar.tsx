@@ -44,6 +44,7 @@ const Sidebar = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [fullSyncNote, setFullSyncNote] = useState(false);
 
   const fetchPendingCount = useCallback(async () => {
     if (!activeProject) {
@@ -105,8 +106,8 @@ const Sidebar = () => {
         onClick={() => navigate(path)}
         className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] rounded-sm transition-colors relative ${
           active
-            ? "text-gold-bright bg-gold-glow border-l-2 border-gold pl-[10px]"
-            : "text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover border-l-2 border-transparent pl-[10px]"
+            ? "text-gold-bright bg-gold-glow border border-gold"
+            : "text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover border border-transparent"
         }`}
       >
         <Icon size={14} />
@@ -142,7 +143,14 @@ const Sidebar = () => {
       </div>
 
       <div className="p-2 border-t border-border space-y-1">
-        {/* Sync Lore + Force Sync */}
+        {/* Full sync patience note */}
+        {fullSyncNote && (
+          <p className="px-3 py-1.5 text-[10px] text-gold/80 bg-gold/5 border border-gold/10 rounded-md">
+            Full syncs can take some time, please be patient.
+          </p>
+        )}
+
+        {/* Sync Lore + Full Sync */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => handleSync(false)}
@@ -154,10 +162,10 @@ const Sidebar = () => {
           <button
             onClick={() => handleSync(true)}
             disabled={syncing}
-            title="Force sync — ignores is_dirty, processes all scenes"
-            className="px-2 py-1.5 text-[10px] rounded-md transition-colors text-text-dimmed hover:text-orange-400 hover:bg-fyrescribe-hover disabled:opacity-40"
+            title="Full sync — ignores is_dirty, processes all scenes"
+            className="px-2 py-1.5 text-[10px] rounded-md transition-colors text-text-dimmed hover:text-gold hover:bg-fyrescribe-hover disabled:opacity-40"
           >
-            all
+            Full sync
           </button>
         </div>
         {syncMessage && (
