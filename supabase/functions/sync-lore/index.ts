@@ -9,6 +9,9 @@ const corsHeaders = {
 // Maximum characters of scene content to include per scene in the AI prompt.
 const SCENE_CONTENT_LIMIT = 1200;
 
+// Number of scenes to send per Anthropic API call.
+const SCENES_PER_CHUNK = 5;
+
 // ── Category metadata (mirrors frontend EntityDetailPage constants) ──────────
 
 const CATEGORY_FIELDS: Record<string, string[]> = {
@@ -148,13 +151,6 @@ async function syncProject(
       .select("name, category, summary")
       .eq("project_id", projectId);
 
-    const sceneContext = scenes
-      .map(
-        (s: { title: string; content: string }) =>
-          `Scene "${s.title}":\n${(s.content ?? "").slice(0, SCENE_CONTENT_LIMIT).trim()}`,
-      )
-      .join("\n\n---\n\n");
-
     const entityContext = (existingEntities ?? [])
       .map(
         (e: { name: string; category: string; summary?: string }) =>
@@ -162,48 +158,79 @@ async function syncProject(
       )
       .join("\n");
 
-    // Call Anthropic.
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4000,
-        messages: [{ role: "user", content: buildPrompt(sceneContext, entityContext) }],
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Anthropic API error:", errText);
-      await finaliseLog(supabase, logId, "failed", scenes.length, 0);
-      throw new Error("Anthropic API call failed");
+    // Split scenes into chunks and call Anthropic once per chunk.
+    const chunks: typeof scenes[] = [];
+    for (let i = 0; i < scenes.length; i += SCENES_PER_CHUNK) {
+      chunks.push(scenes.slice(i, i + SCENES_PER_CHUNK));
     }
 
-    const aiResult = await response.json();
-    const rawText: string = aiResult.content?.[0]?.text ?? "[]";
-    const jsonText = rawText
-      .replace(/^```json?\s*/i, "")
-      .replace(/```\s*$/i, "")
-      .trim();
+    const allSuggestions: AISuggestion[] = [];
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(jsonText);
-    } catch (parseErr) {
-      console.error(`[sync-lore] JSON parse error for project ${projectId}. Raw text:`, rawText.slice(0, 800));
-      throw parseErr;
+    for (const chunk of chunks) {
+      const sceneContext = chunk
+        .map(
+          (s: { title: string; content: string }) =>
+            `Scene "${s.title}":\n${(s.content ?? "").slice(0, SCENE_CONTENT_LIMIT).trim()}`,
+        )
+        .join("\n\n---\n\n");
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": anthropicKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 4000,
+          messages: [{ role: "user", content: buildPrompt(sceneContext, entityContext) }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Anthropic API error:", errText);
+        await finaliseLog(supabase, logId, "failed", scenes.length, 0);
+        throw new Error("Anthropic API call failed");
+      }
+
+      const aiResult = await response.json();
+      const rawText: string = aiResult.content?.[0]?.text ?? "[]";
+      const jsonText = rawText
+        .replace(/^```json?\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch (parseErr) {
+        console.error(`[sync-lore] JSON parse error (chunk). Raw text:`, rawText.slice(0, 800));
+        // Skip this chunk rather than aborting the entire sync.
+        continue;
+      }
+      if (!Array.isArray(parsed)) {
+        console.error(`[sync-lore] Expected JSON array from AI but got ${typeof parsed}. Raw text:`, rawText.slice(0, 800));
+        continue;
+      }
+      allSuggestions.push(...(parsed as AISuggestion[]));
     }
-    if (!Array.isArray(parsed)) {
-      console.error(`[sync-lore] Expected JSON array from AI but got ${typeof parsed}. Raw text:`, rawText.slice(0, 800));
-      throw new Error(`AI returned non-array JSON (type=${typeof parsed})`);
+
+    console.log(`[sync-lore] project=${projectId} chunks=${chunks.length} raw_suggestions=${allSuggestions.length}`);
+
+    // Deduplicate by name (case-insensitive) — keep highest-confidence version
+    // when the same entity appears in multiple chunks.
+    const seenNames = new Map<string, AISuggestion>();
+    for (const s of allSuggestions) {
+      const key = s.name.trim().toLowerCase();
+      const existing = seenNames.get(key);
+      if (!existing || s.confidence > existing.confidence) {
+        seenNames.set(key, s);
+      }
     }
-    const suggestions = parsed as AISuggestion[];
-    console.log(`[sync-lore] project=${projectId} suggestions_from_ai=${suggestions.length}`, JSON.stringify(suggestions.map((s) => ({ name: s.name, category: s.category, fieldKeys: Object.keys(s.fields ?? {}), sectionKeys: Object.keys(s.sections ?? {}), confidence: s.confidence }))));
+    const suggestions = [...seenNames.values()];
+    console.log(`[sync-lore] after dedup: ${suggestions.length} unique suggestions`);
 
     // Map to lore_suggestions rows.
     const validCategories = new Set([
