@@ -491,10 +491,9 @@ export type Database = {
         | "characters"
         | "places"
         | "events"
-        | "history"
         | "artifacts"
         | "creatures"
-        | "magic"
+        | "abilities"
         | "factions"
         | "doctrine"
       lore_suggestion_status: "pending" | "accepted" | "edited" | "rejected"
@@ -637,10 +636,9 @@ export const Constants = {
         "characters",
         "places",
         "events",
-        "history",
         "artifacts",
         "creatures",
-        "magic",
+        "abilities",
         "factions",
         "doctrine",
       ],
