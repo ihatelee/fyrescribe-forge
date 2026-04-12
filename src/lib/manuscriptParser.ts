@@ -65,11 +65,22 @@ export function parseManuscript(text: string): ParsedChapter[] {
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n");
 
+  // ── DEBUG LOGGING ────────────────────────────────────────────────────
+  console.log("[parseManuscript] first 500 chars of normalised text:");
+  console.log(JSON.stringify(normalised.slice(0, 500)));
+
   // Pre-split and trim so every block we iterate is clean.
   const blocks = normalised
     .split(/\n{2,}/)
     .map((b) => b.trim())
     .filter((b) => b.length > 0);
+
+  console.log(`[parseManuscript] total blocks after split: ${blocks.length}`);
+  console.log("[parseManuscript] first 3 blocks:");
+  blocks.slice(0, 3).forEach((b, i) => {
+    console.log(`  block[${i}] (${b.length} chars): ${JSON.stringify(b.slice(0, 120))}`);
+  });
+  // ── END DEBUG ────────────────────────────────────────────────────────
 
   if (blocks.length === 0) {
     return [{ title: "Chapter 1", scenes: [{ title: "Scene 1", content: text.trim() }] }];
