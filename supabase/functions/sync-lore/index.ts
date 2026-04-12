@@ -191,7 +191,14 @@ async function syncProject(
       .replace(/```\s*$/i, "")
       .trim();
 
-    const suggestions: AISuggestion[] = JSON.parse(jsonText);
+    let suggestions: AISuggestion[];
+    try {
+      suggestions = JSON.parse(jsonText);
+    } catch (parseErr) {
+      console.error(`[sync-lore] JSON parse error for project ${projectId}. Raw text:`, rawText.slice(0, 800));
+      throw parseErr;
+    }
+    console.log(`[sync-lore] project=${projectId} suggestions_from_ai=${suggestions.length}`, JSON.stringify(suggestions.map((s) => ({ name: s.name, category: s.category, fieldKeys: Object.keys(s.fields ?? {}), sectionKeys: Object.keys(s.sections ?? {}), confidence: s.confidence }))));
 
     // Map to lore_suggestions rows.
     const validCategories = new Set([
@@ -215,16 +222,41 @@ async function syncProject(
           s.confidence >= 0.6,
       )
       .map((s) => {
-        // Populate all expected At a Glance keys; AI-inferred values override blanks.
+        // Build a case-insensitive lookup of AI-returned field values so key
+        // casing differences (e.g. "place of birth" vs "Place of Birth") don't
+        // silently drop data.
+        const aiFieldsLower: Record<string, string> = {};
+        for (const [k, v] of Object.entries(s.fields ?? {})) {
+          if (typeof v === "string") aiFieldsLower[k.toLowerCase()] = v;
+        }
+
+        // Populate all expected At a Glance keys; AI values (matched
+        // case-insensitively) override blanks.
         const expectedFields = CATEGORY_FIELDS[s.category] ?? [];
         const fields = Object.fromEntries(
-          expectedFields.map((key) => [key, s.fields?.[key] ?? ""]),
+          expectedFields.map((key) => [key, aiFieldsLower[key.toLowerCase()] ?? ""]),
         );
 
-        // Keep only non-empty section values from the AI response.
-        const sections: Record<string, string> = {};
+        // Build a case-insensitive lookup of AI-returned section values.
+        const aiSectionsLower: Record<string, string> = {};
         for (const [k, v] of Object.entries(s.sections ?? {})) {
-          if (typeof v === "string" && v.trim()) sections[k] = v.trim();
+          if (typeof v === "string" && v.trim()) aiSectionsLower[k.toLowerCase()] = v.trim();
+        }
+
+        // Keep only non-empty section values, matched against expected section
+        // names (case-insensitively) so key casing mismatches don't lose data.
+        const expectedSections = CATEGORY_SECTIONS[s.category] ?? [];
+        const sections: Record<string, string> = {};
+        for (const sectionKey of expectedSections) {
+          const val = aiSectionsLower[sectionKey.toLowerCase()];
+          if (val) sections[sectionKey] = val;
+        }
+        // Also capture any AI-returned sections not in the expected list
+        // (future-proofing; won't break the frontend).
+        for (const [k, v] of Object.entries(s.sections ?? {})) {
+          if (typeof v === "string" && v.trim() && !sections[k]) {
+            sections[k] = v.trim();
+          }
         }
 
         return {
