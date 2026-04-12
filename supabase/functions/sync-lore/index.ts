@@ -43,11 +43,20 @@ interface AISuggestion {
   description: string;
   confidence: number;
   source_scene_title?: string;
+  /** "Chapter Title › Scene Title" — stamped by syncProject after the AI call */
+  source_location?: string;
   /** Verbatim sentence from the scene where the entity first appears */
   source_sentence?: string;
   fields?: Record<string, string>;
   sections?: Record<string, string>;
   tags?: string[];
+}
+
+interface SceneRow {
+  id: string;
+  title: string;
+  content: string;
+  chapter_title: string;
 }
 
 serve(async (req) => {
@@ -123,17 +132,28 @@ async function syncProject(
   const logId: string | undefined = logEntry?.id;
 
   try {
-    // Fetch scenes — all with content when force=true, otherwise only dirty ones.
+    // Fetch scenes (with parent chapter title) — all with content when
+    // force=true, otherwise only dirty ones.
     let query = supabase
       .from("scenes")
-      .select("id, title, content")
+      .select("id, title, content, chapters(title)")
       .eq("project_id", projectId)
       .not("content", "is", null)
       .not("content", "eq", "");
     if (!force) {
       query = query.eq("is_dirty", true);
     }
-    const { data: scenes } = await query;
+    const { data: rawScenes } = await query;
+
+    // Flatten the nested chapters relation into a flat SceneRow.
+    const scenes: SceneRow[] = (rawScenes ?? []).map(
+      (s: { id: string; title: string; content: string; chapters: { title: string } | null }) => ({
+        id: s.id,
+        title: s.title,
+        content: s.content,
+        chapter_title: s.chapters?.title ?? "",
+      }),
+    );
 
     if (!scenes || scenes.length === 0) {
       await finaliseLog(supabase, logId, "completed", 0, 0);
@@ -159,20 +179,25 @@ async function syncProject(
 
     const allSuggestions: AISuggestion[] = [];
 
-    for (const scene of scenes as { id: string; title: string; content: string }[]) {
+    for (const scene of scenes) {
       const sceneText = (scene.content ?? "").slice(0, SCENE_CONTENT_LIMIT).trim();
       if (!sceneText) continue;
 
       const sceneSuggestions = await callAnthropicForScene(
         anthropicKey,
         scene.title,
+        scene.chapter_title,
         sceneText,
         entityContext,
       );
 
+      const sourceLocation = scene.chapter_title
+        ? `${scene.chapter_title} › ${scene.title}`
+        : scene.title;
+
       for (const s of sceneSuggestions) {
-        // Stamp the source scene title in case the AI omitted it.
-        s.source_scene_title = s.source_scene_title || scene.title;
+        s.source_scene_title = scene.title;
+        s.source_location = sourceLocation;
         allSuggestions.push(s);
       }
     }
@@ -244,6 +269,9 @@ async function syncProject(
             description: s.description ?? "",
             confidence: Math.min(1, Math.max(0, s.confidence)),
             source_scene_title: s.source_scene_title ?? null,
+            source_location: typeof s.source_location === "string" && s.source_location.trim()
+              ? s.source_location.trim()
+              : (s.source_scene_title ?? null),
             source_sentence: typeof s.source_sentence === "string" && s.source_sentence.trim()
               ? s.source_sentence.trim()
               : null,
@@ -293,6 +321,7 @@ async function syncProject(
 async function callAnthropicForScene(
   anthropicKey: string,
   sceneTitle: string,
+  chapterTitle: string,
   sceneText: string,
   entityContext: string,
 ): Promise<AISuggestion[]> {
@@ -307,8 +336,8 @@ async function callAnthropicForScene(
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 1500,
-        messages: [{ role: "user", content: buildPrompt(sceneTitle, sceneText, entityContext) }],
+        max_tokens: 4000,
+        messages: [{ role: "user", content: buildPrompt(sceneTitle, chapterTitle, sceneText, entityContext) }],
       }),
     });
   } catch (err) {
@@ -371,7 +400,8 @@ function buildCategoryReference(): string {
   return lines.join("\n");
 }
 
-function buildPrompt(sceneTitle: string, sceneText: string, entityContext: string): string {
+function buildPrompt(sceneTitle: string, chapterTitle: string, sceneText: string, entityContext: string): string {
+  const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
   return `You are a world-building database for a fantasy novel. Your job is to extract EVERY named entity from the scene — err heavily on the side of inclusion. If something has a name, suggest it.
 
 EXISTING ENTITIES — do NOT re-suggest these:
@@ -379,12 +409,13 @@ ${entityContext || "(none yet)"}
 
 ${buildCategoryReference()}
 
-SCENE "${sceneTitle}":
+LOCATION: ${locationLabel}
+SCENE CONTENT:
 ${sceneText}
 
 Extract ALL named entities: every named character (including minor ones), every named place (cities, regions, buildings, streets), every named organisation or faction, every named object or artifact, every named creature species, every named event, every named belief system or doctrine, every named magic system. If it has a proper noun, it belongs in the database.
 
-Return a JSON array of up to 5 objects — one per entity. Return an empty array [] if the scene has no proper nouns at all.
+Return a JSON array with one object per entity. Return an empty array [] if the scene has no proper nouns at all. There is no cap — return every named entity you find.
 
 Each object must have exactly these keys:
 - "name": string — the proper name, 1–5 words

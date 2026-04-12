@@ -28,6 +28,9 @@ interface SuggestionPayload {
   description: string;
   confidence: number;
   source_scene_title?: string | null;
+  /** "Chapter Title › Scene Title" — preferred display label */
+  source_location?: string | null;
+  source_sentence?: string | null;
   /** At a Glance key/value pairs — all category field keys present, empty string if unknown */
   fields?: Record<string, string>;
   /** Article section content — only sections the AI had evidence for */
@@ -341,11 +344,13 @@ const SuggestionCard = ({ suggestion, onAccept, onReject, selected, onToggleSele
             </div>
           )}
 
-          {/* Source scene */}
-          {payload.source_scene_title && (
+          {/* Source location */}
+          {(payload.source_location || payload.source_scene_title) && (
             <p className="text-[11px] text-text-dimmed">
-              from scene:{" "}
-              <span className="text-text-secondary italic">{payload.source_scene_title}</span>
+              from{" "}
+              <span className="text-text-secondary italic">
+                {payload.source_location || payload.source_scene_title}
+              </span>
             </p>
           )}
         </div>
