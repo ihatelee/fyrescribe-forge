@@ -1,5 +1,6 @@
-import { Paintbrush, Sparkles } from "lucide-react";
+import { Paintbrush } from "lucide-react";
 import { useTheme, ThemeName } from "@/contexts/ThemeContext";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,13 +9,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const THEMES: { value: ThemeName; label: string; swatch: string }[] = [
+const THEMES: { value: ThemeName; label: string; swatch: string; suffix?: string }[] = [
   { value: "midnight", label: "Midnight", swatch: "#C9A84C" },
   { value: "fireside", label: "Fireside", swatch: "#E07B2A" },
-  { value: "futureworld", label: "Futureworld", swatch: "#00FFE0" },
   { value: "lavender", label: "Lavender Haze", swatch: "#9B7FD4" },
-  { value: "daylight", label: "Daylight", swatch: "#8B5E2A" },
   { value: "enchanted", label: "Enchanted", swatch: "#00C896" },
+  { value: "futureworld", label: "Futureworld", swatch: "#00FFE0" },
+  { value: "daylight", label: "Daylight", swatch: "#8B5E2A", suffix: "light mode" },
 ];
 
 const ThemeSwitcher = () => {

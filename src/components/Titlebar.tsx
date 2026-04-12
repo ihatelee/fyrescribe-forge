@@ -45,8 +45,13 @@ const Titlebar = () => {
   return (
     <div className="fixed top-0 left-0 right-0 h-20 bg-fyrescribe-base border-b border-border flex items-center justify-between px-4 z-50">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate("/projects")} className="hover:opacity-80 transition-opacity">
-          <img src={logoSrc} alt="Fyrescribe" className="h-[44px] w-auto" style={isDaylightTheme(theme) ? { filter: "brightness(0)" } : undefined} />
+        <button onClick={() => navigate("/projects")} className="hover:opacity-80 transition-opacity group/logo">
+          <img
+            src={logoSrc}
+            alt="Fyrescribe"
+            className="h-[44px] w-auto transition-[filter] duration-300 group-hover/logo:drop-shadow-[0_0_12px_hsl(var(--gold))]"
+            style={isDaylightTheme(theme) ? { filter: "brightness(0)" } : undefined}
+          />
         </button>
       </div>
 
