@@ -13,7 +13,7 @@ const AppLayout = ({ children, showSidebar = true }: AppLayoutProps) => {
       <Titlebar />
       {showSidebar && <Sidebar />}
       <main
-        className={`pt-12 ${showSidebar ? "pl-[190px]" : ""} min-h-screen`}
+        className={`pt-20 ${showSidebar ? "pl-[190px]" : ""} min-h-screen`}
       >
         {children}
       </main>
