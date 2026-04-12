@@ -471,38 +471,22 @@ const LoreInboxPage = () => {
       .update({ status: "rejected", reviewed_at: new Date().toISOString() })
       .eq("id", id);
     setSuggestions((prev) => prev.filter((s) => s.id !== id));
-    setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
   };
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
+  // Re-fetch when page becomes visible (e.g. after sync adds new suggestions)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchSuggestions();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [fetchSuggestions]);
 
-  const handleAcceptAll = async () => {
-    if (suggestions.length === 0) return;
-    setBulkBusy(true);
-    for (const s of suggestions) {
-      await handleAccept(s);
-    }
-    setBulkBusy(false);
-  };
-
-  const handleDeleteSelected = async () => {
-    if (selectedIds.size === 0) return;
-    setBulkBusy(true);
-    const ids = [...selectedIds];
-    await supabase
-      .from("lore_suggestions")
-      .update({ status: "rejected", reviewed_at: new Date().toISOString() })
-      .in("id", ids);
-    setSuggestions((prev) => prev.filter((s) => !selectedIds.has(s.id)));
-    setSelectedIds(new Set());
-    setBulkBusy(false);
-  };
+  // Refetch periodically while page is open (every 10s)
+  useEffect(() => {
+    const interval = setInterval(fetchSuggestions, 10000);
+    return () => clearInterval(interval);
+  }, [fetchSuggestions]);
 
   return (
     <AppLayout>
@@ -529,30 +513,6 @@ const LoreInboxPage = () => {
           </div>
         )}
 
-        {/* Bulk action bar */}
-        {!loading && suggestions.length > 0 && (
-          <div className="mb-4 flex items-center gap-2">
-            <button
-              onClick={handleAcceptAll}
-              disabled={bulkBusy}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md bg-green-500/15 text-green-400 hover:bg-green-500/25 disabled:opacity-40 transition-colors"
-            >
-              {bulkBusy ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-              Accept All ({suggestions.length})
-            </button>
-            {selectedIds.size > 0 && (
-              <button
-                onClick={handleDeleteSelected}
-                disabled={bulkBusy}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md bg-destructive/15 text-destructive hover:bg-destructive/25 disabled:opacity-40 transition-colors"
-              >
-                {bulkBusy ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                Delete Selected ({selectedIds.size})
-              </button>
-            )}
-          </div>
-        )}
-
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 size={20} className="animate-spin text-text-dimmed" />
@@ -575,8 +535,6 @@ const LoreInboxPage = () => {
                 suggestion={suggestion}
                 onAccept={handleAccept}
                 onReject={handleReject}
-                selected={selectedIds.has(suggestion.id)}
-                onToggleSelect={toggleSelect}
               />
             ))}
           </div>
