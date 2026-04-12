@@ -50,6 +50,18 @@ const ProjectsPage = () => {
   // Unarchive confirmation state
   const [unarchiveTarget, setUnarchiveTarget] = useState<Project | null>(null);
 
+  // Inline title editing
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectTitle, setEditingProjectTitle] = useState("");
+
+  const saveProjectTitle = async (projectId: string) => {
+    const trimmed = editingProjectTitle.trim();
+    setEditingProjectId(null);
+    if (!trimmed) return;
+    setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, title: trimmed } : p));
+    await supabase.from("projects").update({ title: trimmed }).eq("id", projectId);
+  };
+
   const fetchProjects = async () => {
     const { data, error } = await supabase
       .from("projects")
