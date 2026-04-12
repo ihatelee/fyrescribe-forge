@@ -172,7 +172,7 @@ async function syncProject(
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 2048,
+        max_tokens: 4000,
         messages: [{ role: "user", content: buildPrompt(sceneContext, entityContext) }],
       }),
     });
@@ -335,7 +335,7 @@ function buildCategoryReference(): string {
 }
 
 function buildPrompt(sceneContext: string, entityContext: string): string {
-  return `You are a world-building analyst for a fantasy novel. Analyse the scene excerpts and extract named entities worth tracking in a world-building database.
+  return `You are a world-building analyst for a fantasy novel. Extract the 3 most important named entities from the scene excerpts that are worth tracking in a world-building database.
 
 EXISTING ENTITIES — do NOT re-suggest these:
 ${entityContext || "(none yet)"}
@@ -345,22 +345,21 @@ ${buildCategoryReference()}
 SCENE EXCERPTS:
 ${sceneContext}
 
-Return a JSON array only — no prose, no markdown fences. Each element must have exactly these keys:
+Return a JSON array of exactly 1–3 objects. No prose, no markdown fences. Each object must have these keys:
 
-- "name": string — proper name of the entity (1–5 words)
-- "category": one of "characters" | "places" | "events" | "history" | "artifacts" | "creatures" | "magic" | "factions" | "doctrine"
-- "description": string — 1–2 sentence summary of what this entity is
+- "name": string — proper name (1–5 words)
+- "category": one of "characters"|"places"|"events"|"history"|"artifacts"|"creatures"|"magic"|"factions"|"doctrine"
+- "description": string — max 80 words
 - "confidence": number 0.0–1.0
-- "source_scene_title": string — scene title where this entity appears
-- "fields": object — At a Glance key/value pairs for this category (use the field names from CATEGORY REFERENCE above; only include fields whose values you can infer from the text; omit fields you cannot determine)
-- "sections": object — article section key/value pairs (use the section names from CATEGORY REFERENCE above; write 2–4 sentences per section based strictly on manuscript evidence; only include sections you have real content for)
-- "tags": array of short lowercase strings (e.g. ["protagonist", "magic-user", "northern-faction"]) — 2–5 tags that would help cross-reference this entity with others
+- "source_scene_title": string
+- "fields": object — only include keys from CATEGORY REFERENCE whose values you can infer; omit the rest
+- "sections": object — max 1–2 sections, max 60 words each; use exact section names from CATEGORY REFERENCE
+- "tags": array of 2–4 lowercase strings
 
 Rules:
+- Return only the top 3 highest-confidence entities. Quality over quantity.
 - Confidence >= 0.6 only.
-- Focus on proper nouns and named things. No generic concepts.
-- Do not re-suggest entities in the EXISTING ENTITIES list.
-- For "fields": use only the exact key names listed in CATEGORY REFERENCE. Leave out any key you have no evidence for.
-- For "sections": use only the exact section names listed for the category. Write substantive content — do not write placeholder text.
+- Proper nouns only. No generic concepts.
+- Do not re-suggest entities already in EXISTING ENTITIES.
 - Output only the JSON array, nothing else.`;
 }
