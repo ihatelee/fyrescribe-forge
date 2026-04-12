@@ -110,6 +110,8 @@ interface SuggestionCardProps {
   suggestion: LoreSuggestion;
   onAccept: (suggestion: LoreSuggestion, overrides?: { name: string; description: string }) => Promise<void>;
   onReject: (id: string) => Promise<void>;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps) => {
