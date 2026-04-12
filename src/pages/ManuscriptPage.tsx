@@ -202,6 +202,14 @@ const ManuscriptPage = () => {
   };
   const [textSize, setTextSize] = useState<TextSize>("medium");
 
+  type ColumnWidth = "narrow" | "wide" | "full";
+  const COLUMN_WIDTH_CLASSES: Record<ColumnWidth, string> = {
+    narrow: "max-w-2xl px-8",
+    wide: "max-w-4xl px-4",
+    full: "w-full px-8",
+  };
+  const [columnWidth, setColumnWidth] = useState<ColumnWidth>("narrow");
+
   const editorRef = useRef<HTMLDivElement>(null);
   const focusEditorRef = useRef<HTMLDivElement>(null);
   // Set to true when we auto-create the first chapter+scene so the editor
@@ -556,7 +564,7 @@ const ManuscriptPage = () => {
           </button>
         </div>
         <div className="flex-1 flex justify-center overflow-y-auto pb-24 relative">
-          <div className="w-full max-w-2xl px-8">
+          <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
             <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} />
             <div
               key={activeSceneId ?? "empty"}
@@ -744,6 +752,22 @@ const ManuscriptPage = () => {
                 ))}
               </div>
               <div className="w-px h-4 bg-border mx-1" />
+              <div className="flex items-center gap-0.5 bg-fyrescribe-hover rounded-md p-0.5">
+                {(["narrow", "wide", "full"] as ColumnWidth[]).map((w) => (
+                  <button
+                    key={w}
+                    onClick={() => setColumnWidth(w)}
+                    className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
+                      columnWidth === w
+                        ? "bg-fyrescribe-raised text-foreground"
+                        : "text-text-dimmed hover:text-text-secondary"
+                    }`}
+                  >
+                    {w.charAt(0).toUpperCase() + w.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="w-px h-4 bg-border mx-1" />
               <button
                 onClick={() => setFocusMode(true)}
                 className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
@@ -761,7 +785,7 @@ const ManuscriptPage = () => {
 
           {/* Editor content */}
           <div className="flex-1 overflow-y-auto flex justify-center py-10">
-            <div className="w-full max-w-2xl px-8">
+            <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <Loader2 size={20} className="animate-spin text-text-dimmed" />
