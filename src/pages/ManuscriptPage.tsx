@@ -114,6 +114,60 @@ const ThesaurusPanel = ({
   </div>
 );
 
+// ─── Editable Scene Title (in editor area) ───────────────────────────
+
+const EditableSceneTitle = ({
+  scene,
+  onSave,
+}: {
+  scene: Scene | undefined;
+  onSave: (id: string, title: string) => void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+
+  if (!scene) return null;
+
+  const start = () => {
+    setValue(scene.title);
+    setEditing(true);
+  };
+
+  const commit = () => {
+    setEditing(false);
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== scene.title) {
+      onSave(scene.id, trimmed);
+    }
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        className="font-display text-sm text-gold mb-6 tracking-wide bg-transparent border-b border-gold/50 outline-none w-full"
+      />
+    );
+  }
+
+  return (
+    <div
+      onClick={start}
+      className="font-display text-sm text-gold mb-6 tracking-wide cursor-text hover:border-b hover:border-gold/30 inline-block"
+      title="Click to rename"
+    >
+      {scene.title}
+    </div>
+  );
+};
+
 // ─── Manuscript Page ──────────────────────────────────────────────────
 
 const ManuscriptPage = () => {
@@ -332,6 +386,11 @@ const ManuscriptPage = () => {
     setWordCount(scene.word_count ?? 0);
   };
 
+  const handleSceneTitleSave = async (sceneId: string, newTitle: string) => {
+    setScenes((prev) => prev.map((s) => s.id === sceneId ? { ...s, title: newTitle } : s));
+    await supabase.from("scenes").update({ title: newTitle }).eq("id", sceneId);
+  };
+
   const toggleChapter = (id: string) => {
     setExpandedChapters((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
@@ -498,7 +557,7 @@ const ManuscriptPage = () => {
         </div>
         <div className="flex-1 flex justify-center overflow-y-auto pb-24 relative">
           <div className="w-full max-w-2xl px-8">
-            <div className="font-display text-sm text-gold mb-6">{activeScene?.title}</div>
+            <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} />
             <div
               key={activeSceneId ?? "empty"}
               ref={makeEditorRef(focusEditorRef)}
@@ -721,9 +780,7 @@ const ManuscriptPage = () => {
                 </div>
               ) : (
                 <>
-                  <div className="font-display text-sm text-gold mb-6 tracking-wide">
-                    {activeScene.title}
-                  </div>
+                  <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} />
                   <div
                     key={activeSceneId}
                     ref={makeEditorRef(editorRef)}
