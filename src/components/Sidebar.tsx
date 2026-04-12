@@ -5,11 +5,11 @@ import {
   BookOpen,
   Clock,
   Users,
-  MapPin,
+  Mountain,
   Calendar,
   BookMarked,
   Gem,
-  Bug,
+  PawPrint,
   Wand2,
   Shield,
   ScrollText,
@@ -26,11 +26,11 @@ const WRITE_ITEMS = [
 
 const WORLD_ITEMS = [
   { label: "Characters", path: "/world/characters", icon: Users },
-  { label: "Places", path: "/world/places", icon: MapPin },
+  { label: "Places", path: "/world/places", icon: Mountain },
   { label: "Events", path: "/world/events", icon: Calendar },
   { label: "History", path: "/world/history", icon: BookMarked },
   { label: "Artifacts", path: "/world/artifacts", icon: Gem },
-  { label: "Creatures", path: "/world/creatures", icon: Bug },
+  { label: "Creatures", path: "/world/creatures", icon: PawPrint },
   { label: "Magic", path: "/world/magic", icon: Wand2 },
   { label: "Factions", path: "/world/factions", icon: Shield },
   { label: "Doctrine", path: "/world/doctrine", icon: ScrollText },
@@ -44,6 +44,7 @@ const Sidebar = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [fullSyncNote, setFullSyncNote] = useState(false);
 
   const fetchPendingCount = useCallback(async () => {
     if (!activeProject) {
@@ -66,6 +67,7 @@ const Sidebar = () => {
     if (!activeProject || syncing) return;
     setSyncing(true);
     setSyncMessage(null);
+    if (force) setFullSyncNote(true);
     try {
       const { data, error } = await supabase.functions.invoke("sync-lore", {
         body: { project_id: activeProject.id, trigger: "manual", force },
@@ -89,6 +91,7 @@ const Sidebar = () => {
       setSyncMessage("Sync failed");
     } finally {
       setSyncing(false);
+      setFullSyncNote(false);
       setTimeout(() => setSyncMessage(null), 4000);
     }
   };
@@ -105,8 +108,8 @@ const Sidebar = () => {
         onClick={() => navigate(path)}
         className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] rounded-sm transition-colors relative ${
           active
-            ? "text-gold-bright bg-gold-glow border-l-2 border-gold pl-[10px]"
-            : "text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover border-l-2 border-transparent pl-[10px]"
+            ? "text-gold-bright bg-gold-glow border border-gold"
+            : "text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover border border-transparent"
         }`}
       >
         <Icon size={14} />
@@ -142,7 +145,14 @@ const Sidebar = () => {
       </div>
 
       <div className="p-2 border-t border-border space-y-1">
-        {/* Sync Lore + Force Sync */}
+        {/* Full sync patience note */}
+        {fullSyncNote && (
+          <p className="px-3 py-1.5 text-[10px] text-gold/80 bg-gold/5 border border-gold/10 rounded-md">
+            Full syncs can take some time, please be patient.
+          </p>
+        )}
+
+        {/* Sync Lore + Full Sync */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => handleSync(false)}
@@ -154,10 +164,10 @@ const Sidebar = () => {
           <button
             onClick={() => handleSync(true)}
             disabled={syncing}
-            title="Force sync — ignores is_dirty, processes all scenes"
-            className="px-2 py-1.5 text-[10px] rounded-md transition-colors text-text-dimmed hover:text-orange-400 hover:bg-fyrescribe-hover disabled:opacity-40"
+            title="Full sync — ignores is_dirty, processes all scenes"
+            className="px-2 py-1.5 text-[10px] rounded-md transition-colors text-text-dimmed hover:text-gold hover:bg-fyrescribe-hover disabled:opacity-40"
           >
-            all
+            Full sync
           </button>
         </div>
         {syncMessage && (

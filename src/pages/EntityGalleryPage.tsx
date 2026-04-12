@@ -199,6 +199,10 @@ const EntityGalleryPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<EntityRow | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   const tagFilter = searchParams.get("tag");
 
   useEffect(() => {
@@ -266,6 +270,28 @@ const EntityGalleryPage = () => {
     setEntities((prev) => prev.filter((ent) => ent.id !== eid));
     setDeleteTarget(null);
     setDeleteConfirmText("");
+  };
+
+  const toggleSelectEntity = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    const ids = [...selectedIds];
+    for (const eid of ids) {
+      await supabase.from("entity_links").delete().or(`entity_a_id.eq.${eid},entity_b_id.eq.${eid}`);
+      await supabase.from("entity_tags").delete().eq("entity_id", eid);
+      await supabase.from("entities").delete().eq("id", eid);
+    }
+    setEntities((prev) => prev.filter((ent) => !selectedIds.has(ent.id)));
+    setSelectedIds(new Set());
+    setBulkBusy(false);
   };
 
   // Apply category + optional tag filters, exclude archived
@@ -401,6 +427,26 @@ const EntityGalleryPage = () => {
           )}
         </div>
 
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="mb-4 flex items-center gap-2">
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkBusy}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md bg-destructive/15 text-destructive hover:bg-destructive/25 disabled:opacity-40 transition-colors"
+            >
+              {bulkBusy ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+              Delete Selected ({selectedIds.size})
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-3 py-1.5 text-[12px] rounded-md text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+            >
+              Clear selection
+            </button>
+          </div>
+        )}
+
         {/* Content area */}
         {loading ? (
           <div className="flex items-center justify-center py-24">
@@ -440,6 +486,16 @@ const EntityGalleryPage = () => {
                     onClick={() => navigate(`/entity/${entity.id}`)}
                     className="relative text-left bg-fyrescribe-raised border border-border rounded-xl p-4 hover:border-gold/20 transition-all group animate-fade-in cursor-pointer"
                   >
+                    <div className="absolute top-3 left-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(entity.id)}
+                        onChange={(e) => { e.stopPropagation(); toggleSelectEntity(entity.id); }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity data-[checked]:opacity-100"
+                        style={selectedIds.has(entity.id) ? { opacity: 1 } : undefined}
+                      />
+                    </div>
                     <div className="absolute top-3 right-3">
                       <EntityMenu entity={entity} />
                     </div>
@@ -532,6 +588,13 @@ const EntityGalleryPage = () => {
                         i !== 0 ? "border-t border-border" : ""
                       }`}
                     >
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(entity.id)}
+                        onChange={(e) => { e.stopPropagation(); toggleSelectEntity(entity.id); }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer flex-shrink-0"
+                      />
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 w-[80px] text-center ${
                           CATEGORY_COLORS[entity.category] || ""
