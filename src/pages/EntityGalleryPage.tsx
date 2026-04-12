@@ -199,6 +199,10 @@ const EntityGalleryPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<EntityRow | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   const tagFilter = searchParams.get("tag");
 
   useEffect(() => {
