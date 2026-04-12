@@ -356,8 +356,6 @@ const LoreInboxPage = () => {
   const [suggestions, setSuggestions] = useState<LoreSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptedId, setAcceptedId] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
 
   const fetchSuggestions = useCallback(async () => {
     if (!activeProject) return;
