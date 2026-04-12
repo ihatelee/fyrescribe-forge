@@ -234,9 +234,38 @@ const ProjectsPage = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
 
-                    <h2 className="font-display text-lg text-foreground group-hover:text-gold-bright transition-colors mb-1 pr-8">
-                      {project.title}
-                    </h2>
+                    <div className="flex items-center gap-1.5 pr-8 mb-1">
+                      {editingProjectId === project.id ? (
+                        <input
+                          autoFocus
+                          value={editingProjectTitle}
+                          onChange={(e) => setEditingProjectTitle(e.target.value)}
+                          onBlur={() => saveProjectTitle(project.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveProjectTitle(project.id);
+                            if (e.key === "Escape") setEditingProjectId(null);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-display text-lg text-foreground bg-transparent outline-none border-b border-gold/50 flex-1 min-w-0"
+                        />
+                      ) : (
+                        <>
+                          <h2 className="font-display text-lg text-foreground group-hover:text-gold-bright transition-colors truncate">
+                            {project.title}
+                          </h2>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingProjectId(project.id);
+                              setEditingProjectTitle(project.title);
+                            }}
+                            className="text-text-dimmed hover:text-foreground transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                        </>
+                      )}
+                    </div>
                     {project.description && (
                       <p className="text-text-secondary text-sm mb-4 line-clamp-2">
                         {project.description}
