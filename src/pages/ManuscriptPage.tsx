@@ -616,11 +616,11 @@ const ManuscriptPage = () => {
                               if (e.key === "Escape") { e.preventDefault(); setEditingId(null); }
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="flex-1 min-w-0 bg-transparent outline-none border-b border-gold/50 text-[12px]"
+                            className="flex-1 min-w-0 bg-transparent outline-none border-b border-gold/50 text-[12px] text-foreground"
                           />
                         ) : (
                           <span
-                            className="truncate flex-1"
+                            className="truncate flex-1 cursor-text"
                             onClick={(e) => {
                               e.stopPropagation();
                               selectScene(scene);
