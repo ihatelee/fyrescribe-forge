@@ -110,9 +110,11 @@ interface SuggestionCardProps {
   suggestion: LoreSuggestion;
   onAccept: (suggestion: LoreSuggestion, overrides?: { name: string; description: string }) => Promise<void>;
   onReject: (id: string) => Promise<void>;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps) => {
+const SuggestionCard = ({ suggestion, onAccept, onReject, selected, onToggleSelect }: SuggestionCardProps) => {
   const payload = suggestion.payload;
   const config = TYPE_CONFIG[suggestion.type];
   const Icon = config.icon;
@@ -142,7 +144,19 @@ const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps)
   };
 
   return (
-    <div className="bg-fyrescribe-raised border border-border rounded-lg p-4">
+    <div className="bg-fyrescribe-raised border border-border rounded-lg p-4 flex gap-3">
+      {/* Checkbox */}
+      {onToggleSelect && (
+        <div className="pt-1 flex-shrink-0">
+          <input
+            type="checkbox"
+            checked={selected ?? false}
+            onChange={() => onToggleSelect(suggestion.id)}
+            className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer"
+          />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
         <div className="flex-1 min-w-0">
@@ -336,6 +350,7 @@ const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps)
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };
@@ -349,6 +364,8 @@ const LoreInboxPage = () => {
   const [suggestions, setSuggestions] = useState<LoreSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptedId, setAcceptedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const fetchSuggestions = useCallback(async () => {
     if (!activeProject) return;
@@ -464,6 +481,37 @@ const LoreInboxPage = () => {
       .update({ status: "rejected", reviewed_at: new Date().toISOString() })
       .eq("id", id);
     setSuggestions((prev) => prev.filter((s) => s.id !== id));
+    setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleAcceptAll = async () => {
+    if (suggestions.length === 0) return;
+    setBulkBusy(true);
+    for (const s of suggestions) {
+      await handleAccept(s);
+    }
+    setBulkBusy(false);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    const ids = [...selectedIds];
+    await supabase
+      .from("lore_suggestions")
+      .update({ status: "rejected", reviewed_at: new Date().toISOString() })
+      .in("id", ids);
+    setSuggestions((prev) => prev.filter((s) => !selectedIds.has(s.id)));
+    setSelectedIds(new Set());
+    setBulkBusy(false);
   };
 
   return (
@@ -491,6 +539,30 @@ const LoreInboxPage = () => {
           </div>
         )}
 
+        {/* Bulk action bar */}
+        {!loading && suggestions.length > 0 && (
+          <div className="mb-4 flex items-center gap-2">
+            <button
+              onClick={handleAcceptAll}
+              disabled={bulkBusy}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md bg-green-500/15 text-green-400 hover:bg-green-500/25 disabled:opacity-40 transition-colors"
+            >
+              {bulkBusy ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+              Accept All ({suggestions.length})
+            </button>
+            {selectedIds.size > 0 && (
+              <button
+                onClick={handleDeleteSelected}
+                disabled={bulkBusy}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md bg-destructive/15 text-destructive hover:bg-destructive/25 disabled:opacity-40 transition-colors"
+              >
+                {bulkBusy ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                Delete Selected ({selectedIds.size})
+              </button>
+            )}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 size={20} className="animate-spin text-text-dimmed" />
@@ -502,7 +574,7 @@ const LoreInboxPage = () => {
               Your lore inbox is clear
             </p>
             <p className="text-text-dimmed text-[12px]">
-              Use <span className="text-text-secondary">Sync Now</span> in the sidebar to analyse your manuscript scenes
+              Use <span className="text-text-secondary">Sync Lore</span> in the sidebar to analyse your manuscript scenes
             </p>
           </div>
         ) : (
@@ -513,6 +585,8 @@ const LoreInboxPage = () => {
                 suggestion={suggestion}
                 onAccept={handleAccept}
                 onReject={handleReject}
+                selected={selectedIds.has(suggestion.id)}
+                onToggleSelect={toggleSelect}
               />
             ))}
           </div>
