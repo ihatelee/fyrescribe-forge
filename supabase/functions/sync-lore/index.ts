@@ -58,9 +58,11 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { project_id, trigger = "manual" } = body as {
+    const { project_id, trigger = "manual", force = false } = body as {
       project_id?: string;
       trigger?: "scheduled" | "manual";
+      /** When true, ignore is_dirty and sync all scenes with content. */
+      force?: boolean;
     };
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -90,7 +92,7 @@ serve(async (req) => {
 
     const results = [];
     for (const pid of projectIds) {
-      const result = await syncProject(supabase, pid, trigger as "scheduled" | "manual", anthropicKey);
+      const result = await syncProject(supabase, pid, trigger as "scheduled" | "manual", anthropicKey, force);
       results.push(result);
     }
 
@@ -112,7 +114,8 @@ async function syncProject(
   projectId: string,
   trigger: "scheduled" | "manual",
   anthropicKey: string,
-): Promise<{ project_id: string; scenes_processed: number; suggestions_created: number }> {
+  force = false,
+): Promise<{ project_id: string; scenes_processed: number; suggestions_created: number; force: boolean }> {
   // Open a sync_log entry.
   const { data: logEntry } = await supabase
     .from("sync_log")
@@ -122,18 +125,21 @@ async function syncProject(
   const logId: string | undefined = logEntry?.id;
 
   try {
-    // Fetch scenes with dirty content.
-    const { data: scenes } = await supabase
+    // Fetch scenes — all with content when force=true, otherwise only dirty ones.
+    let query = supabase
       .from("scenes")
       .select("id, title, content")
       .eq("project_id", projectId)
-      .eq("is_dirty", true)
       .not("content", "is", null)
       .not("content", "eq", "");
+    if (!force) {
+      query = query.eq("is_dirty", true);
+    }
+    const { data: scenes } = await query;
 
     if (!scenes || scenes.length === 0) {
       await finaliseLog(supabase, logId, "completed", 0, 0);
-      return { project_id: projectId, scenes_processed: 0, suggestions_created: 0 };
+      return { project_id: projectId, scenes_processed: 0, suggestions_created: 0, force };
     }
 
     // Fetch existing entities so the AI can avoid re-suggesting them.
@@ -262,12 +268,13 @@ async function syncProject(
       .eq("id", projectId);
 
     await finaliseLog(supabase, logId, "completed", scenes.length, suggestionsCreated);
-    return { project_id: projectId, scenes_processed: scenes.length, suggestions_created: suggestionsCreated };
+    return { project_id: projectId, scenes_processed: scenes.length, suggestions_created: suggestionsCreated, force };
   } catch (err) {
     await finaliseLog(supabase, logId, "failed", 0, 0);
     throw err;
   }
 }
+
 
 // deno-lint-ignore no-explicit-any
 async function finaliseLog(supabase: any, logId: string | undefined, status: string, scenesProcessed: number, suggestionsCreated: number) {

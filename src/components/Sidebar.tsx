@@ -62,33 +62,34 @@ const Sidebar = () => {
     fetchPendingCount();
   }, [fetchPendingCount]);
 
-  const handleSync = async () => {
+  const handleSync = async (force = false) => {
     if (!activeProject || syncing) return;
     setSyncing(true);
     setSyncMessage(null);
     try {
       const { data, error } = await supabase.functions.invoke("sync-lore", {
-        body: { project_id: activeProject.id, trigger: "manual" },
+        body: { project_id: activeProject.id, trigger: "manual", force },
       });
       if (error) throw error;
-      const created: number =
-        data?.results?.reduce(
-          (sum: number, r: { suggestions_created?: number }) => sum + (r.suggestions_created ?? 0),
-          0,
-        ) ?? 0;
-      setSyncMessage(
-        data?.message === "No projects with dirty scenes"
-          ? "Up to date"
-          : created > 0
-          ? `${created} new suggestion${created !== 1 ? "s" : ""}`
-          : "No new suggestions",
-      );
+
+      const results: { scenes_processed?: number; suggestions_created?: number }[] =
+        data?.results ?? [];
+      const scenesProcessed = results.reduce((s, r) => s + (r.scenes_processed ?? 0), 0);
+      const created = results.reduce((s, r) => s + (r.suggestions_created ?? 0), 0);
+
+      if (scenesProcessed === 0) {
+        setSyncMessage("No edited scenes");
+      } else if (created > 0) {
+        setSyncMessage(`${created} new suggestion${created !== 1 ? "s" : ""}`);
+      } else {
+        setSyncMessage(`${scenesProcessed} scene${scenesProcessed !== 1 ? "s" : ""} processed, 0 suggestions`);
+      }
       await fetchPendingCount();
     } catch {
       setSyncMessage("Sync failed");
     } finally {
       setSyncing(false);
-      setTimeout(() => setSyncMessage(null), 3500);
+      setTimeout(() => setSyncMessage(null), 4000);
     }
   };
 
@@ -141,19 +142,27 @@ const Sidebar = () => {
       </div>
 
       <div className="p-2 border-t border-border space-y-1">
-        {/* Sync Now */}
-        <button
-          onClick={handleSync}
-          className="w-full flex items-center justify-between px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover"
-        >
-          <div className="flex items-center gap-2">
+        {/* Sync Lore + Force Sync */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => handleSync(false)}
+            className="flex-1 flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover"
+          >
             <RefreshCw size={12} className={syncing ? "animate-spin" : ""} />
             {syncing ? "Syncing…" : "Sync Lore"}
-          </div>
-          {syncMessage && (
-            <span className="text-[10px] text-text-dimmed truncate max-w-[80px]">{syncMessage}</span>
-          )}
-        </button>
+          </button>
+          <button
+            onClick={() => handleSync(true)}
+            disabled={syncing}
+            title="Force sync — ignores is_dirty, processes all scenes"
+            className="px-2 py-1.5 text-[10px] rounded-md transition-colors text-text-dimmed hover:text-orange-400 hover:bg-fyrescribe-hover disabled:opacity-40"
+          >
+            all
+          </button>
+        </div>
+        {syncMessage && (
+          <p className="px-3 text-[10px] text-text-dimmed">{syncMessage}</p>
+        )}
 
         {/* Lore Inbox */}
         <button

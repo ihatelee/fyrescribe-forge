@@ -446,6 +446,7 @@ const ManuscriptPage = () => {
         title: `Scene ${nextOrder}`,
         order: nextOrder,
         content: "",
+        is_dirty: true,
       })
       .select("*")
       .single();
