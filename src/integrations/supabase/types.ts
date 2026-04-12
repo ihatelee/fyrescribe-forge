@@ -48,7 +48,6 @@ export type Database = {
       }
       entities: {
         Row: {
-          archived_at: string | null
           category: Database["public"]["Enums"]["entity_category"]
           cover_image_url: string | null
           created_at: string
@@ -63,7 +62,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          archived_at?: string | null
           category: Database["public"]["Enums"]["entity_category"]
           cover_image_url?: string | null
           created_at?: string
@@ -78,7 +76,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          archived_at?: string | null
           category?: Database["public"]["Enums"]["entity_category"]
           cover_image_url?: string | null
           created_at?: string
