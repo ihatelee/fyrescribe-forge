@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -13,7 +14,10 @@ import {
   Shield,
   ScrollText,
   Inbox,
+  RefreshCw,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveProject } from "@/contexts/ProjectContext";
 
 const WRITE_ITEMS = [
   { label: "Manuscript", path: "/manuscript", icon: BookOpen },
@@ -32,30 +36,68 @@ const WORLD_ITEMS = [
   { label: "Doctrine", path: "/world/doctrine", icon: ScrollText },
 ];
 
-interface SidebarProps {
-  loreSuggestionCount?: number;
-}
-
-const Sidebar = ({ loreSuggestionCount = 4 }: SidebarProps) => {
+const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { activeProject } = useActiveProject();
+
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const fetchPendingCount = useCallback(async () => {
+    if (!activeProject) {
+      setPendingCount(0);
+      return;
+    }
+    const { count } = await supabase
+      .from("lore_suggestions")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", activeProject.id)
+      .eq("status", "pending");
+    setPendingCount(count ?? 0);
+  }, [activeProject]);
+
+  useEffect(() => {
+    fetchPendingCount();
+  }, [fetchPendingCount]);
+
+  const handleSync = async () => {
+    if (!activeProject || syncing) return;
+    setSyncing(true);
+    setSyncMessage(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-lore", {
+        body: { project_id: activeProject.id, trigger: "manual" },
+      });
+      if (error) throw error;
+      const created: number =
+        data?.results?.reduce(
+          (sum: number, r: { suggestions_created?: number }) => sum + (r.suggestions_created ?? 0),
+          0,
+        ) ?? 0;
+      setSyncMessage(
+        data?.message === "No projects with dirty scenes"
+          ? "Up to date"
+          : created > 0
+          ? `${created} new suggestion${created !== 1 ? "s" : ""}`
+          : "No new suggestions",
+      );
+      await fetchPendingCount();
+    } catch {
+      setSyncMessage("Sync failed");
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncMessage(null), 3500);
+    }
+  };
 
   const isActive = (path: string) => {
-    if (path.startsWith("/world/")) {
-      return location.pathname.startsWith(path);
-    }
+    if (path.startsWith("/world/")) return location.pathname.startsWith(path);
     return location.pathname === path;
   };
 
-  const NavItem = ({
-    label,
-    path,
-    icon: Icon,
-  }: {
-    label: string;
-    path: string;
-    icon: LucideIcon;
-  }) => {
+  const NavItem = ({ label, path, icon: Icon }: { label: string; path: string; icon: LucideIcon }) => {
     const active = isActive(path);
     return (
       <button
@@ -98,7 +140,23 @@ const Sidebar = ({ loreSuggestionCount = 4 }: SidebarProps) => {
         </div>
       </div>
 
-      <div className="p-2 border-t border-border">
+      <div className="p-2 border-t border-border space-y-1">
+        {/* Sync Now */}
+        <button
+          onClick={handleSync}
+          disabled={!activeProject || syncing}
+          className="w-full flex items-center justify-between px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-dimmed hover:text-text-secondary hover:bg-fyrescribe-hover disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <div className="flex items-center gap-2">
+            <RefreshCw size={12} className={syncing ? "animate-spin" : ""} />
+            {syncing ? "Syncing…" : "Sync Now"}
+          </div>
+          {syncMessage && (
+            <span className="text-[10px] text-text-dimmed truncate max-w-[80px]">{syncMessage}</span>
+          )}
+        </button>
+
+        {/* Lore Inbox */}
         <button
           onClick={() => navigate("/lore-inbox")}
           className={`w-full flex items-center justify-between px-3 py-2 text-[13px] rounded-md transition-colors ${
@@ -111,9 +169,9 @@ const Sidebar = ({ loreSuggestionCount = 4 }: SidebarProps) => {
             <Inbox size={14} />
             Lore Inbox
           </div>
-          {loreSuggestionCount > 0 && (
+          {pendingCount > 0 && (
             <span className="bg-gold text-primary-foreground text-[10px] font-medium px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-              {loreSuggestionCount}
+              {pendingCount}
             </span>
           )}
         </button>
