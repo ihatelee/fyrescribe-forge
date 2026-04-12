@@ -195,10 +195,10 @@ const ManuscriptPage = () => {
 
   type TextSize = "small" | "medium" | "large" | "xl";
   const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
-    small: "text-sm leading-[1.8]",
-    medium: "text-base leading-[1.9]",
-    large: "text-lg leading-[2.0]",
-    xl: "text-xl leading-[2.1]",
+    small: "text-[16px] leading-[1.8]",
+    medium: "text-[20px] leading-[1.9]",
+    large: "text-[24px] leading-[2.0]",
+    xl: "text-[28px] leading-[2.1]",
   };
   const [textSize, setTextSize] = useState<TextSize>("medium");
 

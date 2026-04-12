@@ -273,8 +273,10 @@ function applyTheme(theme: ThemeName) {
   // Apply Silkscreen font for Futureworld theme
   if (theme === "futureworld") {
     root.style.setProperty("--font-ui", "'Silkscreen', monospace");
+    root.style.setProperty("--font-prose", "'Fira Code', monospace");
   } else {
     root.style.removeProperty("--font-ui");
+    root.style.removeProperty("--font-prose");
   }
 }
 
