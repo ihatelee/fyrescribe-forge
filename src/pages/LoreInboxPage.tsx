@@ -28,7 +28,26 @@ interface SuggestionPayload {
   description: string;
   confidence: number;
   source_scene_title?: string | null;
+  /** At a Glance key/value pairs — all category field keys present, empty string if unknown */
+  fields?: Record<string, string>;
+  /** Article section content — only sections the AI had evidence for */
+  sections?: Record<string, string>;
+  /** Suggested tag strings */
+  tags?: string[];
 }
+
+// At a Glance field keys per category (mirrors EntityDetailPage)
+const CATEGORY_FIELDS: Record<string, string[]> = {
+  characters: ["Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance", "First Appearance", "First Mentioned"],
+  places: ["Region", "Climate", "Population", "Government", "Notable Landmarks", "First Mentioned"],
+  events: ["Date/Era", "Location", "Key Participants", "Outcome", "First Mentioned"],
+  artifacts: ["Type", "Origin", "Current Owner", "Powers", "First Mentioned"],
+  creatures: ["Classification", "Habitat", "Average Size", "Diet", "Threat Level", "First Mentioned"],
+  magic: ["Type", "Regional Origin", "Rarity", "First Recorded Use"],
+  factions: ["Type", "Founded", "Leader", "Headquarters", "Allegiance", "First Mentioned"],
+  doctrine: ["Type", "Regional Origin", "Followers", "Core Belief", "First Mentioned"],
+  history: ["Date/Era", "Location", "Key Factions", "Outcome"],
+};
 
 interface LoreSuggestion {
   id: string;
@@ -230,9 +249,75 @@ const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps)
         )
       )}
 
-      {/* Footer: confidence + source scene */}
+      {/* Footer: fields preview, tags, confidence, source */}
       {!editing && (
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-2.5">
+          {/* Populated At a Glance fields */}
+          {(() => {
+            const populated = Object.entries(payload.fields ?? {}).filter(([, v]) => v.trim());
+            if (!populated.length) return null;
+            return (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1.5">
+                  At a Glance
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  {populated.map(([k, v]) => (
+                    <div key={k} className="flex gap-1.5 min-w-0">
+                      <span className="text-[11px] text-text-dimmed shrink-0">{k}:</span>
+                      <span className="text-[11px] text-text-secondary truncate">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Sections preview — show section names that have content */}
+          {(() => {
+            const populated = Object.keys(payload.sections ?? {}).filter(
+              (k) => (payload.sections?.[k] ?? "").trim(),
+            );
+            if (!populated.length) return null;
+            return (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1.5">
+                  Article sections
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {populated.map((k) => (
+                    <span
+                      key={k}
+                      className="text-[10px] px-1.5 py-0.5 rounded bg-fyrescribe-hover text-text-secondary"
+                    >
+                      {k}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Suggested tags */}
+          {(payload.tags ?? []).length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1.5">
+                Tags
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {(payload.tags ?? []).map((t) => (
+                  <span
+                    key={t}
+                    className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold/10 text-gold border border-gold/20"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Confidence bar */}
           {typeof payload.confidence === "number" && (
             <div>
               <p className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1">
@@ -241,6 +326,8 @@ const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps)
               <ConfidenceBar value={payload.confidence} />
             </div>
           )}
+
+          {/* Source scene */}
           {payload.source_scene_title && (
             <p className="text-[11px] text-text-dimmed">
               from scene:{" "}
@@ -295,6 +382,18 @@ const LoreInboxPage = () => {
     const name = overrides?.name ?? payload.name;
     const description = overrides?.description ?? payload.description;
 
+    // Build fields: ensure all category keys are present; AI values override blanks.
+    const expectedFieldKeys = CATEGORY_FIELDS[payload.category] ?? [];
+    const fieldsToWrite: Record<string, string> = Object.fromEntries(
+      expectedFieldKeys.map((key) => [key, payload.fields?.[key] ?? ""]),
+    );
+
+    // Keep only non-empty section values.
+    const sectionsToWrite: Record<string, string> = {};
+    for (const [k, v] of Object.entries(payload.sections ?? {})) {
+      if (v.trim()) sectionsToWrite[k] = v.trim();
+    }
+
     const { data: entity, error: entityError } = await supabase
       .from("entities")
       .insert({
@@ -302,6 +401,8 @@ const LoreInboxPage = () => {
         category: payload.category,
         name,
         summary: description || null,
+        fields: fieldsToWrite,
+        sections: sectionsToWrite,
       })
       .select("id")
       .single();
@@ -309,6 +410,39 @@ const LoreInboxPage = () => {
     if (entityError || !entity) {
       console.error("Failed to create entity:", entityError);
       return;
+    }
+
+    // Create / link tags.
+    const tagNames = (payload.tags ?? []).filter(Boolean);
+    if (tagNames.length > 0) {
+      // Fetch any existing project tags that match by name (case-insensitive).
+      const { data: existingTags } = await supabase
+        .from("tags")
+        .select("id, name")
+        .eq("project_id", activeProject.id)
+        .in("name", tagNames);
+
+      const existingNameSet = new Set((existingTags ?? []).map((t) => t.name.toLowerCase()));
+      const newTagNames = tagNames.filter((n) => !existingNameSet.has(n.toLowerCase()));
+
+      let createdTags: { id: string }[] = [];
+      if (newTagNames.length > 0) {
+        const { data: inserted } = await supabase
+          .from("tags")
+          .insert(newTagNames.map((name) => ({ project_id: activeProject.id, name })))
+          .select("id");
+        createdTags = inserted ?? [];
+      }
+
+      const allTagIds = [
+        ...(existingTags ?? []).map((t) => t.id),
+        ...createdTags.map((t) => t.id),
+      ];
+      if (allTagIds.length > 0) {
+        await supabase
+          .from("entity_tags")
+          .insert(allTagIds.map((tag_id) => ({ entity_id: entity.id, tag_id })));
+      }
     }
 
     await supabase

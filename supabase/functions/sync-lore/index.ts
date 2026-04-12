@@ -9,12 +9,46 @@ const corsHeaders = {
 // Maximum characters of scene content to include per scene in the AI prompt.
 const SCENE_CONTENT_LIMIT = 1200;
 
+// ── Category metadata (mirrors frontend EntityDetailPage constants) ──────────
+
+const CATEGORY_FIELDS: Record<string, string[]> = {
+  characters: ["Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance", "First Appearance", "First Mentioned"],
+  places: ["Region", "Climate", "Population", "Government", "Notable Landmarks", "First Mentioned"],
+  events: ["Date/Era", "Location", "Key Participants", "Outcome", "First Mentioned"],
+  artifacts: ["Type", "Origin", "Current Owner", "Powers", "First Mentioned"],
+  creatures: ["Classification", "Habitat", "Average Size", "Diet", "Threat Level", "First Mentioned"],
+  magic: ["Type", "Regional Origin", "Rarity", "First Recorded Use"],
+  factions: ["Type", "Founded", "Leader", "Headquarters", "Allegiance", "First Mentioned"],
+  doctrine: ["Type", "Regional Origin", "Followers", "Core Belief", "First Mentioned"],
+  history: ["Date/Era", "Location", "Key Factions", "Outcome"],
+};
+
+const CATEGORY_SECTIONS: Record<string, string[]> = {
+  characters: ["Overview", "Background", "Personality", "Relationships", "Notable Events"],
+  places: ["Description", "History", "Notable Inhabitants", "Points of Interest"],
+  creatures: ["Appearance", "Behaviour", "Abilities", "Habitat", "Lore"],
+  artifacts: ["Description", "History", "Powers", "Current Whereabouts"],
+  events: ["Summary", "Causes", "Key Participants", "Consequences", "Aftermath"],
+  magic: ["Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts"],
+  factions: ["Overview", "History", "Structure", "Notable Members", "Goals"],
+  doctrine: ["Core Tenets", "Origins", "Followers", "Contradictions"],
+  history: ["Overview", "Causes", "Key Figures", "Consequences", "Legacy"],
+};
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
 interface AISuggestion {
   name: string;
   category: string;
   description: string;
   confidence: number;
   source_scene_title?: string;
+  /** At a Glance values — only keys the AI can infer from the text */
+  fields?: Record<string, string>;
+  /** Article section content — only sections the AI has evidence for */
+  sections?: Record<string, string>;
+  /** Short tag strings for cross-referencing */
+  tags?: string[];
 }
 
 serve(async (req) => {
@@ -174,18 +208,37 @@ async function syncProject(
           typeof s.confidence === "number" &&
           s.confidence >= 0.6,
       )
-      .map((s) => ({
-        project_id: projectId,
-        type: "new_entity" as const,
-        payload: {
-          name: s.name,
-          category: s.category,
-          description: s.description ?? "",
-          confidence: Math.min(1, Math.max(0, s.confidence)),
-          source_scene_title: s.source_scene_title ?? null,
-        },
-        status: "pending" as const,
-      }));
+      .map((s) => {
+        // Populate all expected At a Glance keys; AI-inferred values override blanks.
+        const expectedFields = CATEGORY_FIELDS[s.category] ?? [];
+        const fields = Object.fromEntries(
+          expectedFields.map((key) => [key, s.fields?.[key] ?? ""]),
+        );
+
+        // Keep only non-empty section values from the AI response.
+        const sections: Record<string, string> = {};
+        for (const [k, v] of Object.entries(s.sections ?? {})) {
+          if (typeof v === "string" && v.trim()) sections[k] = v.trim();
+        }
+
+        return {
+          project_id: projectId,
+          type: "new_entity" as const,
+          payload: {
+            name: s.name,
+            category: s.category,
+            description: s.description ?? "",
+            confidence: Math.min(1, Math.max(0, s.confidence)),
+            source_scene_title: s.source_scene_title ?? null,
+            fields,
+            sections,
+            tags: Array.isArray(s.tags)
+              ? s.tags.map((t: string) => String(t).trim().toLowerCase()).filter(Boolean)
+              : [],
+          },
+          status: "pending" as const,
+        };
+      });
 
     let suggestionsCreated = 0;
     if (rows.length > 0) {
@@ -225,26 +278,45 @@ async function finaliseLog(supabase: any, logId: string | undefined, status: str
     .eq("id", logId);
 }
 
-function buildPrompt(sceneContext: string, entityContext: string): string {
-  return `You are a world-building analyst for a fantasy novel. Analyse the scene excerpts below and identify named entities that deserve entries in the world-building database: characters, locations, artefacts, creatures, magic systems, factions, historical events, and lore concepts.
+function buildCategoryReference(): string {
+  const lines: string[] = ["CATEGORY REFERENCE — use these when building fields/sections:"];
+  for (const cat of Object.keys(CATEGORY_FIELDS)) {
+    const fields = CATEGORY_FIELDS[cat].join(", ");
+    const sections = (CATEGORY_SECTIONS[cat] ?? []).join(", ");
+    lines.push(`  ${cat}:`);
+    lines.push(`    At a Glance fields: ${fields}`);
+    lines.push(`    Article sections:   ${sections}`);
+  }
+  return lines.join("\n");
+}
 
-EXISTING ENTITIES — do NOT re-suggest these unless you have significant new information:
+function buildPrompt(sceneContext: string, entityContext: string): string {
+  return `You are a world-building analyst for a fantasy novel. Analyse the scene excerpts and extract named entities worth tracking in a world-building database.
+
+EXISTING ENTITIES — do NOT re-suggest these:
 ${entityContext || "(none yet)"}
+
+${buildCategoryReference()}
 
 SCENE EXCERPTS:
 ${sceneContext}
 
-Return a JSON array only — no prose, no markdown code fences. Each element must have exactly these keys:
-- "name": string — the entity's proper name (1–5 words)
+Return a JSON array only — no prose, no markdown fences. Each element must have exactly these keys:
+
+- "name": string — proper name of the entity (1–5 words)
 - "category": one of "characters" | "places" | "events" | "history" | "artifacts" | "creatures" | "magic" | "factions" | "doctrine"
-- "description": string — 1–2 sentences summarising what this entity is, based only on the text
-- "confidence": number 0.0–1.0 — how certain you are this is a distinct, named, trackable entity
-- "source_scene_title": string — title of the scene where this entity appears
+- "description": string — 1–2 sentence summary of what this entity is
+- "confidence": number 0.0–1.0
+- "source_scene_title": string — scene title where this entity appears
+- "fields": object — At a Glance key/value pairs for this category (use the field names from CATEGORY REFERENCE above; only include fields whose values you can infer from the text; omit fields you cannot determine)
+- "sections": object — article section key/value pairs (use the section names from CATEGORY REFERENCE above; write 2–4 sentences per section based strictly on manuscript evidence; only include sections you have real content for)
+- "tags": array of short lowercase strings (e.g. ["protagonist", "magic-user", "northern-faction"]) — 2–5 tags that would help cross-reference this entity with others
 
 Rules:
-- Only include entities with confidence >= 0.6.
-- Focus on proper nouns (named characters, named places, specific artefacts, named groups).
-- Do not suggest generic concepts or unnamed background elements.
-- Do not include entities already in the EXISTING ENTITIES list.
+- Confidence >= 0.6 only.
+- Focus on proper nouns and named things. No generic concepts.
+- Do not re-suggest entities in the EXISTING ENTITIES list.
+- For "fields": use only the exact key names listed in CATEGORY REFERENCE. Leave out any key you have no evidence for.
+- For "sections": use only the exact section names listed for the category. Write substantive content — do not write placeholder text.
 - Output only the JSON array, nothing else.`;
 }
