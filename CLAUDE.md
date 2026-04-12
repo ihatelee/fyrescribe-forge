@@ -46,37 +46,38 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
   - Entity gallery supports tag filtering via `?tag=<id>` search param with "× Clear tag filter" pill.
 - **Manuscript drag and drop** — scenes in the chapter/scene sidebar are `draggable`. Dragging a scene onto a different chapter's container moves it to that chapter in Supabase and updates the `order` field. Dropped-into chapters auto-expand. Visual highlight (gold glow + ring) on drag-over chapter.
 - **Timeline** — `TimelinePage` reads from `timeline_events` Supabase table (real data, no placeholder). "Generate from Lore" button invokes the `generate-timeline` Supabase Edge Function which reads Event/History entities + scene excerpts, calls claude-sonnet-4-6 via Anthropic API, and inserts the returned `{label, date_label, date_sort, type}[]` events. Events can be deleted (hover reveals trash icon). Edge function is deployed to production.
+- **Lore sync pipeline** — `supabase/functions/sync-lore/index.ts` edge function reads scenes where `is_dirty = true` for a project, calls claude-sonnet-4-6, and writes structured `new_entity` suggestions to `lore_suggestions`. Each suggestion payload contains: `name`, `category`, `description`, `confidence`, `source_scene_title`, `fields` (all At a Glance keys for the category, AI-populated where inferable), `sections` (non-empty article sections with substantive AI-written content), `tags` (lowercase cross-reference strings). Clears `is_dirty` on processed scenes, updates `projects.last_sync_at`, and logs to `sync_log`. Deployed to production. Daily pg_cron job (`daily-lore-sync`, 03:00 UTC) calls the function for all projects via `net.http_post`.
+- **Lore Inbox** (`LoreInboxPage`) — fully wired to Supabase. Shows pending `lore_suggestions` for the active project. Each card displays: type badge, category badge, entity name, description, populated At a Glance fields (two-column grid), article section names (pills), suggested tags (gold pills), confidence bar, source scene. **Accept**: inserts entity with pre-populated `fields` and `sections` JSONBs; upserts new tags into `tags` table and links via `entity_tags`; shows "Entity created → View" banner. **Edit**: inline name/description edit before accepting (sets status `edited`). **Reject**: marks `rejected` with `reviewed_at`.
+- **Sidebar — Sync Now** — `Sidebar.tsx` fetches live pending count from `lore_suggestions` (replacing hardcoded prop). "Sync Now" button invokes `sync-lore` for the active project, shows spinner, displays brief result message ("N new suggestions" / "Up to date"), then refreshes the count.
 - **Storage buckets** — `entity-images` (entity gallery images), `manuscripts` (uploaded manuscript files). Both use RLS policies keyed on `storage.foldername(name)[1] = auth.uid()`.
-- **Other pages** — `POVTrackerPage`, `LoreInboxPage` exist (scaffolded).
+- **Other pages** — `POVTrackerPage` exists (scaffolded).
 
 ### What is NOT yet built
 
-- Part 2 of manuscript import: AI analysis to extract lore suggestions into `lore_suggestions` table.
-- Lore Inbox review flow (accept/reject/edit suggestions).
 - POV tracker logic.
 - Word count tracking (column exists on `scenes`, not yet wired up).
 - Project archiving (column `archived_at` exists on `projects`, not yet used in UI).
 - Timeline: manual "Add Event" button (button exists in UI but is not wired up).
+- Lore Inbox: `field_update`, `contradiction`, and `new_tag` suggestion types are displayed but the sync function only produces `new_entity` suggestions today.
 
 ---
 
 ## Where We Left Off
 
-**Session: 2026-04-12 (session 4)**
+**Session: 2026-04-12 (session 5)**
 
-Post-migration cleanup:
+Completed the lore sync pipeline and Lore Inbox end-to-end:
 
-- `20260413000000_entity_category_updates.sql` applied to production — `abilities`→`magic`, `history` added.
-- `types.ts` updated to match post-migration enum; all `as EntityCategory` / `as any` workaround casts removed.
-- `EntityGalleryPage`: `activeFilter` state typed as `EntityCategory | "all"`; URL param initialised via `ENTITY_CATEGORIES.find()` (no cast); select `onChange` uses `find()` on `ENTITY_CATEGORIES` (no cast); Supabase result narrowed to `EntityRow[]` instead of `any`.
-- `sync-lore` edge function and `pg_cron` daily schedule committed (see session-3 commit).
+- **`sync-lore` edge function** built and deployed. Reads dirty scenes, calls claude-sonnet-4-6 with a category-reference block so the AI populates exact At a Glance field keys and article section names. Payload stores `fields`, `sections`, `tags` alongside the existing `name`/`category`/`description`/`confidence`. Daily pg_cron job wired up.
+- **Lore Inbox UI** (`LoreInboxPage`) fully wired. Accept flow creates the entity with pre-populated `fields` + `sections` JSONBs and upserts/links tags. Edit mode allows name/description correction before accepting. Card preview shows all AI-extracted data.
+- **Sidebar Sync Now** button added; live pending count replaces hardcoded prop.
 
 **Next logical steps:**
-- Deploy `sync-lore` edge function: `supabase functions deploy sync-lore`.
-- Confirm `ANTHROPIC_API_KEY` secret is set in the Supabase project (Settings → Edge Functions → Secrets).
-- Test "Generate from Lore" (timeline) and "Lore Sync" (sync-lore) end-to-end in production.
-- Test manuscript import end-to-end with a real file.
-- Build the Lore Inbox review flow (accept/reject/edit `lore_suggestions`).
+- Deploy `sync-lore`: `supabase functions deploy sync-lore` (if not already done via dashboard).
+- Confirm `ANTHROPIC_API_KEY` secret is set (Settings → Edge Functions → Secrets).
+- Test Sync Now end-to-end with real manuscript content.
+- Consider extending the sync prompt to also produce `field_update` and `contradiction` suggestion types.
+- Word count tracking — wire up `scenes.word_count` to the editor's save path.
 
 ---
 

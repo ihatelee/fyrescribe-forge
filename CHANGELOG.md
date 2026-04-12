@@ -4,6 +4,35 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-12 (session 5)
+
+### Lore sync pipeline
+
+**`supabase/functions/sync-lore/index.ts`** (new edge function)
+- Reads scenes where `is_dirty = true` for a given project (or all projects if no `project_id` supplied).
+- Calls claude-sonnet-4-6 with a CATEGORY REFERENCE block listing every At a Glance field key and article section name per category, so the AI uses exact key strings.
+- Each suggestion payload includes: `name`, `category`, `description`, `confidence`, `source_scene_title`, `fields` (all category keys pre-populated; AI fills what it can infer), `sections` (non-empty only, substantive content), `tags` (lowercase cross-reference strings).
+- Writes results to `lore_suggestions` (`type = new_entity`, `status = pending`).
+- Clears `is_dirty` on processed scenes; updates `projects.last_sync_at`; logs to `sync_log`.
+
+**`supabase/migrations/20260412100000_pg_cron_lore_sync.sql`**
+- Enables `pg_cron` + `pg_net`; schedules `daily-lore-sync` at 03:00 UTC via `net.http_post`.
+
+### Lore Inbox UI
+
+**`LoreInboxPage.tsx`** — full rewrite from placeholder data:
+- Fetches pending `lore_suggestions` for the active project, newest first.
+- Card shows: type badge, category badge, entity name, description, populated At a Glance fields (two-column grid), article section names as pills, suggested tags as gold pills, confidence bar, source scene.
+- **Accept**: inserts entity with `fields` + `sections` JSONBs; upserts new tags into `tags` table and links via `entity_tags`; shows "Entity created → View" banner.
+- **Edit**: inline name/description edit before accepting; sets status `edited`.
+- **Reject**: marks `rejected` with `reviewed_at`.
+
+**`Sidebar.tsx`**
+- Removed hardcoded `loreSuggestionCount` prop; sidebar now fetches live pending count from Supabase.
+- Added **Sync Now** button: invokes `sync-lore` for the active project, shows spinner, displays result message ("N new suggestions" / "Up to date"), refreshes count.
+
+---
+
 ## 2026-04-12 (session 4)
 
 ### Post-migration cast cleanup
