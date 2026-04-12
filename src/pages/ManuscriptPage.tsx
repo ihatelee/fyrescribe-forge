@@ -668,6 +668,23 @@ const ManuscriptPage = () => {
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-fyrescribe-base">
             <div className="flex items-center gap-1">
               {toolbar}
+              <div className="w-px h-4 bg-border mx-1" />
+              <div className="flex items-center gap-0.5 bg-fyrescribe-hover rounded-md p-0.5">
+                {(["small", "medium", "large", "xl"] as TextSize[]).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setTextSize(s)}
+                    className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
+                      textSize === s
+                        ? "bg-fyrescribe-raised text-foreground"
+                        : "text-text-dimmed hover:text-text-secondary"
+                    }`}
+                  >
+                    {s === "xl" ? "XL" : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="w-px h-4 bg-border mx-1" />
               <button
                 onClick={() => setFocusMode(true)}
                 className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
@@ -710,7 +727,7 @@ const ManuscriptPage = () => {
                   <div
                     key={activeSceneId}
                     ref={makeEditorRef(editorRef)}
-                    className="font-prose text-base leading-[1.9] text-[#b8c0d4] whitespace-pre-wrap outline-none min-h-[60vh]"
+                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-[#b8c0d4] whitespace-pre-wrap outline-none min-h-[60vh]`}
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
