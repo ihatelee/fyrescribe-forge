@@ -502,7 +502,7 @@ const ManuscriptPage = () => {
             <div
               key={activeSceneId ?? "empty"}
               ref={makeEditorRef(focusEditorRef)}
-              className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-[#b8c0d4] whitespace-pre-wrap outline-none min-h-[60vh]`}
+                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
               contentEditable
               suppressContentEditableWarning
               onInput={handleEditorInput}
@@ -727,7 +727,7 @@ const ManuscriptPage = () => {
                   <div
                     key={activeSceneId}
                     ref={makeEditorRef(editorRef)}
-                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-[#b8c0d4] whitespace-pre-wrap outline-none min-h-[60vh]`}
+                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
