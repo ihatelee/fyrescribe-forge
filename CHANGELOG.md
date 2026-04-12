@@ -4,6 +4,21 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-12 (session 8)
+
+### Lore sync — confirmed working end to end
+
+Pipeline validated with real manuscript content. Entity detection, fields, sections, tags, and confidence scores all populating correctly in the Lore Inbox.
+
+**`supabase/functions/sync-lore/index.ts`**
+- Confidence threshold lowered 0.6 → 0.4. Entities mentioned only briefly (a name dropped once, a place referenced in passing) now surface in the inbox instead of being silently dropped.
+- Prompt rewritten from "identify the single most important entity" to "extract ALL named entities." Every named character (including minor ones), place, organisation, artifact, creature, event, doctrine, and magic system is extracted. If it has a proper noun, it gets suggested.
+- Returns up to 5 entities per scene (array) instead of 1 object. Still one scene per API call so truncation risk is negligible (5 small objects ≈ 1,000 tokens, `max_tokens` 1,500).
+- Added `source_sentence` field to the suggestion payload: verbatim sentence from the scene where the entity first appears. Stored in the JSONB payload; not yet displayed in the Lore Inbox card UI.
+- `callAnthropicForScene` return type changed from `AISuggestion | null` to `AISuggestion[]`.
+
+---
+
 ## 2026-04-12 (session 7)
 
 ### Entity gallery improvements
