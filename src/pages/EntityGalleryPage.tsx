@@ -217,7 +217,7 @@ const EntityGalleryPage = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("entities")
-        .select("id, name, category, summary, archived_at, entity_tags(tags(id, name, color))")
+        .select("id, name, category, summary, entity_tags(tags(id, name, color))")
         .eq("project_id", activeProject.id)
         .order("name");
       if (error) console.error("Failed to fetch entities:", error);
