@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
+import LoreUploadModal from "@/components/LoreUploadModal";
 import {
   Plus,
   Loader2,
@@ -12,6 +13,7 @@ import {
   LayoutGrid,
   List,
   ChevronDown,
+  Upload,
 } from "lucide-react";
 import {
   DropdownMenu,
