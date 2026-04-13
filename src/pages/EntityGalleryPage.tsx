@@ -482,7 +482,7 @@ const EntityGalleryPage = () => {
               >
                 <Plus size={14} />
                 {activeFilter === "all"
-                  ? "Create your first entity"
+                  ? "Create your first entry"
                   : `Create a ${activeFilter.replace(/s$/, "")}`}
               </button>
             )}
