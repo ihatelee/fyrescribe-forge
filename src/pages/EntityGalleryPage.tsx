@@ -736,6 +736,14 @@ const EntityGalleryPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showUploadModal && activeProject && (
+        <LoreUploadModal
+          projectId={activeProject.id}
+          defaultCategory={defaultNewCategory}
+          onClose={() => setShowUploadModal(false)}
+        />
+      )}
     </AppLayout>
   );
 };
