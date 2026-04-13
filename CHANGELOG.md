@@ -4,6 +4,38 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (session 11)
+
+### Outrun theme overhaul + music player
+
+**`src/contexts/ThemeContext.tsx`**
+- `ThemeName` union: `"futureworld"` → `"outrun"`.
+- `THEME_VARS` key renamed accordingly (vars unchanged).
+
+**`src/components/ThemeSwitcher.tsx`**
+- THEMES array: `{ value: "futureworld", label: "Futureworld" }` → `{ value: "outrun", label: "Outrun" }`.
+- Sparkle toggle label: `"Make it Sparkle"` → `"Time to Run"`.
+
+**`src/lib/iconSets.ts`**
+- `THEME_DEFAULT_ICON_SET`: `futureworld` key renamed to `outrun`.
+
+**`src/components/Titlebar.tsx`**, **`src/pages/OnboardingPage.tsx`**
+- Import `fyrescribe_logo_bit.svg`; swap logo src when `theme === "outrun"`, default logo on all other themes.
+
+**`src/components/OutrunGridBackground.tsx`** (new)
+- CSS-only retro perspective grid: a `perspective(500px) rotateX(72deg)` div with repeating `background-image` grid lines, animated via `background-position-y` for a forward-motion illusion. Horizon glow line via `box-shadow`. All colors use `hsl(var(--gold) / alpha)` — no new CSS variables.
+
+**`src/components/GlobalSparkle.tsx`**
+- When `theme === "outrun"`, renders `OutrunGridBackground` instead of `StarfieldBackground`.
+
+**`src/components/OutrunMusicPlayer.tsx`** (new)
+- Streams audio from `OUTRUN_MUSIC_URL` constant (Nihilore – Motion Blur). Auto-plays on mount; cleanup pauses on unmount (i.e. when theme changes away). Autoplay-block fallback: stays in paused state if browser denies autoplay. Controls: play/pause button + volume slider. Credit label: "♪ Nihilore".
+
+**`src/components/Sidebar.tsx`**
+- Imports `OutrunMusicPlayer`; renders it below the sync/inbox section when `theme === "outrun"`.
+
+---
+
 ## 2026-04-13 (session 10)
 
 ### Lovable pull — timeline overhaul, icon sets, entity bulk delete
