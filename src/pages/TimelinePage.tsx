@@ -134,6 +134,26 @@ const TimelinePage = () => {
           </div>
         )}
 
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="mb-4 flex items-center gap-2">
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkBusy}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md bg-destructive/15 text-destructive hover:bg-destructive/25 disabled:opacity-40 transition-colors"
+            >
+              {bulkBusy ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+              Delete Selected ({selectedIds.size})
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-3 py-1.5 text-[12px] rounded-md text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+            >
+              Clear selection
+            </button>
+          </div>
+        )}
+
         <div className="flex gap-2 mb-8">
           {(["all", "world_history", "story_event"] as const).map((type) => (
             <button
