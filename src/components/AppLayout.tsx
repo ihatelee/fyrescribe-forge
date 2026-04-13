@@ -9,11 +9,11 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children, showSidebar = true }: AppLayoutProps) => {
   return (
-    <div className="min-h-screen">
+    <div className="h-screen overflow-hidden flex flex-col">
       <Titlebar />
       {showSidebar && <Sidebar />}
       <main
-        className={`pt-20 ${showSidebar ? "pl-[190px]" : ""} min-h-screen`}
+        className={`flex-1 min-h-0 pt-20 ${showSidebar ? "pl-[190px]" : ""} overflow-auto`}
       >
         {children}
       </main>

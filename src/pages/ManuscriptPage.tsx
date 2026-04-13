@@ -6,6 +6,7 @@ import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { stripRtf, parseManuscript } from "@/lib/manuscriptParser";
+import OutrunMusicPlayer from "@/components/OutrunMusicPlayer";
 import {
   Bold,
   Italic,
@@ -632,8 +633,8 @@ const ManuscriptPage = () => {
   // ─── Main layout ─────────────────────────────────────────────────────
 
   const chapterSidebar = (
-    <div className="w-[240px] bg-fyrescribe-base border-l border-border overflow-y-auto flex-shrink-0 flex flex-col">
-      <div className="p-3 flex-1">
+    <div className="w-[240px] bg-fyrescribe-base border-l border-border overflow-hidden flex-shrink-0 flex flex-col">
+      <div className="p-3 flex-1 overflow-y-auto min-h-0">
         <div className="text-[10px] font-medium uppercase tracking-widest text-text-dimmed mb-3 px-2" style={labelStyle}>
           Chapters
         </div>
@@ -768,6 +769,12 @@ const ManuscriptPage = () => {
         )}
       </div>
 
+      {theme === "outrun" && (
+        <div className="border-t border-border">
+          <OutrunMusicPlayer />
+        </div>
+      )}
+
       <div className="p-3 border-t border-border">
         <button
           onClick={handleAddChapter}
@@ -782,7 +789,7 @@ const ManuscriptPage = () => {
 
   return (
     <AppLayout>
-      <div className="flex h-[calc(100vh-48px)]">
+      <div className="flex h-[calc(100vh-80px)]">
         {/* Editor area */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Toolbar */}

@@ -4,6 +4,27 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (session 15)
+
+### Viewport scroll fix + Outrun music player moved to chapter sidebar
+
+**`src/index.css`**
+- Added `html, body, #root { height: 100%; overflow: hidden; }` — eliminates page-level scroll globally.
+
+**`src/components/AppLayout.tsx`**
+- Outer div: `min-h-screen` → `h-screen overflow-hidden flex flex-col`.
+- `main`: `min-h-screen` → `flex-1 min-h-0 overflow-auto` — correctly fills remaining viewport height without overflowing.
+
+**`src/pages/ManuscriptPage.tsx`**
+- Fixed wrong height offset: `h-[calc(100vh-48px)]` → `h-[calc(100vh-80px)]` (48px was `top-12`; titlebar is `h-20` = 80px).
+- Chapter sidebar outer div: `overflow-y-auto` removed → `overflow-hidden`. Inner chapters div: gains `overflow-y-auto min-h-0` so chapters scroll within the panel while bottom controls remain fixed.
+- Added `OutrunMusicPlayer` import; player rendered above "New chapter" button conditionally when `theme === "outrun"`.
+
+**`src/components/OutrunGlobals.tsx`**
+- Emptied (returns `null`). Player now lives in ManuscriptPage; no duplicate audio element.
+
+---
+
 ## 2026-04-13 (session 14)
 
 ### Outrun theme polish — player persistence, volume memory, manuscript labels, scifi icon sync

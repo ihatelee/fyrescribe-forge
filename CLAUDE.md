@@ -86,6 +86,25 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ## Where We Left Off
 
+**Session: 2026-04-13 (session 15 — viewport scroll fix + music player in chapter panel)**
+
+- `src/index.css`: added `html, body, #root { height: 100%; overflow: hidden; }` to eliminate page-level scroll on all pages.
+- `AppLayout.tsx`: outer div changed from `min-h-screen` to `h-screen overflow-hidden flex flex-col`; `main` changed from `min-h-screen` to `flex-1 min-h-0 overflow-auto`.
+- `ManuscriptPage.tsx`: outer flex container changed from `h-[calc(100vh-48px)]` (wrong 48px offset) to `h-[calc(100vh-80px)]` (correct 80px = h-20 titlebar).
+- `ManuscriptPage.tsx` chapter sidebar restructured: outer div `overflow-hidden`, inner chapters div `flex-1 overflow-y-auto min-h-0` — chapters scroll internally, bottom controls stay fixed.
+- `ManuscriptPage.tsx`: `OutrunMusicPlayer` now rendered inside the chapter sidebar, above the "New chapter" button, only when `theme === "outrun"`. Imported `OutrunMusicPlayer` directly.
+- `OutrunGlobals.tsx`: emptied (returns null) — player is now in ManuscriptPage; no more duplicate audio element or left-sidebar overlay.
+
+**Pending / next logical steps:**
+- Music stops when navigating away from ManuscriptPage (audio now lives in ManuscriptPage, not outside route tree). Acceptable for now; could be fixed by lifting audio to context if needed.
+- The MP3 URL is HTTP, not HTTPS — browsers may block on HTTPS deployments (mixed content). May need to proxy or re-host the track.
+- Display `source_sentence` in the Lore Inbox card (stored in payload, not yet shown in UI).
+- Add a progress toast or per-scene counter to the sidebar sync flow so users can see it working on large manuscripts.
+- Consider extending sync to produce `field_update` and `contradiction` suggestion types.
+- Word count tracking — wire up `scenes.word_count` to the editor's save path.
+
+---
+
 **Session: 2026-04-13 (session 14 — Outrun player persistence + polish)**
 
 - `OutrunGlobals.tsx` created; mounted in `App.tsx` alongside `GlobalSparkle` (outside route tree) so the music player never remounts on navigation.
