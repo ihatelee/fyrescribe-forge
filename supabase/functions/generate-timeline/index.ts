@@ -26,12 +26,17 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch Events and History entities
+    // Fetch Events and History entities (include id for entity_id linking)
     const { data: entities } = await supabase
       .from("entities")
-      .select("name, category, summary")
+      .select("id, name, category, summary")
       .eq("project_id", project_id)
       .in("category", ["events", "history"]);
+
+    // Build a lookup map: lowercase name → entity id (covers events + history)
+    const entityIdByName = new Map<string, string>(
+      (entities || []).map((e) => [e.name.toLowerCase(), e.id])
+    );
 
     // Fetch scene content (first 500 chars each to keep context manageable)
     const { data: scenes } = await supabase
@@ -98,7 +103,7 @@ Include world history events and story-level events separately. Aim for 6–14 e
     const events: { label: string; date_label: string; date_sort: number; type: string }[] =
       JSON.parse(jsonText);
 
-    // Validate and insert into timeline_events
+    // Validate and insert into timeline_events; match label → entity_id where possible
     const rows = events
       .filter((e) => e.label && (e.type === "world_history" || e.type === "story_event"))
       .map((e) => ({
@@ -107,6 +112,7 @@ Include world history events and story-level events separately. Aim for 6–14 e
         date_label: e.date_label ?? null,
         date_sort: typeof e.date_sort === "number" ? e.date_sort : null,
         type: e.type as "world_history" | "story_event",
+        entity_id: entityIdByName.get(e.label.toLowerCase()) ?? null,
       }));
 
     const { data: inserted, error: insertError } = await supabase

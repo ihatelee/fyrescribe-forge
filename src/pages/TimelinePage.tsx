@@ -14,6 +14,7 @@ interface TimelineEvent {
   date_sort: number | null;
   type: TimelineEventType;
   project_id: string;
+  entity_id: string | null;
 }
 
 const ERA_OPTIONS = [
@@ -65,7 +66,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
       return;
     }
 
-    // Also create a corresponding "events" entity in the lore system
+    // Also create a corresponding "events" entity and link it back
     if (createEntity) {
       const fields: Record<string, string> = {
         "Date/Era": dateLabel,
@@ -81,18 +82,28 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
         Consequences: "",
       };
 
-      const { error: entityError } = await supabase.from("entities").insert({
-        name: trimmed,
-        category: "events" as Database["public"]["Enums"]["entity_category"],
-        project_id: projectId,
-        summary: dateLabel ? `Event occurring in the ${dateLabel}` : null,
-        fields,
-        sections,
-      });
+      const { data: entityData, error: entityError } = await supabase
+        .from("entities")
+        .insert({
+          name: trimmed,
+          category: "events" as Database["public"]["Enums"]["entity_category"],
+          project_id: projectId,
+          summary: dateLabel ? `Event occurring in the ${dateLabel}` : null,
+          fields,
+          sections,
+        })
+        .select("id")
+        .single();
 
       if (entityError) {
         console.error("Failed to create entity for timeline event:", entityError);
         // Non-blocking — the timeline event was still created
+      } else if (entityData) {
+        await supabase
+          .from("timeline_events")
+          .update({ entity_id: entityData.id })
+          .eq("id", eventData.id);
+        (eventData as TimelineEvent).entity_id = entityData.id;
       }
     }
 
