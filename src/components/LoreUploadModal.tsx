@@ -186,7 +186,7 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
     <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-fyrescribe-raised border border-border rounded-xl p-6 w-full max-w-md shadow-2xl max-h-[85vh] flex flex-col"
+        className="bg-fyrescribe-raised border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl max-h-[85vh] flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
@@ -199,8 +199,8 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
         {state === "success" ? (
           /* ─── Success state ─── */
           <div className="flex flex-col items-center py-8">
-            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
-              <Check size={20} className="text-green-400" />
+            <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center mb-4">
+              <Check size={20} className="text-gold" />
             </div>
             <p className="text-sm text-foreground mb-1">Entity created successfully</p>
             {createdEntityId && (
@@ -240,74 +240,63 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
             </div>
 
             {/* Upload dropzone / file display */}
-            {!file ? (
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer transition-colors mb-4 ${
-                  dragOver
-                    ? "border-gold bg-gold/5"
-                    : "border-border hover:border-text-dimmed"
-                }`}
-              >
-                <Upload size={24} className="text-text-dimmed mb-3" />
-                <p className="text-sm text-text-secondary mb-1">
-                  Drop a file here or click to browse
-                </p>
-                <p className="text-[11px] text-text-dimmed">PDF or plain text (.txt)</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.txt,application/pdf,text/plain"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleFileSelect(f);
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 bg-fyrescribe-hover border border-border rounded-lg px-3 py-2.5 mb-4">
-                <FileText size={16} className="text-gold shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{file.name}</p>
-                  <p className="text-[11px] text-text-dimmed">{formatFileSize(file.size)}</p>
+            <div className="mb-5">
+              <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
+                Document
+              </label>
+              {!file ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  className={`w-full bg-fyrescribe-hover border border-dashed rounded-lg px-3 py-4 text-sm text-text-dimmed hover:text-text-secondary hover:border-text-dimmed transition-colors flex flex-col items-center gap-1 ${
+                    dragOver ? "border-gold text-gold" : "border-border"
+                  }`}
+                >
+                  <Upload size={18} />
+                  <span>Drop a file here, or click to browse</span>
+                  <span className="text-[11px] text-text-dimmed">PDF or plain text (.txt)</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.txt,application/pdf,text/plain"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleFileSelect(f);
+                    }}
+                  />
+                </button>
+              ) : (
+                <div className="flex items-center gap-3 bg-fyrescribe-hover border border-border rounded-lg px-3 py-2.5">
+                  <FileText size={16} className="text-gold shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground truncate">{file.name}</p>
+                    <p className="text-[11px] text-text-dimmed">{formatFileSize(file.size)}</p>
+                  </div>
+                  {state !== "parsing" && state !== "applying" && (
+                    <button
+                      onClick={clearFile}
+                      className="text-text-dimmed hover:text-foreground transition-colors shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
-                {state !== "parsing" && state !== "applying" && (
-                  <button
-                    onClick={clearFile}
-                    className="text-text-dimmed hover:text-foreground transition-colors shrink-0"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Error message */}
             {state === "parse_error" && errorMessage && (
-              <div className="mb-4 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                {errorMessage}
-              </div>
-            )}
-
-            {/* Parse button (visible when file is selected but not yet parsed) */}
-            {(state === "file_selected" || state === "parse_error") && (
-              <button
-                onClick={handleParse}
-                disabled={!file}
-                className="w-full py-2 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors disabled:opacity-50 mb-4"
-              >
-                Read Entry
-              </button>
+              <p className="text-destructive text-xs mb-4">{errorMessage}</p>
             )}
 
             {/* Parsing spinner */}
             {state === "parsing" && (
-              <div className="flex items-center justify-center gap-2 py-6 mb-4">
-                <Loader2 size={16} className="animate-spin text-gold" />
+              <div className="flex items-center justify-center gap-2 py-4 mb-4">
+                <Loader2 size={14} className="animate-spin text-gold" />
                 <span className="text-sm text-text-secondary">Reading your lore entry…</span>
               </div>
             )}
@@ -353,35 +342,35 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
               </div>
             )}
 
-            {/* Confirm / cancel buttons */}
-            {state === "fields_ready" && (
-              <div className="flex gap-3">
-                <button
-                  onClick={handleCreate}
-                  disabled={!hasIncluded}
-                  className="flex-1 py-2 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors disabled:opacity-50"
-                >
-                  Create Entity
-                </button>
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 text-sm text-text-secondary hover:text-foreground transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-
+            {/* Applying spinner */}
             {state === "applying" && (
-              <div className="flex items-center justify-center gap-2 py-3">
-                <Loader2 size={16} className="animate-spin text-gold" />
+              <div className="flex items-center justify-center gap-2 py-3 mb-4">
+                <Loader2 size={14} className="animate-spin text-gold" />
                 <span className="text-sm text-text-secondary">Creating entity…</span>
               </div>
             )}
 
-            {/* Cancel for early states */}
-            {(state === "empty" || state === "file_selected" || state === "parse_error") && (
-              <div className="flex justify-end">
+            {/* Action bar — always visible, matches Import modal layout */}
+            {state !== "parsing" && state !== "applying" && (
+              <div className="flex gap-3">
+                {(state === "file_selected" || state === "parse_error") && (
+                  <button
+                    onClick={handleParse}
+                    disabled={!file}
+                    className="flex-1 py-2 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors disabled:opacity-50"
+                  >
+                    Read Entry
+                  </button>
+                )}
+                {state === "fields_ready" && (
+                  <button
+                    onClick={handleCreate}
+                    disabled={!hasIncluded}
+                    className="flex-1 py-2 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors disabled:opacity-50"
+                  >
+                    Create Entity
+                  </button>
+                )}
                 <button
                   onClick={onClose}
                   className="px-4 py-2 text-sm text-text-secondary hover:text-foreground transition-colors"
