@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import OutrunMusicPlayer from "./OutrunMusicPlayer";
 
 const WRITE_KEYS = ["manuscript", "timeline"] as const;
 const WRITE_LABELS: Record<string, string> = {
@@ -46,7 +47,7 @@ const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { activeProject } = useActiveProject();
-  const { icons } = useTheme();
+  const { icons, theme } = useTheme();
 
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -118,6 +119,11 @@ const Sidebar = () => {
             ? "text-gold-bright bg-gold-glow border border-gold"
             : "text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover border border-transparent"
         }`}
+        style={
+          active && theme === "outrun"
+            ? { borderColor: "hsl(var(--neon-yellow))", color: "hsl(var(--neon-yellow))" }
+            : undefined
+        }
       >
         <Icon size={14} weight="duotone" />
         {label}
@@ -164,7 +170,7 @@ const Sidebar = () => {
         </div>
       </div>
 
-      <div className="p-2 border-t border-border space-y-1">
+      <div className={`p-2 border-t border-border space-y-1 ${theme === "outrun" ? "pb-[72px]" : ""}`}>
         {/* Full sync patience note */}
         {fullSyncNote && (
           <p className="px-3 py-1.5 text-[10px] text-gold/80 bg-gold/5 border border-gold/10 rounded-md">
@@ -215,6 +221,12 @@ const Sidebar = () => {
         </button>
       </div>
 
+      {/* Outrun music player — absolutely pinned to the bottom of this panel */}
+      {theme === "outrun" && (
+        <div className="absolute bottom-0 left-0 right-0 z-10 bg-fyrescribe-base">
+          <OutrunMusicPlayer />
+        </div>
+      )}
     </div>
   );
 };

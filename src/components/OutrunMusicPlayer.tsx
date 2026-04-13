@@ -44,8 +44,10 @@ const OutrunMusicPlayer = () => {
     }
   };
 
-  const trackFill = `hsl(var(--gold))`;
-  const trackEmpty = `hsl(var(--gold) / 0.2)`;
+  // Neon yellow accent for play button + slider; card border stays gold (green)
+  const neonYellow = `hsl(var(--neon-yellow))`;
+  const trackFill = neonYellow;
+  const trackEmpty = `hsl(var(--neon-yellow) / 0.2)`;
 
   return (
     <div className="px-2 pb-2">
@@ -66,15 +68,15 @@ const OutrunMusicPlayer = () => {
             aria-label={playing ? "Pause" : "Play"}
             className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded transition-all"
             style={{
-              color: "hsl(var(--gold))",
-              border: "1px solid hsl(var(--gold) / 0.4)",
-              background: "hsl(var(--gold) / 0.08)",
+              color: neonYellow,
+              border: `1px solid hsl(var(--neon-yellow) / 0.5)`,
+              background: `hsl(var(--neon-yellow) / 0.08)`,
             }}
             onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "hsl(var(--gold) / 0.18)")
+              (e.currentTarget.style.background = `hsl(var(--neon-yellow) / 0.18)`)
             }
             onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "hsl(var(--gold) / 0.08)")
+              (e.currentTarget.style.background = `hsl(var(--neon-yellow) / 0.08)`)
             }
           >
             {playing ? (

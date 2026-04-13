@@ -4,6 +4,27 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (session 13)
+
+### Outrun theme polish — player placement, neon yellow, logo color
+
+**`src/components/AppLayout.tsx`**
+- Reverted to simple form: removed `useTheme`, `OutrunMusicPlayer` import, right panel div, and `pr-[180px]` offset. No layout changes for the outrun theme.
+
+**`src/components/Sidebar.tsx`**
+- Re-added `OutrunMusicPlayer` import and `theme` from `useTheme()`.
+- Player rendered as `absolute bottom-0 left-0 right-0 z-10 bg-fyrescribe-base` — positioned within the sidebar's `fixed` container, which acts as the CSS containing block.
+- Bottom nav section gets `pb-[72px]` when `theme === "outrun"` to clear the absolutely positioned player.
+- `NavItem` applies `borderColor` + `color` of `hsl(var(--neon-yellow))` via inline style when the item is active and the theme is "outrun".
+
+**`src/components/OutrunMusicPlayer.tsx`**
+- Play/pause button and volume slider now use `--neon-yellow` (acid yellow-green) instead of `--gold` (green), giving the player a two-tone accent that makes the new color visible.
+
+**`src/assets/fyrescribe_logo_bit.svg`**
+- Changed `.cls-1{fill:#fff}` → `.cls-1{fill:#00FF41}`. The bit logo is now outrun green without needing any CSS filter.
+
+---
+
 ## 2026-04-13 (session 12)
 
 ### Outrun theme fixes
