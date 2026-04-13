@@ -51,8 +51,8 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
       .from("timeline_events")
       .insert({
         label: trimmed,
-        date_label: dateLabel.trim() || null,
-        date_sort: dateSort ? parseInt(dateSort, 10) : 0,
+        date_label: dateLabel || null,
+        date_sort: ERA_OPTIONS.find((o) => o.label === dateLabel)?.sort ?? 0,
         type,
         project_id: projectId,
       })
@@ -128,28 +128,17 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
           <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
             Date / Era
           </label>
-          <input
+          <select
             value={dateLabel}
             onChange={(e) => setDateLabel(e.target.value)}
-            placeholder="e.g. Third Age, Year 412"
-            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40 placeholder:text-text-dimmed"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
-            Sort Order
-          </label>
-          <input
-            type="number"
-            value={dateSort}
-            onChange={(e) => setDateSort(e.target.value)}
-            placeholder="0"
-            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40 placeholder:text-text-dimmed"
-          />
-          <p className="text-[10px] text-text-dimmed mt-1">
-            Lower numbers appear first on the timeline.
-          </p>
+            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40"
+          >
+            {ERA_OPTIONS.map((era) => (
+              <option key={era.label} value={era.label}>
+                {era.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="mb-4">
