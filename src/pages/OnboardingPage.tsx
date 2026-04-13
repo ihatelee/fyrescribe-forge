@@ -26,6 +26,14 @@ const OnboardingPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 relative">
+      {/* Close / back to projects */}
+      <button
+        onClick={() => navigate("/projects")}
+        className="absolute top-5 right-5 z-20 w-8 h-8 rounded-lg flex items-center justify-center text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+        title="Back to projects"
+      >
+        <X size={18} />
+      </button>
       <StarfieldBackground />
 
       <div className="relative z-10 flex flex-col items-center">
