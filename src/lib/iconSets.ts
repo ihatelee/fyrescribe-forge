@@ -7,7 +7,7 @@ import {
   Mountains as FantasyPlaces,
   CalendarBlank as FantasyEvents,
   BookBookmark as FantasyHistory,
-  Diamond as FantasyArtifacts,
+  SketchLogo as FantasyArtifacts,
   Horse as FantasyCreatures,
   MagicWand as FantasyMagic,
   Shield as FantasyFactions,
