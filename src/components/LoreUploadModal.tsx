@@ -37,7 +37,7 @@ interface ExtractedField {
   included: boolean;
 }
 
-type ModalState = "empty" | "file_selected" | "parsing" | "parse_error" | "fields_ready" | "applying" | "success";
+type ModalState = "ready" | "importing" | "fields_ready" | "applying" | "success";
 
 interface LoreUploadModalProps {
   projectId: string;
