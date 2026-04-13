@@ -486,15 +486,23 @@ const EntityGalleryPage = () => {
                     onClick={() => navigate(`/entity/${entity.id}`)}
                     className="relative text-left bg-fyrescribe-raised border border-border rounded-xl p-4 hover:border-gold/20 transition-all group animate-fade-in cursor-pointer"
                   >
-                    <div className="absolute top-3 left-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(entity.id)}
-                        onChange={(e) => { e.stopPropagation(); toggleSelectEntity(entity.id); }}
+                    <div
+                      className="absolute bottom-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={selectedIds.has(entity.id) ? { opacity: 1 } : undefined}
+                    >
+                      <label
                         onClick={(e) => e.stopPropagation()}
-                        className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity data-[checked]:opacity-100"
-                        style={selectedIds.has(entity.id) ? { opacity: 1 } : undefined}
-                      />
+                        className="flex items-center gap-1.5 cursor-pointer text-text-dimmed hover:text-destructive transition-colors"
+                      >
+                        <span className="text-[10px]">delete</span>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(entity.id)}
+                          onChange={(e) => { e.stopPropagation(); toggleSelectEntity(entity.id); }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer"
+                        />
+                      </label>
                     </div>
                     <div className="absolute top-3 right-3">
                       <EntityMenu entity={entity} />
