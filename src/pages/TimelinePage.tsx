@@ -16,6 +16,185 @@ interface TimelineEvent {
   project_id: string;
 }
 
+// ─── Add Event Modal ─────────────────────────────────────────────────
+
+interface AddEventModalProps {
+  projectId: string;
+  onCreated: (event: TimelineEvent) => void;
+  onClose: () => void;
+}
+
+const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) => {
+  const [label, setLabel] = useState("");
+  const [dateLabel, setDateLabel] = useState("");
+  const [dateSort, setDateSort] = useState("");
+  const [type, setType] = useState<TimelineEventType>("story_event");
+  const [createEntity, setCreateEntity] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    setSaving(true);
+
+    // Insert timeline event
+    const { data: eventData, error: eventError } = await supabase
+      .from("timeline_events")
+      .insert({
+        label: trimmed,
+        date_label: dateLabel.trim() || null,
+        date_sort: dateSort ? parseInt(dateSort, 10) : 0,
+        type,
+        project_id: projectId,
+      })
+      .select("*")
+      .single();
+
+    if (eventError) {
+      console.error("Failed to create timeline event:", eventError);
+      setSaving(false);
+      return;
+    }
+
+    // Also create a corresponding "events" entity in the lore system
+    if (createEntity) {
+      const fields: Record<string, string> = {
+        "Date/Era": dateLabel.trim(),
+        "Location": "",
+        "Key Participants": "",
+        "Outcome": "",
+        "First Mentioned": "",
+      };
+
+      const sections: Record<string, string> = {
+        Overview: "",
+        "Key Figures": "",
+        Consequences: "",
+      };
+
+      const { error: entityError } = await supabase.from("entities").insert({
+        name: trimmed,
+        category: "events" as Database["public"]["Enums"]["entity_category"],
+        project_id: projectId,
+        summary: dateLabel.trim() ? `Event occurring ${dateLabel.trim()}` : null,
+        fields,
+        sections,
+      });
+
+      if (entityError) {
+        console.error("Failed to create entity for timeline event:", entityError);
+        // Non-blocking — the timeline event was still created
+      }
+    }
+
+    onCreated(eventData as TimelineEvent);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-fyrescribe-raised border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl"
+      >
+        <h2 className="font-display text-base text-foreground mb-5">Add Event</h2>
+
+        <div className="mb-4">
+          <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
+            Event Name
+          </label>
+          <input
+            autoFocus
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. The Fall of Eldrath"
+            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40 placeholder:text-text-dimmed"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
+            Date / Era
+          </label>
+          <input
+            value={dateLabel}
+            onChange={(e) => setDateLabel(e.target.value)}
+            placeholder="e.g. Third Age, Year 412"
+            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40 placeholder:text-text-dimmed"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
+            Sort Order
+          </label>
+          <input
+            type="number"
+            value={dateSort}
+            onChange={(e) => setDateSort(e.target.value)}
+            placeholder="0"
+            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40 placeholder:text-text-dimmed"
+          />
+          <p className="text-[10px] text-text-dimmed mt-1">
+            Lower numbers appear first on the timeline.
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
+            Type
+          </label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as TimelineEventType)}
+            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40"
+          >
+            <option value="story_event">Story Event</option>
+            <option value="world_history">World History</option>
+          </select>
+        </div>
+
+        <div className="mb-6">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={createEntity}
+              onChange={(e) => setCreateEntity(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer"
+            />
+            <span className="text-xs text-text-secondary">
+              Also create an Events lore entry
+            </span>
+          </label>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={!label.trim() || saving}
+            className="flex-1 py-2 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors disabled:opacity-50"
+          >
+            {saving ? "Creating…" : "Add Event"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-text-secondary hover:text-foreground transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+// ─── Timeline Page ───────────────────────────────────────────────────
+
 const TimelinePage = () => {
   const { activeProject } = useActiveProject();
   const [filter, setFilter] = useState<"all" | TimelineEventType>("all");
@@ -25,6 +204,7 @@ const TimelinePage = () => {
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const toggleSelectEvent = (id: string) => {
     setSelectedIds((prev) => {
@@ -98,6 +278,14 @@ const TimelinePage = () => {
     }
   };
 
+  const handleEventCreated = (event: TimelineEvent) => {
+    setEvents((prev) => {
+      const merged = [...prev, event];
+      return merged.sort((a, b) => (a.date_sort ?? 0) - (b.date_sort ?? 0));
+    });
+    setShowAddModal(false);
+  };
+
   return (
     <AppLayout>
       <div className="p-6 max-w-2xl mx-auto">
@@ -119,6 +307,7 @@ const TimelinePage = () => {
               {generating ? "Generating…" : "Generate from Lore"}
             </button>
             <button
+              onClick={() => setShowAddModal(true)}
               disabled={!activeProject}
               className="flex items-center gap-2 px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors disabled:opacity-50"
             >
@@ -258,6 +447,15 @@ const TimelinePage = () => {
           </div>
         )}
       </div>
+
+      {/* Add Event Modal */}
+      {showAddModal && activeProject && (
+        <AddEventModal
+          projectId={activeProject.id}
+          onCreated={handleEventCreated}
+          onClose={() => setShowAddModal(false)}
+        />
+      )}
     </AppLayout>
   );
 };
