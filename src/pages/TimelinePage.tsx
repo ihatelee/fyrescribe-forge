@@ -237,6 +237,20 @@ const TimelinePage = () => {
                         <Trash2 size={12} />
                       </button>
                     </div>
+                    <div
+                      className="flex items-center justify-end gap-1.5 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={selectedIds.has(event.id) ? { opacity: 1 } : undefined}
+                    >
+                      <label className="flex items-center gap-1.5 cursor-pointer text-text-dimmed hover:text-destructive transition-colors">
+                        <span className="text-[10px]">delete</span>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(event.id)}
+                          onChange={() => toggleSelectEvent(event.id)}
+                          className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer"
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
               ))}
