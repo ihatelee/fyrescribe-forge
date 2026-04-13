@@ -458,6 +458,7 @@ export type Database = {
       user_preferences: {
         Row: {
           created_at: string
+          icon_set: string
           id: string
           sparkle_enabled: boolean
           theme: string
@@ -466,6 +467,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          icon_set?: string
           id?: string
           sparkle_enabled?: boolean
           theme?: string
@@ -474,6 +476,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          icon_set?: string
           id?: string
           sparkle_enabled?: boolean
           theme?: string

@@ -1,0 +1,1 @@
+ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS icon_set text NOT NULL DEFAULT 'fantasy';
