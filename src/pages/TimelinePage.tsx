@@ -23,6 +23,28 @@ const TimelinePage = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const toggleSelectEvent = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    const ids = [...selectedIds];
+    for (const id of ids) {
+      await supabase.from("timeline_events").delete().eq("id", id);
+    }
+    setEvents((prev) => prev.filter((e) => !selectedIds.has(e.id)));
+    setSelectedIds(new Set());
+    setBulkBusy(false);
+  };
 
   useEffect(() => {
     if (!activeProject) return;
@@ -112,6 +134,26 @@ const TimelinePage = () => {
           </div>
         )}
 
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="mb-4 flex items-center gap-2">
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkBusy}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md bg-destructive/15 text-destructive hover:bg-destructive/25 disabled:opacity-40 transition-colors"
+            >
+              {bulkBusy ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+              Delete Selected ({selectedIds.size})
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-3 py-1.5 text-[12px] rounded-md text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+            >
+              Clear selection
+            </button>
+          </div>
+        )}
+
         <div className="flex gap-2 mb-8">
           {(["all", "world_history", "story_event"] as const).map((type) => (
             <button
@@ -194,6 +236,20 @@ const TimelinePage = () => {
                       >
                         <Trash2 size={12} />
                       </button>
+                    </div>
+                    <div
+                      className="flex items-center justify-end gap-1.5 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={selectedIds.has(event.id) ? { opacity: 1 } : undefined}
+                    >
+                      <label className="flex items-center gap-1.5 cursor-pointer text-text-dimmed hover:text-destructive transition-colors">
+                        <span className="text-[10px]">delete</span>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(event.id)}
+                          onChange={() => toggleSelectEvent(event.id)}
+                          className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer"
+                        />
+                      </label>
                     </div>
                   </div>
                 </div>
