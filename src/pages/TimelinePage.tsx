@@ -16,6 +16,15 @@ interface TimelineEvent {
   project_id: string;
 }
 
+const ERA_OPTIONS = [
+  { label: "Ancient Times", sort: 100 },
+  { label: "Distant Past", sort: 200 },
+  { label: "Generations Ago", sort: 300 },
+  { label: "Years Ago", sort: 400 },
+  { label: "Recent Past", sort: 500 },
+  { label: "Present Day", sort: 600 },
+] as const;
+
 // ─── Add Event Modal ─────────────────────────────────────────────────
 
 interface AddEventModalProps {
