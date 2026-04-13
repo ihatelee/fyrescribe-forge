@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Upload, X, Loader2, FileText, Check, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import ModalSelect from "@/components/ModalSelect";
 
 type EntityCategory = Database["public"]["Enums"]["entity_category"];
 
@@ -258,19 +259,18 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
               <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
                 Entity Type
               </label>
-              <select
+              <ModalSelect
                 value={category}
                 onChange={(e) => {
                   const found = ENTITY_CATEGORIES.find((c) => c.value === e.target.value);
                   if (found) setCategory(found.value);
                 }}
                 disabled={state === "importing"}
-                className="w-full bg-fyrescribe-hover border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground outline-none focus:border-gold/40 disabled:opacity-50"
               >
                 {ENTITY_CATEGORIES.map((cat) => (
                   <option key={cat.value} value={cat.value}>{cat.label}</option>
                 ))}
-              </select>
+              </ModalSelect>
             </div>
 
             {/* File upload */}

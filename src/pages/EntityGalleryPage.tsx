@@ -4,6 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import LoreUploadModal from "@/components/LoreUploadModal";
+import ModalSelect from "@/components/ModalSelect";
 import {
   Plus,
   Loader2,
@@ -139,20 +140,19 @@ const NewEntityModal = ({ projectId, defaultCategory, onCreated, onClose }: NewE
           <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
             Category
           </label>
-          <select
+          <ModalSelect
             value={category}
             onChange={(e) => {
               const found = ENTITY_CATEGORIES.find((c) => c.value === e.target.value);
               if (found) setCategory(found.value);
             }}
-            className="w-full bg-fyrescribe-hover border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground outline-none focus:border-gold/40"
           >
             {ENTITY_CATEGORIES.map((cat) => (
               <option key={cat.value} value={cat.value}>
                 {cat.label}
               </option>
             ))}
-          </select>
+          </ModalSelect>
         </div>
 
         <div className="flex gap-3">

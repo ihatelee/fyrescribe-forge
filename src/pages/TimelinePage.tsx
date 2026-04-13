@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
+import ModalSelect from "@/components/ModalSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { Plus, Loader2, Sparkles, Trash2 } from "lucide-react";
@@ -139,31 +140,29 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
           <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
             Date / Era
           </label>
-          <select
+          <ModalSelect
             value={dateLabel}
             onChange={(e) => setDateLabel(e.target.value)}
-            className="w-full bg-fyrescribe-hover border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground outline-none focus:border-gold/40"
           >
             {ERA_OPTIONS.map((era) => (
               <option key={era.label} value={era.label}>
                 {era.label}
               </option>
             ))}
-          </select>
+          </ModalSelect>
         </div>
 
         <div className="mb-4">
           <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
             Type
           </label>
-          <select
+          <ModalSelect
             value={type}
             onChange={(e) => setType(e.target.value as TimelineEventType)}
-            className="w-full bg-fyrescribe-hover border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground outline-none focus:border-gold/40"
           >
             <option value="story_event">Story Event</option>
             <option value="world_history">World History</option>
-          </select>
+          </ModalSelect>
         </div>
 
         <div className="mb-6">
