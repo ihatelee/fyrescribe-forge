@@ -16,6 +16,15 @@ interface TimelineEvent {
   project_id: string;
 }
 
+const ERA_OPTIONS = [
+  { label: "Ancient Times", sort: 100 },
+  { label: "Distant Past", sort: 200 },
+  { label: "Generations Ago", sort: 300 },
+  { label: "Years Ago", sort: 400 },
+  { label: "Recent Past", sort: 500 },
+  { label: "Present Day", sort: 600 },
+] as const;
+
 // ─── Add Event Modal ─────────────────────────────────────────────────
 
 interface AddEventModalProps {
@@ -26,8 +35,7 @@ interface AddEventModalProps {
 
 const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) => {
   const [label, setLabel] = useState("");
-  const [dateLabel, setDateLabel] = useState("");
-  const [dateSort, setDateSort] = useState("");
+  const [dateLabel, setDateLabel] = useState<string>(ERA_OPTIONS[0].label);
   const [type, setType] = useState<TimelineEventType>("story_event");
   const [createEntity, setCreateEntity] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,8 +51,8 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
       .from("timeline_events")
       .insert({
         label: trimmed,
-        date_label: dateLabel.trim() || null,
-        date_sort: dateSort ? parseInt(dateSort, 10) : 0,
+        date_label: dateLabel || null,
+        date_sort: ERA_OPTIONS.find((o) => o.label === dateLabel)?.sort ?? 0,
         type,
         project_id: projectId,
       })
@@ -60,7 +68,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
     // Also create a corresponding "events" entity in the lore system
     if (createEntity) {
       const fields: Record<string, string> = {
-        "Date/Era": dateLabel.trim(),
+        "Date/Era": dateLabel,
         "Location": "",
         "Key Participants": "",
         "Outcome": "",
@@ -77,7 +85,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
         name: trimmed,
         category: "events" as Database["public"]["Enums"]["entity_category"],
         project_id: projectId,
-        summary: dateLabel.trim() ? `Event occurring ${dateLabel.trim()}` : null,
+        summary: dateLabel ? `Event occurring in the ${dateLabel}` : null,
         fields,
         sections,
       });
@@ -120,28 +128,17 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
           <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
             Date / Era
           </label>
-          <input
+          <select
             value={dateLabel}
             onChange={(e) => setDateLabel(e.target.value)}
-            placeholder="e.g. Third Age, Year 412"
-            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40 placeholder:text-text-dimmed"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
-            Sort Order
-          </label>
-          <input
-            type="number"
-            value={dateSort}
-            onChange={(e) => setDateSort(e.target.value)}
-            placeholder="0"
-            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40 placeholder:text-text-dimmed"
-          />
-          <p className="text-[10px] text-text-dimmed mt-1">
-            Lower numbers appear first on the timeline.
-          </p>
+            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40"
+          >
+            {ERA_OPTIONS.map((era) => (
+              <option key={era.label} value={era.label}>
+                {era.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="mb-4">
