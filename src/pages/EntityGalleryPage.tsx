@@ -145,7 +145,7 @@ const NewEntityModal = ({ projectId, defaultCategory, onCreated, onClose }: NewE
               const found = ENTITY_CATEGORIES.find((c) => c.value === e.target.value);
               if (found) setCategory(found.value);
             }}
-            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40"
+            className="w-full bg-fyrescribe-hover border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground outline-none focus:border-gold/40"
           >
             {ENTITY_CATEGORIES.map((cat) => (
               <option key={cat.value} value={cat.value}>

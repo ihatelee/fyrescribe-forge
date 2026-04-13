@@ -265,7 +265,7 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
                   if (found) setCategory(found.value);
                 }}
                 disabled={state === "importing"}
-                className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40 disabled:opacity-50"
+                className="w-full bg-fyrescribe-hover border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground outline-none focus:border-gold/40 disabled:opacity-50"
               >
                 {ENTITY_CATEGORIES.map((cat) => (
                   <option key={cat.value} value={cat.value}>{cat.label}</option>
