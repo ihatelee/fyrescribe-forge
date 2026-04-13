@@ -23,6 +23,8 @@ const THEMES: { value: ThemeName; label: string; swatch: string; suffix?: string
 
 const ThemeSwitcher = () => {
   const { theme, setTheme, sparkle, setSparkle, iconSetName, setIconSet } = useTheme();
+  // When outrun is active the icon set is forced to scifi regardless of saved preference
+  const effectiveIconSet = theme === "outrun" ? "scifi" : iconSetName;
 
   return (
     <DropdownMenu>
@@ -75,7 +77,7 @@ const ThemeSwitcher = () => {
                 <PreviewIcon3 size={12} weight="duotone" />
               </span>
               <span className="flex-1 text-sm">{set.label}</span>
-              {iconSetName === set.value && <Check size={12} className="text-gold" />}
+              {effectiveIconSet === set.value && <Check size={12} className="text-gold" />}
             </DropdownMenuItem>
           );
         })}

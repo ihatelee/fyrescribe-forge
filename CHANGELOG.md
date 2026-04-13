@@ -4,6 +4,34 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (session 14)
+
+### Outrun theme polish — player persistence, volume memory, manuscript labels, scifi icon sync
+
+**`src/components/OutrunGlobals.tsx`** (new)
+- Thin wrapper that renders `OutrunMusicPlayer` as `fixed left-0 bottom-0 w-[190px] z-[45]` (visually overlapping the sidebar bottom) only when `theme === "outrun"`. Mounted in `App.tsx` outside the route tree so it never remounts on navigation.
+
+**`src/App.tsx`**
+- Imports and renders `<OutrunGlobals />` alongside `<GlobalSparkle />`.
+
+**`src/components/Sidebar.tsx`**
+- Removed `OutrunMusicPlayer` import, render, and the `pb-[72px]` padding on the bottom nav section. Player is now owned by `OutrunGlobals`.
+
+**`src/components/OutrunMusicPlayer.tsx`**
+- Added `VOLUME_KEY = "fyrescribe_outrun_volume"` and `readVolume()` helper.
+- `volume` state lazy-initialised from `localStorage`, falling back to `0.05` (5%).
+- Volume `useEffect` now writes to `localStorage` on every change, persisting across remounts and reloads.
+
+**`src/components/ThemeSwitcher.tsx`**
+- Added `effectiveIconSet = theme === "outrun" ? "scifi" : iconSetName`.
+- Icon-set check mark now uses `effectiveIconSet` — Sci-Fi appears selected when outrun is active, regardless of the saved `iconSetName` preference.
+
+**`src/pages/ManuscriptPage.tsx`**
+- Added `useTheme` import and call; derived `labelStyle = theme === "outrun" ? { color: "hsl(var(--neon-yellow))" } : undefined`.
+- Applied `labelStyle` to the "Chapters" uppercase label (right sidebar) and the `Ch X · Scene Title` toolbar breadcrumb.
+
+---
+
 ## 2026-04-13 (session 13)
 
 ### Outrun theme polish — player placement, neon yellow, logo color

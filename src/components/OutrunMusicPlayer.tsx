@@ -4,10 +4,17 @@ import { Play, Pause, SpeakerHigh } from "@phosphor-icons/react";
 // OUTRUN_MUSIC_URL — swap this constant to change the background track
 const OUTRUN_MUSIC_URL = "http://www.nihilore.com/s/Motion-Blur.mp3";
 
+const VOLUME_KEY = "fyrescribe_outrun_volume";
+
+const readVolume = (): number => {
+  const saved = localStorage.getItem(VOLUME_KEY);
+  return saved !== null ? Number(saved) : 0.05;
+};
+
 const OutrunMusicPlayer = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.5);
+  const [volume, setVolume] = useState(readVolume);
 
   // Auto-play on mount (this component only renders when outrun theme is active).
   // On unmount (theme changed away), the audio element is destroyed and playback stops.
@@ -31,6 +38,7 @@ const OutrunMusicPlayer = () => {
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
+    localStorage.setItem(VOLUME_KEY, String(volume));
   }, [volume]);
 
   const togglePlay = () => {
