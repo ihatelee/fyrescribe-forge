@@ -32,9 +32,9 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
   - Chapters and scenes are inserted into Supabase sequentially.
 - **Theme system** — `ThemeContext` + `ThemeSwitcher`. Six themes: Midnight, Fireside, Lavender Haze, Enchanted, **Outrun** (formerly Futureworld), Daylight. Preferences persisted to `user_preferences` Supabase table. Outrun uses Silkscreen + Fira Code fonts; all other themes use Cinzel (display) + EB Garamond (prose) + system sans-serif (body). All theme styles — including fonts — flow exclusively through CSS variables (`--font-body`, `--font-display`, `--font-prose`, plus the full set of color tokens). `applyTheme` clears all managed variables before setting the new theme, guaranteeing no bleed-through.
 - **Sparkle toggle** — `GlobalSparkle` renders `StarfieldBackground` (stars + sparkles) on all themes, or `OutrunGridBackground` when the active theme is "outrun". Persisted alongside theme preference. Sparkle button label changes to "Time to Run" (hardcoded string in `ThemeSwitcher`).
-- **Outrun visual overhaul** — When theme is "outrun": logo swaps to `fyrescribe_logo_bit.svg` in `Titlebar` and `OnboardingPage`; sparkle animation replaced by `OutrunGridBackground` (CSS `perspective`/`rotateX` grid with animated `background-position-y` scroll and horizon glow line, all colors from `--gold` CSS variable).
-- **Outrun music player** — `OutrunMusicPlayer` component rendered at the bottom of `Sidebar.tsx` only when theme is "outrun". Streams from `OUTRUN_MUSIC_URL` constant (currently Nihilore – Motion Blur). Auto-plays on mount (theme activation); pauses on unmount (theme change). Gracefully falls back to paused state if browser autoplay is blocked. Controls: play/pause + volume slider. Credit: "♪ Nihilore". Track URL is a clearly commented constant at the top of `OutrunMusicPlayer.tsx`.
-- **Icon sets** — `src/lib/iconSets.ts` defines three icon sets (Fantasy, Sci-Fi, Standard) using Phosphor icons. Each set provides icons for all 13 sidebar slots (manuscript, timeline, all 9 entity categories, inbox, sync). `THEME_DEFAULT_ICON_SET` maps themes to their default set (Midnight/Fireside/Lavender/Enchanted → fantasy, Outrun → scifi, Daylight → standard). Icon set preference persisted to `user_preferences.icon_set` (migration `20260413000331_...sql`). `ThemeContext` + `ThemeSwitcher` + `Sidebar.tsx` updated to use the active icon set.
+- **Outrun visual overhaul** — When theme is "outrun": logo swaps to `fyrescribe_logo_bit.svg` in `Titlebar` and `OnboardingPage`; sparkle animation is `OutrunGridBackground` (CSS `perspective`/`rotateX` grid with animated `background-position-y` scroll, horizon glow line removed, all colors from `--gold` CSS variable); outrun palette includes `--neon-yellow: 72 100% 50%` (#CCFF00, acid yellow-green).
+- **Outrun music player** — `OutrunMusicPlayer` component rendered inside a dedicated right panel in `AppLayout.tsx` only when theme is "outrun". The right panel is `fixed right-0 top-20 bottom-0 w-[180px]`; main content gets `pr-[180px]` to avoid overlap. Streams from `OUTRUN_MUSIC_URL` constant (currently Nihilore – Motion Blur). Auto-plays on mount (theme activation); pauses on unmount (theme change). Gracefully falls back to paused state if browser autoplay is blocked. Controls: play/pause + volume slider (overflow fixed with `min-w-0` + `overflow-hidden`). Credit: "♪ Nihilore". Track URL is a clearly commented constant at the top of `OutrunMusicPlayer.tsx`.
+- **Icon sets** — `src/lib/iconSets.ts` defines three icon sets (Fantasy, Sci-Fi, Standard) using Phosphor icons. Each set provides icons for all 13 sidebar slots (manuscript, timeline, all 9 entity categories, inbox, sync). `THEME_DEFAULT_ICON_SET` maps themes to their default set (Midnight/Fireside/Lavender/Enchanted → fantasy, Outrun → scifi, Daylight → standard). Icon set preference persisted to `user_preferences.icon_set` (migration `20260413000331_...sql`). `ThemeContext` forces scifi icons when theme is "outrun" (`ICON_SETS[theme === "outrun" ? "scifi" : iconSetName]`), ignoring any saved preference.
 - **Entity system** — `EntityGalleryPage` + `EntityDetailPage` with 9 categories: characters, places, events, history, artifacts, creatures, magic, factions, doctrine.
   - `abilities` enum value renamed to `magic`; `history` added as a new enum value (`supabase/migrations/20260413000000_entity_category_updates.sql`). Migration applied to production; `types.ts` updated to match.
   - POV Tracker removed from sidebar (route kept in App.tsx).
@@ -86,15 +86,15 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ## Where We Left Off
 
-**Session: 2026-04-13 (session 11 — Outrun theme overhaul + music player)**
+**Session: 2026-04-13 (session 12 — Outrun theme fixes)**
 
-Completed a full visual and UX overhaul of the Outrun (formerly Futureworld) theme:
+Fixes and additions to the Outrun theme:
 
-- Renamed `futureworld` → `outrun` throughout (`ThemeName` type, `THEME_VARS` key, `ThemeSwitcher` THEMES array, `THEME_DEFAULT_ICON_SET`).
-- Logo swaps to `fyrescribe_logo_bit.svg` in `Titlebar` and `OnboardingPage` when theme is "outrun".
-- Sparkle button label changed to "Time to Run" in `ThemeSwitcher`.
-- `OutrunGridBackground` component: CSS `perspective(500px) rotateX(72deg)` floor grid with `background-position-y` animation and horizon glow line. All colors via `--gold` CSS variable. `GlobalSparkle` renders this instead of `StarfieldBackground` on the outrun theme.
-- `OutrunMusicPlayer` component: streams Nihilore – Motion Blur MP3; auto-plays on mount, pauses on unmount; graceful autoplay-block fallback; play/pause + volume; "♪ Nihilore" credit. Mounted at the bottom of `Sidebar.tsx` only when theme is "outrun". Track URL in `OUTRUN_MUSIC_URL` constant.
+- **Music player moved to right panel**: removed from `Sidebar.tsx`; now rendered inside a new right panel in `AppLayout.tsx` (`fixed right-0 top-20 bottom-0 w-[180px]`). Main content gets `pr-[180px]` offset when outrun is active.
+- **Icon set forced to scifi on outrun**: `ThemeContext.tsx` now computes `icons` as `ICON_SETS[theme === "outrun" ? "scifi" : iconSetName]`, ignoring saved preference while outrun is active.
+- **Neon yellow added**: `--neon-yellow: 72 100% 50%` (#CCFF00) added to the outrun theme vars in `ThemeContext.tsx`.
+- **Volume slider overflow fixed**: added `overflow-hidden` to the controls row and `min-w-0` to the slider input in `OutrunMusicPlayer.tsx`.
+- **Horizon line removed from grid animation**: deleted the horizon glow `<div>` from `OutrunGridBackground.tsx`. Grid now flows without a hard break.
 
 **Pending / next logical steps:**
 - The MP3 URL is HTTP, not HTTPS — if the app is served over HTTPS, browsers will block the audio as mixed content. May need to proxy or re-host the track.

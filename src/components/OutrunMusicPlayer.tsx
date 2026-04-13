@@ -59,7 +59,7 @@ const OutrunMusicPlayer = () => {
         }}
       >
         {/* Controls row */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-hidden">
           {/* Play / Pause */}
           <button
             onClick={togglePlay}
@@ -100,7 +100,7 @@ const OutrunMusicPlayer = () => {
             step={0.02}
             value={volume}
             onChange={(e) => setVolume(Number(e.target.value))}
-            className="flex-1 h-[3px] cursor-pointer rounded appearance-none"
+            className="flex-1 min-w-0 h-[3px] cursor-pointer rounded appearance-none"
             style={{
               accentColor: trackFill,
               background: `linear-gradient(to right, ${trackFill} ${volume * 100}%, ${trackEmpty} ${volume * 100}%)`,

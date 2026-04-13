@@ -151,6 +151,7 @@ const THEME_VARS: Record<ThemeName, Record<string, string>> = {
     "--gold": "135 100% 50%",
     "--gold-bright": "135 100% 60%",
     "--gold-glow": "135 100% 50% / 0.08",
+    "--neon-yellow": "72 100% 50%",
     "--border-subtle": "168 100% 50% / 0.08",
     "--sidebar-background": "0 0% 2%",
     "--sidebar-foreground": "147 100% 33%",
@@ -367,7 +368,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     persistPrefs(theme, sparkle, v);
   };
 
-  const icons = ICON_SETS[iconSetName];
+  // Outrun theme always uses the sci-fi icon set regardless of saved preference
+  const icons = ICON_SETS[theme === "outrun" ? "scifi" : iconSetName];
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, sparkle, setSparkle, iconSetName, setIconSet, icons }}>

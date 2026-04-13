@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
-import OutrunMusicPlayer from "./OutrunMusicPlayer";
 
 const WRITE_KEYS = ["manuscript", "timeline"] as const;
 const WRITE_LABELS: Record<string, string> = {
@@ -47,7 +46,7 @@ const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { activeProject } = useActiveProject();
-  const { icons, theme } = useTheme();
+  const { icons } = useTheme();
 
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -216,8 +215,6 @@ const Sidebar = () => {
         </button>
       </div>
 
-      {/* Outrun music player — only visible on the outrun theme */}
-      {theme === "outrun" && <OutrunMusicPlayer />}
     </div>
   );
 };

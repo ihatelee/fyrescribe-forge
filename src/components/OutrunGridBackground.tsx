@@ -15,20 +15,6 @@ const OutrunGridBackground = () => {
         }
       `}</style>
 
-      {/* Horizon glow line */}
-      <div
-        style={{
-          position: "absolute",
-          top: "42%",
-          left: 0,
-          right: 0,
-          height: "1px",
-          background:
-            "linear-gradient(to right, transparent 0%, hsl(var(--gold) / 0.6) 20%, hsl(var(--gold)) 50%, hsl(var(--gold) / 0.6) 80%, transparent 100%)",
-          boxShadow: "0 0 24px 6px hsl(var(--gold) / 0.25)",
-        }}
-      />
-
       {/* Perspective grid floor */}
       <div
         className="outrun-floor-grid"

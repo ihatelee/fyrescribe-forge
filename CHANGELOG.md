@@ -4,6 +4,31 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (session 12)
+
+### Outrun theme fixes
+
+**`src/components/AppLayout.tsx`**
+- Imports `useTheme` and `OutrunMusicPlayer`.
+- When `theme === "outrun"`: renders a `fixed right-0 top-20 bottom-0 w-[180px]` right panel with the music player pinned to the bottom; adds `pr-[180px]` to `<main>` so content is not overlapped.
+
+**`src/components/Sidebar.tsx`**
+- Removed `OutrunMusicPlayer` import and render (player moved to AppLayout right panel).
+- Removed `theme` from `useTheme()` destructure (no longer needed here).
+
+**`src/contexts/ThemeContext.tsx`**
+- Added `--neon-yellow: 72 100% 50%` (#CCFF00, acid yellow-green) to the outrun theme vars.
+- `icons` computation now forces `"scifi"` icon set when `theme === "outrun"`, overriding any saved `iconSetName` preference.
+
+**`src/components/OutrunMusicPlayer.tsx`**
+- Added `overflow-hidden` to the controls flex row.
+- Added `min-w-0` to the volume range input so it respects flex constraints and no longer overflows.
+
+**`src/components/OutrunGridBackground.tsx`**
+- Removed the horizon glow line `<div>` (the element with `top: 42%`, `height: 1px`, and `box-shadow`). Grid now renders without a hard horizontal break.
+
+---
+
 ## 2026-04-13 (session 11)
 
 ### Outrun theme overhaul + music player
