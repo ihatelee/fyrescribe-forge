@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
+import LoreUploadModal from "@/components/LoreUploadModal";
 import {
   Plus,
   Loader2,
@@ -12,6 +13,7 @@ import {
   LayoutGrid,
   List,
   ChevronDown,
+  Upload,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -187,6 +189,7 @@ const EntityGalleryPage = () => {
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
 
   // View mode persisted to localStorage
@@ -391,13 +394,22 @@ const EntityGalleryPage = () => {
             </div>
 
             {activeProject && (
-              <button
-                onClick={() => setShowNewModal(true)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
-              >
-                <Plus size={14} />
-                New Entity
-              </button>
+              <>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 border border-border text-sm text-text-secondary rounded-lg hover:text-foreground hover:border-text-dimmed transition-colors"
+                >
+                  <Upload size={14} />
+                  Upload Entry
+                </button>
+                <button
+                  onClick={() => setShowNewModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
+                >
+                  <Plus size={14} />
+                  New Entity
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -724,6 +736,14 @@ const EntityGalleryPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showUploadModal && activeProject && (
+        <LoreUploadModal
+          projectId={activeProject.id}
+          defaultCategory={defaultNewCategory}
+          onClose={() => setShowUploadModal(false)}
+        />
+      )}
     </AppLayout>
   );
 };
