@@ -49,10 +49,11 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
   - Smart tag clicking: 1 matching entity → navigate directly; >1 → filtered gallery at `/world?tag=tagId`. Applies on gallery cards and entity detail header tags.
   - Entity gallery supports tag filtering via `?tag=<id>` search param with "× Clear tag filter" pill.
 - **Manuscript drag and drop** — scenes in the chapter/scene sidebar are `draggable`. Dragging a scene onto a different chapter's container moves it to that chapter in Supabase and updates the `order` field. Dropped-into chapters auto-expand. Visual highlight (gold glow + ring) on drag-over chapter.
-- **Timeline** — `TimelinePage` reads from `timeline_events` Supabase table (real data, no placeholder). "Generate from Lore" button invokes the `generate-timeline` Supabase Edge Function which reads Event/History entities + scene excerpts, calls claude-sonnet-4-6 via Anthropic API, and inserts the returned `{label, date_label, date_sort, type}[]` events. Events can be deleted (hover reveals trash icon). Edge function is deployed to production.
+- **Timeline** — `TimelinePage` reads from `timeline_events` Supabase table (real data, no placeholder). "Generate from Lore" button invokes the `generate-timeline` Supabase Edge Function which reads Event/History entities + scene excerpts, calls claude-sonnet-4-6 via Anthropic API, and inserts the returned events. Events can be deleted (hover reveals trash icon). Edge function is deployed to production.
   - **Add Event modal** — "Add Event" button wired up. Modal takes: event name, Date/Era dropdown (`ERA_OPTIONS`: Ancient Times → Present Day, each with a numeric `date_sort`), type (Story Event / World History), and an optional checkbox to also create a corresponding `events` lore entity with pre-seeded `fields` and `sections`.
   - **Drag-to-reorder** — timeline events are draggable. Drop above/below a target card; `date_sort` is recalculated by interpolating between neighbours. Gold drop indicator line shows above/below target. Persisted to Supabase.
   - **Bulk delete** — hover-reveal "delete" checkbox per event card. When any are checked a bulk action bar appears ("Delete Selected (N)" + "Clear selection"). Bulk delete cascades correctly.
+  - **entity_id FK wired up** — `TimelineEvent` interface includes `entity_id: string | null`. `AddEventModal` writes the created entity's `id` back to the timeline event row via a follow-up `update` call. `generate-timeline` edge function builds a name→id lookup map from the project's events/history entities and populates `entity_id` on each inserted row via case-insensitive exact-name match.
 - **Lore sync pipeline** — `supabase/functions/sync-lore/index.ts` edge function. Confirmed working end-to-end with real manuscript content. Architecture: one Anthropic API call per scene, returning a JSON array of all named entities found (no per-scene cap; `max_tokens: 4000`). Scenes are queried with their parent chapter title (`chapters(title)` join). Prompt is aggressive: extract every named entity — if it has a proper noun, suggest it. Shows `LOCATION: Chapter Title › Scene Title` in the prompt for structural context. Confidence threshold is 0.4. Each suggestion payload contains: `name`, `category`, `description`, `confidence`, `source_scene_title`, `source_location` (formatted as `"Chapter Title › Scene Title"`), `source_sentence` (verbatim sentence where entity first appears), `fields` (all At a Glance keys for the category, AI-populated where inferable, matched case-insensitively), `sections` (non-empty article sections, case-insensitive key match), `tags` (lowercase cross-reference strings). Deduplicates by name across scenes (highest confidence wins). Clears `is_dirty` on processed scenes, updates `projects.last_sync_at`, and logs to `sync_log`. Deployed to production. Daily pg_cron job (`daily-lore-sync`, 03:00 UTC) calls the function for all projects via `net.http_post`. Force sync mode (`force=true`) ignores `is_dirty` and processes all scenes — accessible via the "all" button in the sidebar.
 - **Lore Inbox** (`LoreInboxPage`) — fully wired to Supabase. Shows pending `lore_suggestions` for the active project. Each card displays: type badge, category badge, entity name, description, populated At a Glance fields (two-column grid), article section names (pills), suggested tags (gold pills), confidence bar, source scene. **Accept**: inserts entity with pre-populated `fields` and `sections` JSONBs; upserts new tags into `tags` table and links via `entity_tags`; shows "Entity created → View" banner. **Edit**: inline name/description edit before accepting (sets status `edited`). **Reject**: marks `rejected` with `reviewed_at`.
 - **Sidebar — Sync Lore** — `Sidebar.tsx` fetches live pending count from `lore_suggestions` (replacing hardcoded prop). "Sync Lore" button invokes `sync-lore` for the active project, shows spinner, displays brief result message ("N new suggestions" / "No edited scenes" / "N scenes processed, 0 suggestions"), then refreshes the count. Small "all" button triggers force sync. Button has no `disabled` state (handler guards internally).
@@ -76,16 +77,31 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ## Next Session
 
-1. **Regenerate `types.ts`** — run `supabase gen types typescript` after all pending migrations to eliminate the 9 `as any` / `as unknown as` casts scattered across `ThemeContext.tsx`, `EntityGalleryPage.tsx`, `ProjectsPage.tsx`, `LoreInboxPage.tsx`, `EntityDetailPage.tsx`, and `OnboardingPage.tsx`. All are Supabase type-gap issues, not logic bugs.
-2. **Wire up timeline ↔ entity links** — `entity_id` FK exists on `timeline_events` but is never written or read. Three places to fix: (a) `TimelinePage.tsx` `TimelineEvent` interface + select query, (b) `supabase/functions/generate-timeline/index.ts` insert, (c) `AddEventModal` — write the created entity's ID back to the timeline event row.
-3. **Character sheet upload** — add PDF/plain-text upload to `EntityDetailPage` (characters category). Parse the file (strip RTF/PDF formatting), extract field values, pre-populate the At a Glance fields and sections. No edge function exists yet.
-4. **README** — replace the Lovable boilerplate in `README.md` with a real Fyrescribe project description (what it is, stack, local dev setup).
-5. **LICENSE file** — add a `LICENSE` file to the project root.
-6. **Hand off to Lovable for Session 4 visual polish pass and domain connection.**
+1. **Character sheet upload** — add PDF/plain-text upload to `EntityDetailPage` (characters category). Parse the file (strip RTF/PDF formatting), extract field values, pre-populate the At a Glance fields and sections. No edge function exists yet.
+2. **README** — replace the Lovable boilerplate in `README.md` with a real Fyrescribe project description (what it is, stack, local dev setup).
+3. **LICENSE file** — add a `LICENSE` file to the project root.
+4. **Hand off to Lovable for Session 4 visual polish pass and domain connection.**
 
 ---
 
 ## Where We Left Off
+
+**Session: 2026-04-13 (session 16 — type cleanup + timeline ↔ entity links)**
+
+- `src/types/supabase.ts` added; `package-lock.json` updated — proper types for `EntitySections`, `EntityFields`, `SuggestionPayload` eliminating `as any` / `as unknown as` casts.
+- `supabase/.temp/` added to `.gitignore`.
+- `TimelinePage.tsx` `TimelineEvent` interface: `entity_id: string | null` added (field already exists on the DB row; `select("*")` picks it up automatically).
+- `AddEventModal.handleSubmit`: entity insert now uses `.select("id").single()`; on success, calls `supabase.from("timeline_events").update({ entity_id })` to write the link back; also patches `eventData.entity_id` in-memory before `onCreated` so state is immediately correct.
+- `supabase/functions/generate-timeline/index.ts`: entity fetch now includes `id`; a `Map<string, string>` (lowercase name → entity id) is built; each row insert now sets `entity_id` via case-insensitive exact name match.
+
+**Pending / next logical steps:**
+- Display `source_sentence` in the Lore Inbox card (stored in payload, not yet shown in UI).
+- Add a progress toast or per-scene counter to the sidebar sync flow so users can see it working on large manuscripts.
+- Consider extending sync to produce `field_update` and `contradiction` suggestion types.
+- Word count tracking — wire up `scenes.word_count` to the editor's save path.
+- The MP3 URL is HTTP, not HTTPS — browsers may block on HTTPS deployments (mixed content). May need to proxy or re-host the track.
+
+---
 
 **Session: 2026-04-13 (session 15 — viewport scroll fix + music player in chapter panel)**
 

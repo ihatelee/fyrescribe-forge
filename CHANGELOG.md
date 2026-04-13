@@ -4,6 +4,27 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (session 16)
+
+### Type cleanup + timeline ↔ entity links
+
+**`src/types/supabase.ts`** (new)
+- Added proper TypeScript types for `EntitySections`, `EntityFields`, and `SuggestionPayload`, eliminating `as any` / `as unknown as` casts that were papering over Supabase type-gap issues.
+
+**`.gitignore`**
+- Added `supabase/.temp/` — Supabase CLI temp directory was being tracked as untracked files.
+
+**`src/pages/TimelinePage.tsx`**
+- `TimelineEvent` interface: added `entity_id: string | null`. The column already existed on the DB row and `select("*")` returns it; the interface was just missing the field.
+- `AddEventModal.handleSubmit`: entity insert changed from fire-and-forget to `.select("id").single()`. On success, calls `supabase.from("timeline_events").update({ entity_id: entityData.id }).eq("id", eventData.id)` to write the FK back. Also patches `eventData.entity_id` in-memory before passing to `onCreated` so local state is immediately consistent without a refetch.
+
+**`supabase/functions/generate-timeline/index.ts`**
+- Entity fetch now selects `id` in addition to `name, category, summary`.
+- Builds `entityIdByName: Map<string, string>` — lowercase entity name → entity UUID — immediately after the fetch.
+- Each inserted row now includes `entity_id: entityIdByName.get(e.label.toLowerCase()) ?? null`, linking generated timeline events to existing lore entities via case-insensitive exact name match.
+
+---
+
 ## 2026-04-13 (session 15)
 
 ### Viewport scroll fix + Outrun music player moved to chapter sidebar
