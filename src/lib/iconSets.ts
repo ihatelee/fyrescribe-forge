@@ -4,10 +4,10 @@ import {
   BookOpenText as FantasyManuscript,
   Hourglass as FantasyTimeline,
   Sword as FantasyCharacters,
-  MountainSnow as FantasyPlaces,
+  Mountains as FantasyPlaces,
   Scroll as FantasyEvents,
   BookBookmark as FantasyHistory,
-  GemFour as FantasyArtifacts,
+  Gem as FantasyArtifacts,
   Horse as FantasyCreatures,
   MagicWand as FantasyMagic,
   Shield as FantasyFactions,
@@ -40,7 +40,7 @@ import {
   Sparkle as StdMagic,
   FlagBanner as StdFactions,
   ListBullets as StdDoctrine,
-  Inbox as StdInbox,
+  Tray as StdInbox,
   ArrowsClockwise as StdSync,
 } from "@phosphor-icons/react";
 
