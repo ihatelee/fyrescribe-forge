@@ -71,6 +71,17 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ---
 
+## Next Session
+
+1. **Regenerate `types.ts`** — run `supabase gen types typescript` after all pending migrations to eliminate the 9 `as any` / `as unknown as` casts scattered across `ThemeContext.tsx`, `EntityGalleryPage.tsx`, `ProjectsPage.tsx`, `LoreInboxPage.tsx`, `EntityDetailPage.tsx`, and `OnboardingPage.tsx`. All are Supabase type-gap issues, not logic bugs.
+2. **Wire up timeline ↔ entity links** — `entity_id` FK exists on `timeline_events` but is never written or read. Three places to fix: (a) `TimelinePage.tsx` `TimelineEvent` interface + select query, (b) `supabase/functions/generate-timeline/index.ts` insert, (c) `AddEventModal` — write the created entity's ID back to the timeline event row.
+3. **Character sheet upload** — add PDF/plain-text upload to `EntityDetailPage` (characters category). Parse the file (strip RTF/PDF formatting), extract field values, pre-populate the At a Glance fields and sections. No edge function exists yet.
+4. **README** — replace the Lovable boilerplate in `README.md` with a real Fyrescribe project description (what it is, stack, local dev setup).
+5. **LICENSE file** — add a `LICENSE` file to the project root.
+6. **Hand off to Lovable for Session 4 visual polish pass and domain connection.**
+
+---
+
 ## Where We Left Off
 
 **Session: 2026-04-13 (session 10 — Lovable pull)**
