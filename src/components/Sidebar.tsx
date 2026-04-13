@@ -1,45 +1,52 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import type { LucideIcon } from "lucide-react";
-import {
-  BookOpen,
-  Clock,
-  Users,
-  Mountain,
-  Calendar,
-  BookMarked,
-  Gem,
-  PawPrint,
-  Wand2,
-  Shield,
-  ScrollText,
-  Inbox,
-  RefreshCw,
-} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 
-const WRITE_ITEMS = [
-  { label: "Manuscript", path: "/manuscript", icon: BookOpen },
-  { label: "Timeline", path: "/timeline", icon: Clock },
-];
+const WRITE_KEYS = ["manuscript", "timeline"] as const;
+const WRITE_LABELS: Record<string, string> = {
+  manuscript: "Manuscript",
+  timeline: "Timeline",
+};
+const WRITE_PATHS: Record<string, string> = {
+  manuscript: "/manuscript",
+  timeline: "/timeline",
+};
 
-const WORLD_ITEMS = [
-  { label: "Characters", path: "/world/characters", icon: Users },
-  { label: "Places", path: "/world/places", icon: Mountain },
-  { label: "Events", path: "/world/events", icon: Calendar },
-  { label: "History", path: "/world/history", icon: BookMarked },
-  { label: "Artifacts", path: "/world/artifacts", icon: Gem },
-  { label: "Creatures", path: "/world/creatures", icon: PawPrint },
-  { label: "Magic", path: "/world/magic", icon: Wand2 },
-  { label: "Factions", path: "/world/factions", icon: Shield },
-  { label: "Doctrine", path: "/world/doctrine", icon: ScrollText },
-];
+const WORLD_KEYS = [
+  "characters", "places", "events", "history",
+  "artifacts", "creatures", "magic", "factions", "doctrine",
+] as const;
+const WORLD_LABELS: Record<string, string> = {
+  characters: "Characters",
+  places: "Places",
+  events: "Events",
+  history: "History",
+  artifacts: "Artifacts",
+  creatures: "Creatures",
+  magic: "Magic",
+  factions: "Factions",
+  doctrine: "Doctrine",
+};
+const WORLD_PATHS: Record<string, string> = {
+  characters: "/world/characters",
+  places: "/world/places",
+  events: "/world/events",
+  history: "/world/history",
+  artifacts: "/world/artifacts",
+  creatures: "/world/creatures",
+  magic: "/world/magic",
+  factions: "/world/factions",
+  doctrine: "/world/doctrine",
+};
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { activeProject } = useActiveProject();
+  const { icons } = useTheme();
 
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -101,7 +108,7 @@ const Sidebar = () => {
     return location.pathname === path;
   };
 
-  const NavItem = ({ label, path, icon: Icon }: { label: string; path: string; icon: LucideIcon }) => {
+  const NavItem = ({ label, path, icon: Icon }: { label: string; path: string; icon: PhosphorIcon }) => {
     const active = isActive(path);
     return (
       <button
@@ -112,11 +119,14 @@ const Sidebar = () => {
             : "text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover border border-transparent"
         }`}
       >
-        <Icon size={14} />
+        <Icon size={14} weight="duotone" />
         {label}
       </button>
     );
   };
+
+  const SyncIcon = icons.sync;
+  const InboxIcon = icons.inbox;
 
   return (
     <div className="fixed left-0 top-12 bottom-0 w-[190px] bg-fyrescribe-base border-r border-border flex flex-col z-40">
@@ -126,8 +136,13 @@ const Sidebar = () => {
             Write
           </div>
           <div className="space-y-0.5">
-            {WRITE_ITEMS.map((item) => (
-              <NavItem key={item.path} {...item} />
+            {WRITE_KEYS.map((key) => (
+              <NavItem
+                key={key}
+                label={WRITE_LABELS[key]}
+                path={WRITE_PATHS[key]}
+                icon={icons[key]}
+              />
             ))}
           </div>
         </div>
@@ -137,8 +152,13 @@ const Sidebar = () => {
             World & Lore
           </div>
           <div className="space-y-0.5">
-            {WORLD_ITEMS.map((item) => (
-              <NavItem key={item.path} {...item} />
+            {WORLD_KEYS.map((key) => (
+              <NavItem
+                key={key}
+                label={WORLD_LABELS[key]}
+                path={WORLD_PATHS[key]}
+                icon={icons[key]}
+              />
             ))}
           </div>
         </div>
@@ -158,7 +178,7 @@ const Sidebar = () => {
             onClick={() => handleSync(false)}
             className="flex-1 flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover"
           >
-            <RefreshCw size={12} className={syncing ? "animate-spin" : ""} />
+            <SyncIcon size={12} weight="duotone" className={syncing ? "animate-spin" : ""} />
             {syncing ? "Syncing…" : "Sync Lore"}
           </button>
           <button
@@ -184,7 +204,7 @@ const Sidebar = () => {
           }`}
         >
           <div className="flex items-center gap-2">
-            <Inbox size={14} />
+            <InboxIcon size={14} weight="duotone" />
             Lore Inbox
           </div>
           {pendingCount > 0 && (
