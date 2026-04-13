@@ -90,7 +90,7 @@ const ThemeSwitcher = () => {
           className="cursor-pointer flex items-center gap-2"
         >
           <SparklePhosphor size={14} weight="duotone" className="text-gold flex-shrink-0" />
-          <span className="flex-1 text-sm">Time to Run</span>
+          <span className="flex-1 text-sm">{theme === "outrun" ? "Time to Run" : "Make it Sparkle"}</span>
           <Switch
             checked={sparkle}
             onCheckedChange={setSparkle}
