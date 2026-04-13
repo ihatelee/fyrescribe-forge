@@ -394,13 +394,22 @@ const EntityGalleryPage = () => {
             </div>
 
             {activeProject && (
-              <button
-                onClick={() => setShowNewModal(true)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
-              >
-                <Plus size={14} />
-                New Entity
-              </button>
+              <>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 border border-border text-sm text-text-secondary rounded-lg hover:text-foreground hover:border-text-dimmed transition-colors"
+                >
+                  <Upload size={14} />
+                  Upload Entry
+                </button>
+                <button
+                  onClick={() => setShowNewModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
+                >
+                  <Plus size={14} />
+                  New Entity
+                </button>
+              </>
             )}
           </div>
         </div>
