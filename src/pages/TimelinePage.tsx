@@ -142,7 +142,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
           <select
             value={dateLabel}
             onChange={(e) => setDateLabel(e.target.value)}
-            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40"
+            className="w-full bg-fyrescribe-hover border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground outline-none focus:border-gold/40"
           >
             {ERA_OPTIONS.map((era) => (
               <option key={era.label} value={era.label}>
@@ -159,7 +159,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
           <select
             value={type}
             onChange={(e) => setType(e.target.value as TimelineEventType)}
-            className="w-full bg-fyrescribe-hover border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold/40"
+            className="w-full bg-fyrescribe-hover border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground outline-none focus:border-gold/40"
           >
             <option value="story_event">Story Event</option>
             <option value="world_history">World History</option>
