@@ -68,7 +68,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
     // Also create a corresponding "events" entity in the lore system
     if (createEntity) {
       const fields: Record<string, string> = {
-        "Date/Era": dateLabel.trim(),
+        "Date/Era": dateLabel,
         "Location": "",
         "Key Participants": "",
         "Outcome": "",
@@ -85,7 +85,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
         name: trimmed,
         category: "events" as Database["public"]["Enums"]["entity_category"],
         project_id: projectId,
-        summary: dateLabel.trim() ? `Event occurring ${dateLabel.trim()}` : null,
+        summary: dateLabel ? `Event occurring in the ${dateLabel}` : null,
         fields,
         sections,
       });
