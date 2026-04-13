@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
+import { IconSetName, ICON_SETS, THEME_DEFAULT_ICON_SET, type IconSet } from "@/lib/iconSets";
 
 export type ThemeName = "midnight" | "fireside" | "futureworld" | "lavender" | "daylight" | "enchanted";
 export const isDaylightTheme = (t: ThemeName) => t === "daylight";
@@ -10,6 +11,9 @@ interface ThemeContextType {
   setTheme: (t: ThemeName) => void;
   sparkle: boolean;
   setSparkle: (v: boolean) => void;
+  iconSetName: IconSetName;
+  setIconSet: (v: IconSetName) => void;
+  icons: IconSet;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -17,6 +21,9 @@ const ThemeContext = createContext<ThemeContextType>({
   setTheme: () => {},
   sparkle: false,
   setSparkle: () => {},
+  iconSetName: "fantasy",
+  setIconSet: () => {},
+  icons: ICON_SETS.fantasy,
 });
 
 export const useTheme = () => useContext(ThemeContext);
@@ -295,11 +302,9 @@ for (const vars of Object.values(THEME_VARS)) {
 function applyTheme(theme: ThemeName) {
   const vars = THEME_VARS[theme];
   const root = document.documentElement;
-  // Clear every managed variable first so no value from the previous theme bleeds through.
   for (const key of ALL_THEME_VAR_KEYS) {
     root.style.removeProperty(key);
   }
-  // Set all variables for the incoming theme.
   for (const [key, val] of Object.entries(vars)) {
     root.style.setProperty(key, val);
   }
@@ -309,6 +314,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [theme, setThemeState] = useState<ThemeName>("midnight");
   const [sparkle, setSparkleState] = useState(false);
+  const [iconSetName, setIconSetState] = useState<IconSetName>("fantasy");
   const [loaded, setLoaded] = useState(false);
 
   // Load preferences from DB
@@ -316,13 +322,18 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     supabase
       .from("user_preferences" as any)
-      .select("theme, sparkle_enabled")
+      .select("theme, sparkle_enabled, icon_set")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }: any) => {
         if (data) {
           setThemeState(data.theme as ThemeName);
           setSparkleState(data.sparkle_enabled);
+          if (data.icon_set) {
+            setIconSetState(data.icon_set as IconSetName);
+          } else {
+            setIconSetState(THEME_DEFAULT_ICON_SET[data.theme] || "fantasy");
+          }
           applyTheme(data.theme as ThemeName);
         }
         setLoaded(true);
@@ -333,26 +344,33 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     applyTheme(theme);
   }, [theme]);
 
-  const persistPrefs = async (t: ThemeName, s: boolean) => {
+  const persistPrefs = async (t: ThemeName, s: boolean, i: IconSetName) => {
     if (!user) return;
     await supabase.from("user_preferences" as any).upsert(
-      { user_id: user.id, theme: t, sparkle_enabled: s, updated_at: new Date().toISOString() } as any,
+      { user_id: user.id, theme: t, sparkle_enabled: s, icon_set: i, updated_at: new Date().toISOString() } as any,
       { onConflict: "user_id" }
     );
   };
 
   const setTheme = (t: ThemeName) => {
     setThemeState(t);
-    persistPrefs(t, sparkle);
+    persistPrefs(t, sparkle, iconSetName);
   };
 
   const setSparkle = (v: boolean) => {
     setSparkleState(v);
-    persistPrefs(theme, v);
+    persistPrefs(theme, v, iconSetName);
   };
 
+  const setIconSet = (v: IconSetName) => {
+    setIconSetState(v);
+    persistPrefs(theme, sparkle, v);
+  };
+
+  const icons = ICON_SETS[iconSetName];
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, sparkle, setSparkle }}>
+    <ThemeContext.Provider value={{ theme, setTheme, sparkle, setSparkle, iconSetName, setIconSet, icons }}>
       {children}
     </ThemeContext.Provider>
   );

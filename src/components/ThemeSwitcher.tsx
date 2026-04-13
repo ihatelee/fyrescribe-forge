@@ -1,12 +1,15 @@
-import { Paintbrush } from "lucide-react";
+import { Paintbrush, Check, SparkleIcon } from "lucide-react";
 import { useTheme, ThemeName } from "@/contexts/ThemeContext";
 import { Switch } from "@/components/ui/switch";
+import { ICON_SET_META, ICON_SETS, type IconSetName } from "@/lib/iconSets";
+import { Sparkle as SparklePhosphor } from "@phosphor-icons/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 
 const THEMES: { value: ThemeName; label: string; swatch: string; suffix?: string }[] = [
@@ -14,12 +17,12 @@ const THEMES: { value: ThemeName; label: string; swatch: string; suffix?: string
   { value: "fireside", label: "Fireside", swatch: "#E07B2A" },
   { value: "lavender", label: "Lavender Haze", swatch: "#9B7FD4" },
   { value: "enchanted", label: "Enchanted", swatch: "#00C896" },
-  { value: "futureworld", label: "Futureworld", swatch: "#00FFE0" },
+  { value: "futureworld", label: "Futureworld", swatch: "#00FF41" },
   { value: "daylight", label: "Daylight", swatch: "#8B5E2A", suffix: "light mode" },
 ];
 
 const ThemeSwitcher = () => {
-  const { theme, setTheme, sparkle, setSparkle } = useTheme();
+  const { theme, setTheme, sparkle, setSparkle, iconSetName, setIconSet } = useTheme();
 
   return (
     <DropdownMenu>
@@ -28,7 +31,8 @@ const ThemeSwitcher = () => {
           <Paintbrush size={14} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-card border-border w-48">
+      <DropdownMenuContent align="end" className="bg-card border-border w-56">
+        {/* Color themes */}
         {THEMES.map((t) => (
           <DropdownMenuItem
             key={t.value}
@@ -43,14 +47,47 @@ const ThemeSwitcher = () => {
               {t.label}
               {t.suffix && <em className="text-muted-foreground ml-1 text-xs">{t.suffix}</em>}
             </span>
-            {theme === t.value && <span className="text-gold text-xs">✓</span>}
+            {theme === t.value && <Check size={12} className="text-gold" />}
           </DropdownMenuItem>
         ))}
+
         <DropdownMenuSeparator />
+
+        {/* Icon set selector */}
+        <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-text-dimmed font-medium">
+          Icon Set
+        </DropdownMenuLabel>
+        {ICON_SET_META.map((set) => {
+          const icons = ICON_SETS[set.value];
+          // Show a few representative icons as preview
+          const PreviewIcon1 = icons.characters;
+          const PreviewIcon2 = icons.magic;
+          const PreviewIcon3 = icons.creatures;
+          return (
+            <DropdownMenuItem
+              key={set.value}
+              onClick={() => setIconSet(set.value)}
+              className="cursor-pointer flex items-center gap-2"
+            >
+              <span className="flex items-center gap-0.5 flex-shrink-0 text-text-secondary">
+                <PreviewIcon1 size={12} weight="duotone" />
+                <PreviewIcon2 size={12} weight="duotone" />
+                <PreviewIcon3 size={12} weight="duotone" />
+              </span>
+              <span className="flex-1 text-sm">{set.label}</span>
+              {iconSetName === set.value && <Check size={12} className="text-gold" />}
+            </DropdownMenuItem>
+          );
+        })}
+
+        <DropdownMenuSeparator />
+
+        {/* Sparkle toggle */}
         <DropdownMenuItem
           onSelect={(e) => e.preventDefault()}
           className="cursor-pointer flex items-center gap-2"
         >
+          <SparklePhosphor size={14} weight="duotone" className="text-gold flex-shrink-0" />
           <span className="flex-1 text-sm">Make it Sparkle</span>
           <Switch
             checked={sparkle}
