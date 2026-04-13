@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
 import { IconSetName, ICON_SETS, THEME_DEFAULT_ICON_SET, type IconSet } from "@/lib/iconSets";
 
-export type ThemeName = "midnight" | "fireside" | "futureworld" | "lavender" | "daylight" | "enchanted";
+export type ThemeName = "midnight" | "fireside" | "outrun" | "lavender" | "daylight" | "enchanted";
 export const isDaylightTheme = (t: ThemeName) => t === "daylight";
 
 interface ThemeContextType {
@@ -118,7 +118,7 @@ const THEME_VARS: Record<ThemeName, Record<string, string>> = {
     "--sidebar-border": "30 20% 70% / 0.08",
     "--sidebar-ring": "24 75% 52%",
   },
-  futureworld: {
+  outrun: {
     "--font-body": "'Silkscreen', monospace",
     "--font-display": "'Silkscreen', monospace",
     "--font-prose": "'Fira Code', monospace",

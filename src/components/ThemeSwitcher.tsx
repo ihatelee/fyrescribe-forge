@@ -17,7 +17,7 @@ const THEMES: { value: ThemeName; label: string; swatch: string; suffix?: string
   { value: "fireside", label: "Fireside", swatch: "#E07B2A" },
   { value: "lavender", label: "Lavender Haze", swatch: "#9B7FD4" },
   { value: "enchanted", label: "Enchanted", swatch: "#00C896" },
-  { value: "futureworld", label: "Futureworld", swatch: "#00FF41" },
+  { value: "outrun", label: "Outrun", swatch: "#00FF41" },
   { value: "daylight", label: "Daylight", swatch: "#8B5E2A", suffix: "light mode" },
 ];
 
@@ -88,7 +88,7 @@ const ThemeSwitcher = () => {
           className="cursor-pointer flex items-center gap-2"
         >
           <SparklePhosphor size={14} weight="duotone" className="text-gold flex-shrink-0" />
-          <span className="flex-1 text-sm">Make it Sparkle</span>
+          <span className="flex-1 text-sm">Time to Run</span>
           <Switch
             checked={sparkle}
             onCheckedChange={setSparkle}

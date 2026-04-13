@@ -116,7 +116,7 @@ export const THEME_DEFAULT_ICON_SET: Record<string, IconSetName> = {
   fireside: "fantasy",
   lavender: "fantasy",
   enchanted: "fantasy",
-  futureworld: "scifi",
+  outrun: "scifi",
   daylight: "standard",
 };
 

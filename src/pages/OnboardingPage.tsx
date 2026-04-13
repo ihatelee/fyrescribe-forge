@@ -2,8 +2,10 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Upload, X, Loader2 } from "lucide-react";
 import logoSrc from "@/assets/fyrescribe_logo_white.svg";
+import logoBitSrc from "@/assets/fyrescribe_logo_bit.svg";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import NewProjectModal from "@/components/NewProjectModal";
 import StarfieldBackground from "@/components/StarfieldBackground";
 
@@ -13,6 +15,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const OnboardingPage = () => {
   const navigate = useNavigate();
   const { setActiveProject } = useActiveProject();
+  const { theme } = useTheme();
   const [showNewProject, setShowNewProject] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
@@ -33,7 +36,7 @@ const OnboardingPage = () => {
             style={{ background: "radial-gradient(circle, hsl(var(--gold)) 0%, transparent 70%)", transform: "scale(1.5)" }}
           />
           <img
-            src={logoSrc}
+            src={theme === "outrun" ? logoBitSrc : logoSrc}
             alt="Fyrescribe"
             className="w-[300px] relative z-10"
           />
