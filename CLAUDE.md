@@ -32,6 +32,7 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
   - Chapters and scenes are inserted into Supabase sequentially.
 - **Theme system** — `ThemeContext` + `ThemeSwitcher`. Six themes: Midnight, Fireside, Lavender Haze, Enchanted, Futureworld, Daylight. Preferences persisted to `user_preferences` Supabase table. Futureworld uses Silkscreen + Fira Code fonts; all other themes use Cinzel (display) + EB Garamond (prose) + system sans-serif (body). All theme styles — including fonts — flow exclusively through CSS variables (`--font-body`, `--font-display`, `--font-prose`, plus the full set of color tokens). `applyTheme` clears all managed variables before setting the new theme, guaranteeing no bleed-through.
 - **Sparkle toggle** — `GlobalSparkle` + `StarfieldBackground` render an animated star/sparkle overlay, persisted alongside theme preference.
+- **Icon sets** — `src/lib/iconSets.ts` defines three icon sets (Fantasy, Sci-Fi, Standard) using Phosphor icons. Each set provides icons for all 13 sidebar slots (manuscript, timeline, all 9 entity categories, inbox, sync). `THEME_DEFAULT_ICON_SET` maps themes to their default set (Midnight/Fireside/Lavender/Enchanted → fantasy, Futureworld → scifi, Daylight → standard). Icon set preference persisted to `user_preferences.icon_set` (migration `20260413000331_...sql`). `ThemeContext` + `ThemeSwitcher` + `Sidebar.tsx` updated to use the active icon set.
 - **Entity system** — `EntityGalleryPage` + `EntityDetailPage` with 9 categories: characters, places, events, history, artifacts, creatures, magic, factions, doctrine.
   - `abilities` enum value renamed to `magic`; `history` added as a new enum value (`supabase/migrations/20260413000000_entity_category_updates.sql`). Migration applied to production; `types.ts` updated to match.
   - POV Tracker removed from sidebar (route kept in App.tsx).
@@ -46,11 +47,15 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
   - Entity gallery supports tag filtering via `?tag=<id>` search param with "× Clear tag filter" pill.
 - **Manuscript drag and drop** — scenes in the chapter/scene sidebar are `draggable`. Dragging a scene onto a different chapter's container moves it to that chapter in Supabase and updates the `order` field. Dropped-into chapters auto-expand. Visual highlight (gold glow + ring) on drag-over chapter.
 - **Timeline** — `TimelinePage` reads from `timeline_events` Supabase table (real data, no placeholder). "Generate from Lore" button invokes the `generate-timeline` Supabase Edge Function which reads Event/History entities + scene excerpts, calls claude-sonnet-4-6 via Anthropic API, and inserts the returned `{label, date_label, date_sort, type}[]` events. Events can be deleted (hover reveals trash icon). Edge function is deployed to production.
-- **Lore sync pipeline** — `supabase/functions/sync-lore/index.ts` edge function. Confirmed working end-to-end with real manuscript content. Architecture: one Anthropic API call per scene, returning a JSON array of up to 5 entities (`max_tokens: 1500`). This eliminates the truncation that occurred when all scenes were batched into one call. Prompt is aggressive: extract every named entity (characters, places, factions, artifacts, creatures, events, magic, doctrine) — if it has a proper noun, suggest it. Confidence threshold is 0.4 (entities mentioned briefly still surface). Each suggestion payload contains: `name`, `category`, `description`, `confidence`, `source_scene_title`, `source_sentence` (verbatim sentence where entity first appears), `fields` (all At a Glance keys for the category, AI-populated where inferable, matched case-insensitively), `sections` (non-empty article sections, case-insensitive key match), `tags` (lowercase cross-reference strings). Deduplicates by name across scenes (highest confidence wins). Clears `is_dirty` on processed scenes, updates `projects.last_sync_at`, and logs to `sync_log`. Deployed to production. Daily pg_cron job (`daily-lore-sync`, 03:00 UTC) calls the function for all projects via `net.http_post`. Force sync mode (`force=true`) ignores `is_dirty` and processes all scenes — accessible via the "all" button in the sidebar.
+  - **Add Event modal** — "Add Event" button wired up. Modal takes: event name, Date/Era dropdown (`ERA_OPTIONS`: Ancient Times → Present Day, each with a numeric `date_sort`), type (Story Event / World History), and an optional checkbox to also create a corresponding `events` lore entity with pre-seeded `fields` and `sections`.
+  - **Drag-to-reorder** — timeline events are draggable. Drop above/below a target card; `date_sort` is recalculated by interpolating between neighbours. Gold drop indicator line shows above/below target. Persisted to Supabase.
+  - **Bulk delete** — hover-reveal "delete" checkbox per event card. When any are checked a bulk action bar appears ("Delete Selected (N)" + "Clear selection"). Bulk delete cascades correctly.
+- **Lore sync pipeline** — `supabase/functions/sync-lore/index.ts` edge function. Confirmed working end-to-end with real manuscript content. Architecture: one Anthropic API call per scene, returning a JSON array of all named entities found (no per-scene cap; `max_tokens: 4000`). Scenes are queried with their parent chapter title (`chapters(title)` join). Prompt is aggressive: extract every named entity — if it has a proper noun, suggest it. Shows `LOCATION: Chapter Title › Scene Title` in the prompt for structural context. Confidence threshold is 0.4. Each suggestion payload contains: `name`, `category`, `description`, `confidence`, `source_scene_title`, `source_location` (formatted as `"Chapter Title › Scene Title"`), `source_sentence` (verbatim sentence where entity first appears), `fields` (all At a Glance keys for the category, AI-populated where inferable, matched case-insensitively), `sections` (non-empty article sections, case-insensitive key match), `tags` (lowercase cross-reference strings). Deduplicates by name across scenes (highest confidence wins). Clears `is_dirty` on processed scenes, updates `projects.last_sync_at`, and logs to `sync_log`. Deployed to production. Daily pg_cron job (`daily-lore-sync`, 03:00 UTC) calls the function for all projects via `net.http_post`. Force sync mode (`force=true`) ignores `is_dirty` and processes all scenes — accessible via the "all" button in the sidebar.
 - **Lore Inbox** (`LoreInboxPage`) — fully wired to Supabase. Shows pending `lore_suggestions` for the active project. Each card displays: type badge, category badge, entity name, description, populated At a Glance fields (two-column grid), article section names (pills), suggested tags (gold pills), confidence bar, source scene. **Accept**: inserts entity with pre-populated `fields` and `sections` JSONBs; upserts new tags into `tags` table and links via `entity_tags`; shows "Entity created → View" banner. **Edit**: inline name/description edit before accepting (sets status `edited`). **Reject**: marks `rejected` with `reviewed_at`.
 - **Sidebar — Sync Lore** — `Sidebar.tsx` fetches live pending count from `lore_suggestions` (replacing hardcoded prop). "Sync Lore" button invokes `sync-lore` for the active project, shows spinner, displays brief result message ("N new suggestions" / "No edited scenes" / "N scenes processed, 0 suggestions"), then refreshes the count. Small "all" button triggers force sync. Button has no `disabled` state (handler guards internally).
 - **Entity gallery — view toggle** — card/list toggle in the gallery header, persisted to `localStorage` (`fyrescribe_entity_view_mode`). List view shows category badge, name, summary, tags (up to 3 + overflow count), and 3-dot menu per row.
 - **Entity gallery — 3-dot menu** — Archive (soft-delete via `archived_at`) and Delete (PERMANENTLY DELETE confirmation, cascades `entity_links` + `entity_tags`) on every entity card and list row, matching the projects page interaction pattern. Archived entities appear in a collapsible section at the bottom; click to unarchive. Migration: `20260412210000_entity_archived_at.sql`.
+- **Entity gallery — bulk delete** — hover-reveal "delete" checkbox on each card and list row. Bulk action bar ("Delete Selected (N)" + "Clear selection") appears when any are checked. Cascades `entity_links` + `entity_tags` before deleting the entity, matching the single-delete behaviour.
 - **Storage buckets** — `entity-images` (entity gallery images), `manuscripts` (uploaded manuscript files). Both use RLS policies keyed on `storage.foldername(name)[1] = auth.uid()`.
 - **Other pages** — `POVTrackerPage` exists (scaffolded).
 
@@ -59,26 +64,27 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 - POV tracker logic.
 - Word count tracking (column exists on `scenes`, not yet wired up).
 - Project archiving (column `archived_at` exists on `projects`, not yet used in UI).
-- Timeline: manual "Add Event" button (button exists in UI but is not wired up).
+- Timeline: manual "Add Event" is now wired up — see above.
 - Lore Inbox: `field_update`, `contradiction`, and `new_tag` suggestion types are displayed but the sync function only produces `new_entity` suggestions today.
 - Sync Lore progress UI — no per-scene progress feedback while sync is running; sidebar just shows a spinner for the full duration.
-- `source_sentence` stored in suggestion payload but not yet displayed in the Lore Inbox card UI.
+- `source_sentence` and `source_location` stored in suggestion payload; `source_location` now displayed in the Lore Inbox card. `source_sentence` stored but not yet surfaced in the UI.
 
 ---
 
 ## Where We Left Off
 
-**Session: 2026-04-12 (session 7)**
+**Session: 2026-04-13 (session 10 — Lovable pull)**
 
-Lore sync pipeline is working end-to-end. Fields, sections, and tags are populating correctly in accepted entities. Key work this session:
+`git pull` brought in 30 Lovable commits. All our prior changes intact. Lovable added:
 
-- **Entity gallery view toggle + 3-dot menu**: card/list toggle (localStorage), Archive + Delete actions matching the projects page pattern.
-- **sync-lore architecture overhaul**: moved from a single all-scenes API call → 5-scene chunks → one call per scene (single JSON object). Each approach was deployed and tested; truncation errors at positions ~7583/7668 confirmed the batch approaches were still hitting token limits. One-call-per-scene with `max_tokens: 1000` eliminates truncation entirely.
-- **Fields/sections fix**: case-insensitive key matching for both `fields` and `sections` so AI casing variations don't silently drop data.
-- **Force sync mode**: "all" button bypasses `is_dirty` filter — useful for re-syncing existing scenes after prompt changes.
+- **Timeline overhaul**: Add Event modal (era dropdown, type, optional lore entity creation), drag-to-reorder (date_sort interpolation), bulk delete with checkboxes.
+- **Icon sets**: `iconSets.ts` with Fantasy/Sci-Fi/Standard Phosphor icon sets; theme-defaulted; persisted to `user_preferences.icon_set`.
+- **Entity gallery bulk delete**: hover-reveal checkboxes + bulk action bar, matching Timeline pattern.
+
+No code was written by Claude this session — documentation-only update after pull.
 
 **Pending / next logical steps:**
-- Display `source_sentence` in the Lore Inbox suggestion card (stored in payload, not yet shown in UI).
+- Display `source_sentence` in the Lore Inbox card (stored in payload, not yet shown in UI).
 - Add a progress toast or per-scene counter to the sidebar sync flow so users can see it working on large manuscripts.
 - Consider extending sync to produce `field_update` and `contradiction` suggestion types.
 - Word count tracking — wire up `scenes.word_count` to the editor's save path.

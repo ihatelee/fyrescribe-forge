@@ -4,6 +4,48 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (session 10)
+
+### Lovable pull — timeline overhaul, icon sets, entity bulk delete
+
+All changes in this session came from Lovable (30 commits via `git pull`). No Claude-authored code.
+
+**`src/pages/TimelinePage.tsx`**
+- "Add Event" button now opens `AddEventModal`: event name field, Date/Era dropdown (`ERA_OPTIONS`: Ancient Times / Distant Past / Generations Ago / Years Ago / Recent Past / Present Day, each mapped to a numeric `date_sort`), type selector (Story Event / World History), and an optional "Also create an Events lore entry" checkbox that inserts a corresponding entity with pre-seeded `fields` and `sections`.
+- Drag-to-reorder: events are `draggable`. Drop indicator (gold line) shows above/below the hovered card. On drop, `date_sort` is recalculated by interpolating between the new neighbours; persisted to Supabase.
+- Bulk delete: hover-reveal "delete" checkbox per event. Bulk action bar ("Delete Selected (N)" + "Clear selection") appears when any are checked.
+
+**`src/lib/iconSets.ts`** (new file)
+- Three icon sets (Fantasy, Sci-Fi, Standard) using `@phosphor-icons/react`, covering all 13 sidebar slots.
+- `THEME_DEFAULT_ICON_SET`: Midnight/Fireside/Lavender/Enchanted → fantasy; Futureworld → scifi; Daylight → standard.
+
+**`src/contexts/ThemeContext.tsx`**, **`src/components/ThemeSwitcher.tsx`**, **`src/components/Sidebar.tsx`**
+- Updated to load and apply the active icon set from `user_preferences.icon_set`.
+
+**`supabase/migrations/20260413000331_573063f8-dc9e-48a7-a61e-a6694657ec32.sql`**
+- Adds `icon_set text NOT NULL DEFAULT 'fantasy'` to `user_preferences`.
+
+**`src/pages/EntityGalleryPage.tsx`**
+- Bulk delete: hover-reveal "delete" checkbox on card (bottom-right) and list (leading column) rows. Bulk action bar matches the Timeline pattern. Cascades `entity_links` + `entity_tags` before deleting entities.
+
+---
+
+## 2026-04-12 (session 9)
+
+### sync-lore — chapter context, source_location, uncapped detection
+
+**`supabase/functions/sync-lore/index.ts`**
+- Scenes query now joins `chapters(title)` so each scene carries its parent chapter title. A `SceneRow` type flattens the nested relation.
+- `buildPrompt` receives `chapterTitle` and shows `LOCATION: Chapter Title › Scene Title` at the top of each prompt, giving the AI structural context about where in the manuscript it's reading.
+- `source_location` added to the suggestion payload, formatted as `"Chapter Title › Scene Title"` — stamped by `syncProject` after the API call (not by the AI) so it's always accurate. Falls back to scene title alone if no chapter title exists. `source_scene_title` kept for backwards compatibility.
+- Removed the "up to 5 entities" cap from the prompt. AI now returns every named entity it finds per scene. `max_tokens` raised 1500 → 4000 to accommodate dense scenes.
+
+**`src/pages/LoreInboxPage.tsx`**
+- `SuggestionPayload` interface gains `source_location` and `source_sentence` fields.
+- Suggestion card now displays `source_location` (with fallback to `source_scene_title`) instead of the bare scene title.
+
+---
+
 ## 2026-04-12 (session 8)
 
 ### Lore sync — confirmed working end to end
