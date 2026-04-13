@@ -19,7 +19,7 @@ import {
   Timer as SciFiTimeline,
   UserCircleGear as SciFiCharacters,
   Planet as SciFiPlaces,
-  Lightning as SciFiEvents,
+  CalendarStar as SciFiEvents,
   Database as SciFiHistory,
   Cpu as SciFiArtifacts,
   Alien as SciFiCreatures,
@@ -39,7 +39,7 @@ import {
   PawPrint as StdCreatures,
   Sparkle as StdMagic,
   FlagBanner as StdFactions,
-  ListBullets as StdDoctrine,
+  Gavel as StdDoctrine,
   Tray as StdInbox,
   ArrowsClockwise as StdSync,
 } from "@phosphor-icons/react";
