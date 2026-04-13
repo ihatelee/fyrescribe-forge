@@ -120,7 +120,7 @@ const NewEntityModal = ({ projectId, defaultCategory, onCreated, onClose }: NewE
         onClick={(e) => e.stopPropagation()}
         className="bg-fyrescribe-raised border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl"
       >
-        <h2 className="font-display text-base text-foreground mb-5">New Entity</h2>
+        <h2 className="font-display text-base text-foreground mb-5">New Entry</h2>
 
         <div className="mb-4">
           <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
@@ -407,7 +407,7 @@ const EntityGalleryPage = () => {
                   className="flex items-center gap-2 px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
                 >
                   <Plus size={14} />
-                  New Entity
+                  New Entry
                 </button>
               </>
             )}
