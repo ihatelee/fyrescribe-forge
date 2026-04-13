@@ -7,7 +7,7 @@ import {
   Mountains as FantasyPlaces,
   Scroll as FantasyEvents,
   BookBookmark as FantasyHistory,
-  Gem as FantasyArtifacts,
+  DiamondsFour as FantasyArtifacts,
   Horse as FantasyCreatures,
   MagicWand as FantasyMagic,
   Shield as FantasyFactions,
