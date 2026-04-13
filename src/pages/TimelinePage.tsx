@@ -35,8 +35,7 @@ interface AddEventModalProps {
 
 const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) => {
   const [label, setLabel] = useState("");
-  const [dateLabel, setDateLabel] = useState(ERA_OPTIONS[0].label);
-  const [type, setType] = useState<TimelineEventType>("story_event");
+  const [dateLabel, setDateLabel] = useState<string>(ERA_OPTIONS[0].label);
   const [type, setType] = useState<TimelineEventType>("story_event");
   const [createEntity, setCreateEntity] = useState(true);
   const [saving, setSaving] = useState(false);
