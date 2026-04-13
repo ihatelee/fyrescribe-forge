@@ -252,12 +252,12 @@ const EntityGalleryPage = () => {
   const handleArchive = async (entity: EntityRow, e: React.MouseEvent) => {
     e.stopPropagation();
     const now = new Date().toISOString();
-    await supabase.from("entities").update({ archived_at: now } as any).eq("id", entity.id);
+    await supabase.from("entities").update({ archived_at: now }).eq("id", entity.id);
     setEntities((prev) => prev.map((ent) => ent.id === entity.id ? { ...ent, archived_at: now } : ent));
   };
 
   const handleUnarchive = async (entity: EntityRow) => {
-    await supabase.from("entities").update({ archived_at: null } as any).eq("id", entity.id);
+    await supabase.from("entities").update({ archived_at: null }).eq("id", entity.id);
     setEntities((prev) => prev.map((ent) => ent.id === entity.id ? { ...ent, archived_at: null } : ent));
   };
 

@@ -86,6 +86,12 @@ const SECTION_PLACEHOLDER_TEXT: Record<string, string> = {
 
 // ─── Types ────────────────────────────────────────────────────────────
 
+/** Typed shape for entities.sections JSONB column (section name → rich text content) */
+type EntitySections = Record<string, string>;
+
+/** Typed shape for entities.fields JSONB column (At a Glance key → value) */
+type EntityFields = Record<string, string>;
+
 interface LinkedEntityEntry {
   id: string;
   name: string;
@@ -340,8 +346,8 @@ const EntityDetailInner = () => {
   const [projectId, setProjectId] = useState("");
 
   const [summary, setSummary] = useState("");
-  const [fields, setFields] = useState<Record<string, string>>({});
-  const [sections, setSections] = useState<Record<string, string>>({});
+  const [fields, setFields] = useState<EntityFields>({});
+  const [sections, setSections] = useState<EntitySections>({});
   const [tags, setTags] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [projectTags, setProjectTags] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [coverImage, setCoverImage] = useState<string | null>(null);
@@ -358,7 +364,7 @@ const EntityDetailInner = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
 
-  const sectionsRef = useRef<Record<string, string>>({});
+  const sectionsRef = useRef<EntitySections>({});
   const sectionList = CATEGORY_SECTIONS[entity?.category || "characters"] || [];
 
   // ─── Fetch ────────────────────────────────────────────────────────
@@ -377,7 +383,7 @@ const EntityDetailInner = () => {
         setSummary(dbEntity.summary || "");
 
         // Structured fields: seed from CATEGORY_FIELDS if entity has none
-        const existingFields = (dbEntity.fields as Record<string, string>) || {};
+        const existingFields = (dbEntity.fields as EntityFields) || {};
         const stdKeys = CATEGORY_FIELDS[dbEntity.category] || [];
         const initialFields =
           Object.keys(existingFields).length === 0
@@ -385,7 +391,7 @@ const EntityDetailInner = () => {
             : existingFields;
         setFields(initialFields);
 
-        const initialSections = (dbEntity.sections as Record<string, string>) || {};
+        const initialSections = (dbEntity.sections as EntitySections) || {};
         setSections(initialSections);
         sectionsRef.current = initialSections;
         setCoverImage(dbEntity.cover_image_url || null);
@@ -422,10 +428,10 @@ const EntityDetailInner = () => {
 
   // ─── Auto-save sections ──────────────────────────────────────────
 
-  const saveSectionsToDb = useDebouncedCallback(async (newSections: Record<string, string>) => {
+  const saveSectionsToDb = useDebouncedCallback(async (newSections: EntitySections) => {
     if (!id) return;
     const { error } = await supabase
-      .from("entities").update({ sections: newSections as unknown as Json }).eq("id", id);
+      .from("entities").update({ sections: newSections as Json }).eq("id", id);
     if (error) console.error("Failed to save sections:", error);
   }, 1000);
 
@@ -442,9 +448,9 @@ const EntityDetailInner = () => {
     await supabase.from("entities").update({ summary }).eq("id", id);
   }, [id, summary]);
 
-  const saveFields = useCallback(async (updatedFields: Record<string, string>) => {
+  const saveFields = useCallback(async (updatedFields: EntityFields) => {
     if (!id) return;
-    await supabase.from("entities").update({ fields: updatedFields as unknown as Json }).eq("id", id);
+    await supabase.from("entities").update({ fields: updatedFields as Json }).eq("id", id);
   }, [id]);
 
   const handleSaveFieldEdit = useCallback((key: string) => {

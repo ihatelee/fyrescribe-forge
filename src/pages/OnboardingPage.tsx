@@ -191,7 +191,7 @@ const ImportModal = ({ onCreated, onClose }: ImportModalProps) => {
 
     const { error: updateError } = await supabase
       .from("projects")
-      .update({ manuscript_path: storagePath } as any)
+      .update({ manuscript_path: storagePath })
       .eq("id", project.id);
 
     if (updateError) {

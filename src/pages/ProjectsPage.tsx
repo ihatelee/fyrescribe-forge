@@ -114,7 +114,7 @@ const ProjectsPage = () => {
     e.stopPropagation();
     const { error } = await supabase
       .from("projects")
-      .update({ archived_at: new Date().toISOString() } as any)
+      .update({ archived_at: new Date().toISOString() })
       .eq("id", project.id);
     if (error) {
       console.error("Failed to archive:", error);
@@ -131,7 +131,7 @@ const ProjectsPage = () => {
     if (!unarchiveTarget) return;
     const { error } = await supabase
       .from("projects")
-      .update({ archived_at: null } as any)
+      .update({ archived_at: null })
       .eq("id", unarchiveTarget.id);
     if (error) {
       console.error("Failed to unarchive:", error);

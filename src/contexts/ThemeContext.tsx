@@ -322,11 +322,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user) return;
     supabase
-      .from("user_preferences" as any)
+      .from("user_preferences")
       .select("theme, sparkle_enabled, icon_set")
       .eq("user_id", user.id)
       .maybeSingle()
-      .then(({ data }: any) => {
+      .then(({ data }) => {
         if (data) {
           setThemeState(data.theme as ThemeName);
           setSparkleState(data.sparkle_enabled);
@@ -347,8 +347,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   const persistPrefs = async (t: ThemeName, s: boolean, i: IconSetName) => {
     if (!user) return;
-    await supabase.from("user_preferences" as any).upsert(
-      { user_id: user.id, theme: t, sparkle_enabled: s, icon_set: i, updated_at: new Date().toISOString() } as any,
+    await supabase.from("user_preferences").upsert(
+      { user_id: user.id, theme: t, sparkle_enabled: s, icon_set: i, updated_at: new Date().toISOString() },
       { onConflict: "user_id" }
     );
   };
