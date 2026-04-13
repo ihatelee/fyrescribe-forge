@@ -189,6 +189,7 @@ const EntityGalleryPage = () => {
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
 
   // View mode persisted to localStorage
