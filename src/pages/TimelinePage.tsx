@@ -206,6 +206,10 @@ const TimelinePage = () => {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  // Drag-and-drop state
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; position: "above" | "below" } | null>(null);
+
   const toggleSelectEvent = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -284,6 +288,98 @@ const TimelinePage = () => {
       return merged.sort((a, b) => (a.date_sort ?? 0) - (b.date_sort ?? 0));
     });
     setShowAddModal(false);
+  };
+
+  // ─── Drag-and-drop handlers ─────────────────────────────────────────
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDragId(id);
+    e.dataTransfer.effectAllowed = "move";
+    // Make the drag image slightly transparent
+    const el = e.currentTarget as HTMLElement;
+    setTimeout(() => el.style.opacity = "0.4", 0);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    (e.currentTarget as HTMLElement).style.opacity = "1";
+    setDragId(null);
+    setDropTarget(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (!dragId || dragId === targetId) {
+      setDropTarget(null);
+      return;
+    }
+    // Determine above/below based on mouse position within the card
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    const position = e.clientY < midY ? "above" : "below";
+    setDropTarget({ id: targetId, position });
+  };
+
+  const handleDragLeave = () => {
+    setDropTarget(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!dragId || dragId === targetId || !dropTarget) {
+      setDragId(null);
+      setDropTarget(null);
+      return;
+    }
+
+    const currentList = [...filtered];
+    const dragIndex = currentList.findIndex((ev) => ev.id === dragId);
+    const targetIndex = currentList.findIndex((ev) => ev.id === targetId);
+    if (dragIndex === -1 || targetIndex === -1) return;
+
+    // Calculate the insertion index
+    const insertIndex = dropTarget.position === "above" ? targetIndex : targetIndex + 1;
+
+    // Remove dragged item and insert at new position
+    const dragged = currentList[dragIndex];
+    const withoutDragged = currentList.filter((_, i) => i !== dragIndex);
+    const adjustedInsert = insertIndex > dragIndex ? insertIndex - 1 : insertIndex;
+    withoutDragged.splice(adjustedInsert, 0, dragged);
+
+    // Calculate new date_sort: interpolate between neighbors
+    const prev = adjustedInsert > 0 ? withoutDragged[adjustedInsert - 1] : null;
+    const next = adjustedInsert < withoutDragged.length - 1 ? withoutDragged[adjustedInsert + 1] : null;
+
+    let newDateSort: number;
+    if (prev && next) {
+      newDateSort = Math.round(((prev.date_sort ?? 0) + (next.date_sort ?? 0)) / 2);
+      // If same value (events in same timeframe), just use the value — they share the slot
+      if (newDateSort === (prev.date_sort ?? 0)) {
+        newDateSort = (prev.date_sort ?? 0);
+      }
+    } else if (prev) {
+      newDateSort = (prev.date_sort ?? 0) + 1;
+    } else if (next) {
+      newDateSort = (next.date_sort ?? 0) - 1;
+    } else {
+      newDateSort = 0;
+    }
+
+    // Optimistic update
+    const updatedDragged = { ...dragged, date_sort: newDateSort };
+    const newEvents = events.map((ev) =>
+      ev.id === dragId ? updatedDragged : ev
+    ).sort((a, b) => (a.date_sort ?? 0) - (b.date_sort ?? 0));
+    setEvents(newEvents);
+
+    setDragId(null);
+    setDropTarget(null);
+
+    // Persist
+    await supabase
+      .from("timeline_events")
+      .update({ date_sort: newDateSort })
+      .eq("id", dragId);
   };
 
   return (
@@ -385,9 +481,22 @@ const TimelinePage = () => {
               {filtered.map((event, i) => (
                 <div
                   key={event.id}
-                  className="relative pl-12 animate-fade-in group"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, event.id)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(e) => handleDragOver(e, event.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, event.id)}
+                  className={`relative pl-12 animate-fade-in group cursor-grab active:cursor-grabbing ${
+                    dragId === event.id ? "opacity-40" : ""
+                  }`}
                   style={{ animationDelay: `${i * 50}ms` }}
                 >
+                  {/* Drop indicator — above */}
+                  {dropTarget?.id === event.id && dropTarget.position === "above" && (
+                    <div className="absolute -top-3 left-12 right-0 h-0.5 bg-gold rounded-full shadow-[0_0_6px_hsl(var(--gold))]" />
+                  )}
+
                   {/* Dot */}
                   <div
                     className={`absolute left-[14px] top-3 w-3 h-3 rounded-full border-2 ${
@@ -397,7 +506,11 @@ const TimelinePage = () => {
                     }`}
                   />
 
-                  <div className="bg-fyrescribe-raised border border-border rounded-lg p-4 hover:border-gold/20 transition-colors">
+                  <div className={`bg-fyrescribe-raised border rounded-lg p-4 transition-colors ${
+                    dropTarget?.id === event.id
+                      ? "border-gold/40"
+                      : "border-border hover:border-gold/20"
+                  }`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
@@ -441,6 +554,11 @@ const TimelinePage = () => {
                       </label>
                     </div>
                   </div>
+
+                  {/* Drop indicator — below */}
+                  {dropTarget?.id === event.id && dropTarget.position === "below" && (
+                    <div className="absolute -bottom-3 left-12 right-0 h-0.5 bg-gold rounded-full shadow-[0_0_6px_hsl(var(--gold))]" />
+                  )}
                 </div>
               ))}
             </div>
