@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { parsePdf } from "https://esm.sh/unpdf@0.11.0";
+import { extractText } from "https://esm.sh/unpdf@0.11.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +10,7 @@ const corsHeaders = {
 // PDF text extraction via unpdf — built for edge/serverless, no Worker dep.
 // ---------------------------------------------------------------------------
 async function extractTextFromPdf(bytes: Uint8Array): Promise<string> {
-  const { text } = await parsePdf(bytes, { splitPages: false });
+  const { text } = await extractText(bytes);
   return text.slice(0, 8000);
 }
 
