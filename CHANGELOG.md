@@ -4,6 +4,39 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (sessions 16–17 consolidated)
+
+### Type cleanup, timeline entity links, lore entry upload, README + LICENSE
+
+**Type cleanup**
+- Added proper TypeScript types for `EntitySections`, `EntityFields`, and `SuggestionPayload` in `src/types/supabase.ts`, eliminating `as any` / `as unknown as` casts across `ThemeContext.tsx`, `EntityGalleryPage.tsx`, `ProjectsPage.tsx`, `LoreInboxPage.tsx`, `EntityDetailPage.tsx`, and `OnboardingPage.tsx`.
+- Added `supabase/.temp/` to `.gitignore`.
+
+**Timeline ↔ entity links**
+- `TimelinePage.tsx` `TimelineEvent` interface: added `entity_id: string | null`.
+- `AddEventModal.handleSubmit`: entity insert now uses `.select("id").single()`; writes `entity_id` back to the timeline event row; patches `eventData.entity_id` in-memory before `onCreated`.
+- `supabase/functions/generate-timeline/index.ts`: entity fetch includes `id`; builds a `Map<string, string>` (lowercase name → entity UUID); each inserted row now sets `entity_id` via case-insensitive exact name match.
+
+**`supabase/functions/parse-lore-file/index.ts`** (new, deployed to production)
+- Accepts `multipart/form-data` with `file` (PDF or TXT) and `category`.
+- TXT: decoded as UTF-8. PDF: `extractTextFromPdf()` scans `BT…ET` blocks; falls back to raw scan. Truncates to 8,000 chars.
+- Calls `claude-sonnet-4-20250514` with a category-aware system prompt enforcing exact `fields` and `sections` key names for all 9 entity categories, matching `EntityDetailPage`'s `CATEGORY_FIELDS` / `CATEGORY_SECTIONS` constants.
+- Returns `{ name, summary, fields: Record<string, string>, sections: Record<string, string> }`.
+- Full error coverage: 400, 422, 500 paths all return `{ error: string }` with specific messages.
+
+**`src/components/LoreUploadModal.tsx`**
+- Removed `mockParse` and `setTimeout` stub.
+- `handleImport` calls `supabase.functions.invoke("parse-lore-file", { body: formData })`.
+- `ExtractedField` gains `group: "field" | "section"` discriminator; `extractedName` + `extractedSummary` state added.
+- Field preview split into "At a Glance" and "Sections" groups with per-item toggles.
+- `handleCreate` writes `name`, `summary`, `fields`, and `sections` columns in one insert (previously `sections` was never written on upload).
+
+**Docs**
+- `README.md` replaced with a proper project description (features, stack, env vars, repo link).
+- `LICENSE` added (MIT, Lee Williams 2026).
+
+---
+
 ## 2026-04-13 (session 17)
 
 ### parse-lore-file edge function + LoreUploadModal full wiring

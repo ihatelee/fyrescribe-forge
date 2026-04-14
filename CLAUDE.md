@@ -69,7 +69,6 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 - POV tracker logic.
 - Word count tracking (column exists on `scenes`, not yet wired up).
 - Project archiving (column `archived_at` exists on `projects`, not yet used in UI).
-- Timeline: manual "Add Event" is now wired up — see above.
 - Lore Inbox: `field_update`, `contradiction`, and `new_tag` suggestion types are displayed but the sync function only produces `new_entity` suggestions today.
 - Sync Lore progress UI — no per-scene progress feedback while sync is running; sidebar just shows a spinner for the full duration.
 - `source_sentence` and `source_location` stored in suggestion payload; `source_location` now displayed in the Lore Inbox card. `source_sentence` stored but not yet surfaced in the UI.
@@ -78,10 +77,9 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ## Next Session
 
-1. **Deploy `parse-lore-file`** — run `supabase login`, then `supabase link --project-ref bedrzyekoynnzdeblunt && supabase functions deploy parse-lore-file --no-verify-jwt`. The function is written and pushed but not yet deployed to production.
-2. **README** — replace the Lovable boilerplate in `README.md` with a real Fyrescribe project description (what it is, stack, local dev setup).
-3. **LICENSE file** — add a `LICENSE` file to the project root.
-4. **Hand off to Lovable for Session 4 visual polish pass and domain connection.**
+1. **Remove "+ Add field" button from At a Glance** — `EntityDetailPage` currently shows an "Add field" button at the bottom of the At a Glance panel. Remove it — fields are seeded from `CATEGORY_FIELDS` on first load and should not be user-extensible (Lovable).
+2. **Visual polish pass** — general UI refinements across pages (Lovable).
+3. **Domain connection** — connect to `fyrescribe.com` (Lovable).
 
 ---
 
