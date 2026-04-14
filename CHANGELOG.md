@@ -4,6 +4,28 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-14 (session 20)
+
+### `parse-lore-file` PDF extraction replaced with binary-safe printable-ASCII approach
+
+- `supabase/functions/parse-lore-file/index.ts` — `extractTextFromPdf` rewritten; decodes raw bytes as latin1 then extracts all printable-ASCII runs ≥ 4 chars; filters out PDF operator tokens (1–3 uppercase letters), structural keywords (`obj`, `endobj`, `stream`, `endstream`, `xref`, `trailer`, `startxref`, `null`, `true`, `false`, `dict`, `array`), numeric-only strings, short hex strings, and runs with no letters; handles compressed streams, CIDFont, and Type3 fonts where BT/ET scanning fails; 8,000 char truncation kept.
+- Deploy: **pending** — local CLI returned 403 (authentication/privilege issue); run `supabase login` then `supabase functions deploy parse-lore-file --project-ref bedrzyekoynnzdeblunt`.
+
+
+### Global lore search added — searches entity name, summary, fields, sections via ilike
+
+- `src/hooks/useLoreSearch.ts` — new hook; accepts `projectId` and `query`; runs three parallel Supabase queries (name/summary OR, fields JSONB cast, sections JSONB cast); deduplicates by id; 300 ms debounce; excludes archived entities.
+- `src/components/LoreSearchModal.tsx` — new Dialog-based command-palette UI; search input with spinner, result list (name + category badge + 80-char summary preview), idle and empty states; navigates to `/entity/:id` on selection.
+- `src/components/Sidebar.tsx` — search icon button added to the World & Lore section header (tooltip shows ⌘K); `Cmd+K` / `Ctrl+K` global keyboard shortcut; `LoreSearchModal` rendered at component root.
+
+### `source_sentence` displayed in Lore Inbox suggestion cards with link back to source scene
+
+- `src/pages/LoreInboxPage.tsx` — added `useNavigate` call inside `SuggestionCard`; added blockquote rendering `payload.source_sentence` (gold left-border, muted italic text, `text-dimmed`) and a "View in manuscript →" link navigating to `/manuscript`; both are conditionally rendered only when `source_sentence` is non-null, hidden during edit mode.
+- No DB or type changes required: `source_sentence` was already typed in `SuggestionPayload` and fetched via the existing `select("*")` query.
+- Note: no `scene_id` is stored in the payload by `sync-lore`, so the link goes to the manuscript page rather than a specific scene.
+
+---
+
 ## 2026-04-13 (session 19)
 
 ### Codebase audit — no code changes
