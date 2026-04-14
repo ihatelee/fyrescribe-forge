@@ -692,11 +692,12 @@ const EntityDetailInner = () => {
               {entity.category}
             </span>
 
-            <input
+            <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               onBlur={saveSummary}
-              className="block w-full text-sm text-text-secondary bg-transparent border-b border-transparent hover:border-border focus:border-gold/40 outline-none pb-1 mb-4 transition-colors placeholder:text-text-dimmed"
+              rows={2}
+              className="block w-full text-sm text-text-secondary bg-transparent border-b border-transparent hover:border-border focus:border-gold/40 outline-none pb-1 mb-4 transition-colors placeholder:text-text-dimmed resize-none"
               placeholder="Write a short description…"
             />
 
@@ -749,7 +750,7 @@ const EntityDetailInner = () => {
                     <div
                       contentEditable
                       suppressContentEditableWarning
-                      className="font-prose text-sm leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
+                      className="font-prose text-base leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
                       data-placeholder={SECTION_PLACEHOLDER_TEXT[section] || "Write here…"}
                       onInput={(e) => handleSectionInput(section, (e.target as HTMLDivElement).innerHTML)}
                       ref={(el) => {
@@ -982,22 +983,7 @@ const EntityDetailInner = () => {
                     );
                   })}
                 </div>
-                {/* Add custom field */}
-                <button
-                  onClick={() => {
-                    const key = window.prompt("Field name:");
-                    if (!key?.trim()) return;
-                    const updated = { ...fields, [key.trim()]: "" };
-                    setFields(updated);
-                    saveFields(updated);
-                    setEditingField(key.trim());
-                    setEditingFieldValue("");
-                  }}
-                  className="w-full px-4 py-2.5 text-xs text-text-dimmed hover:text-text-secondary flex items-center justify-center gap-1 border-t border-border transition-colors"
-                >
-                  <Plus size={11} />
-                  Add field
-                </button>
+                {/* Add custom field — hidden but functionality preserved */}
               </div>
             </div>
           </div>
