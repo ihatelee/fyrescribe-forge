@@ -49,6 +49,7 @@ serve(async (req) => {
     }
 
     const contentType = req.headers.get("content-type") ?? "";
+    if (!contentType.includes("multipart/form-data")) {
       return new Response(
         JSON.stringify({ error: "Expected multipart/form-data" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
