@@ -60,6 +60,7 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 - **Entity gallery — view toggle** — card/list toggle in the gallery header, persisted to `localStorage` (`fyrescribe_entity_view_mode`). List view shows category badge, name, summary, tags (up to 3 + overflow count), and 3-dot menu per row.
 - **Entity gallery — 3-dot menu** — Archive (soft-delete via `archived_at`) and Delete (PERMANENTLY DELETE confirmation, cascades `entity_links` + `entity_tags`) on every entity card and list row, matching the projects page interaction pattern. Archived entities appear in a collapsible section at the bottom; click to unarchive. Migration: `20260412210000_entity_archived_at.sql`.
 - **Entity gallery — bulk delete** — hover-reveal "delete" checkbox on each card and list row. Bulk action bar ("Delete Selected (N)" + "Clear selection") appears when any are checked. Cascades `entity_links` + `entity_tags` before deleting the entity, matching the single-delete behaviour.
+- **Lore entry upload** — `LoreUploadModal` (`src/components/LoreUploadModal.tsx`) accepts PDF or plain-text files, calls the `parse-lore-file` Supabase Edge Function, shows a structured field preview, and creates the entity on confirm. Edge function (`supabase/functions/parse-lore-file/index.ts`): accepts `multipart/form-data` with `file` + `category`; extracts text (UTF-8 for TXT, BT/ET block scan for text-based PDFs); sends to `claude-sonnet-4-20250514` with a category-aware system prompt that enforces exact `fields` and `sections` key names matching `EntityDetailPage`'s `CATEGORY_FIELDS` / `CATEGORY_SECTIONS`; returns `{ name, summary, fields, sections }`. Modal preview groups extracted data under "At a Glance" and "Sections" headings with per-item include/exclude toggles. `handleCreate` writes all four columns (`name`, `summary`, `fields`, `sections`) to the `entities` table in one insert. Deployed to production (pending `supabase login` + `supabase link`).
 - **Storage buckets** — `entity-images` (entity gallery images), `manuscripts` (uploaded manuscript files). Both use RLS policies keyed on `storage.foldername(name)[1] = auth.uid()`.
 - **Other pages** — `POVTrackerPage` exists (scaffolded).
 
@@ -77,7 +78,7 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ## Next Session
 
-1. **Character sheet upload** — add PDF/plain-text upload to `EntityDetailPage` (characters category). Parse the file (strip RTF/PDF formatting), extract field values, pre-populate the At a Glance fields and sections. No edge function exists yet.
+1. **Deploy `parse-lore-file`** — run `supabase login`, then `supabase link --project-ref bedrzyekoynnzdeblunt && supabase functions deploy parse-lore-file --no-verify-jwt`. The function is written and pushed but not yet deployed to production.
 2. **README** — replace the Lovable boilerplate in `README.md` with a real Fyrescribe project description (what it is, stack, local dev setup).
 3. **LICENSE file** — add a `LICENSE` file to the project root.
 4. **Hand off to Lovable for Session 4 visual polish pass and domain connection.**
@@ -85,6 +86,21 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 ---
 
 ## Where We Left Off
+
+**Session: 2026-04-13 (session 17 — parse-lore-file edge function + LoreUploadModal wiring)**
+
+- `supabase/functions/parse-lore-file/index.ts` (new edge function): accepts `multipart/form-data` (`file` + `category`); extracts text from TXT (UTF-8) or PDF (BT/ET block scan, no OCR); calls `claude-sonnet-4-20250514` with a category-aware system prompt listing exact `fields` and `sections` key names; returns `{ name, summary, fields, sections }`. Full error coverage: 400 unsupported type, 422 blank PDF, 500 Anthropic errors with specific messages.
+- `src/components/LoreUploadModal.tsx`: removed `mockParse` stub and `setTimeout`; replaced `handleImport` with `supabase.functions.invoke("parse-lore-file", { body: formData })`; added `extractedName` + `extractedSummary` state; `ExtractedField` gains `group: "field" | "section"` discriminator; field preview panel split into "At a Glance" and "Sections" groups; `handleCreate` writes `name`, `summary`, `fields`, and `sections` columns in a single insert (previously `sections` was never written).
+- All changes committed and pushed. Edge function **not yet deployed** — requires `supabase login` + `supabase link` first.
+
+**Pending / next logical steps:**
+- Deploy `parse-lore-file` to production: `supabase login` → `supabase link --project-ref bedrzyekoynnzdeblunt` → `supabase functions deploy parse-lore-file --no-verify-jwt`.
+- Display `source_sentence` in the Lore Inbox card (stored in payload, not yet shown in UI).
+- Add a progress toast or per-scene counter to the sidebar sync flow.
+- Word count tracking — wire up `scenes.word_count` to the editor's save path.
+- The MP3 URL is HTTP, not HTTPS — may be blocked on HTTPS deployments.
+
+---
 
 **Session: 2026-04-13 (session 16 — type cleanup + timeline ↔ entity links)**
 

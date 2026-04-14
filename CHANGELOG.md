@@ -4,6 +4,29 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (session 17)
+
+### parse-lore-file edge function + LoreUploadModal full wiring
+
+**`supabase/functions/parse-lore-file/index.ts`** (new)
+- Accepts `multipart/form-data` POST with `file` (PDF or TXT) and `category` fields.
+- TXT: decoded as UTF-8. PDF: `extractTextFromPdf()` scans `BT…ET` blocks for parenthesised strings with escape handling; falls back to raw scan if no blocks found. Truncates to 8,000 chars before sending to Claude.
+- Calls `claude-sonnet-4-20250514` with a category-aware system prompt that lists exact `fields` and `sections` key names for all 9 entity categories, matching `EntityDetailPage`'s `CATEGORY_FIELDS` / `CATEGORY_SECTIONS` constants exactly.
+- Returns `{ name: string, summary: string, fields: Record<string, string>, sections: Record<string, string> }`.
+- Error coverage: 400 (unsupported type, missing fields), 422 (blank PDF extraction), 500 (missing API key, Anthropic HTTP error with body, invalid JSON from Claude, unhandled exception) — all with specific messages.
+
+**`src/components/LoreUploadModal.tsx`**
+- Removed `mockParse` function and `setTimeout` stub entirely.
+- `handleImport` now builds a `FormData` and calls `supabase.functions.invoke("parse-lore-file", { body: formData })`.
+- Added `extractedName` and `extractedSummary` state to hold the top-level values from the response.
+- `ExtractedField` interface gains `group: "field" | "section"` discriminator.
+- `handleImport` maps `data.fields` entries as `group: "field"` and `data.sections` entries as `group: "section"` into the unified `fields` state array.
+- Field preview panel restructured: name + summary shown as a read-only header block; fields listed under "At a Glance" heading; sections listed under "Sections" heading.
+- `handleCreate` splits the `fields` array by `group` into `entityFields` and `entitySections`; inserts with `name`, `summary`, `fields`, and `sections` columns (previously `sections` was never written on upload).
+- `hasIncluded` also passes if `extractedName` is non-empty.
+
+---
+
 ## 2026-04-13 (session 16)
 
 ### Type cleanup + timeline ↔ entity links
