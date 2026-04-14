@@ -77,13 +77,27 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 
 ## Next Session
 
-1. **Remove "+ Add field" button from At a Glance** — `EntityDetailPage` currently shows an "Add field" button at the bottom of the At a Glance panel. Remove it — fields are seeded from `CATEGORY_FIELDS` on first load and should not be user-extensible (Lovable).
-2. **Visual polish pass** — general UI refinements across pages (Lovable).
-3. **Domain connection** — connect to `fyrescribe.com` (Lovable).
+1. **Visual polish pass** — general UI refinements across pages (Lovable).
+2. **Domain connection** — connect to `fyrescribe.com` (Lovable).
 
 ---
 
 ## Where We Left Off
+
+**Session: 2026-04-13 (session 18 — Lovable pull + parse-lore-file prompt fix)**
+
+- `git pull` — Lovable removed the "+ Add field" button from `EntityDetailPage`'s At a Glance panel (`EntityDetailPage.tsx`, 20 deletions / 6 insertions).
+- `supabase/functions/parse-lore-file/index.ts`: added `"Magic & Abilities"` to the characters entry in the sections list of the system prompt, matching `CATEGORY_SECTIONS` in `EntityDetailPage`.
+
+**Pending / next logical steps:**
+- Visual polish pass (Lovable).
+- Domain connection to `fyrescribe.com` (Lovable).
+- Display `source_sentence` in the Lore Inbox card (stored in payload, not yet shown in UI).
+- Add a progress toast or per-scene counter to the sidebar sync flow.
+- Word count tracking — wire up `scenes.word_count` to the editor's save path.
+- The MP3 URL is HTTP, not HTTPS — may be blocked on HTTPS deployments.
+
+---
 
 **Session: 2026-04-13 (session 17 — parse-lore-file edge function + LoreUploadModal wiring)**
 

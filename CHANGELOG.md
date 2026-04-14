@@ -4,6 +4,18 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (session 18)
+
+### Lovable pull — remove "+ Add field" button; parse-lore-file prompt fix
+
+**`src/pages/EntityDetailPage.tsx`** (Lovable)
+- Removed the "+ Add field" button from the At a Glance panel. Fields are seeded from `CATEGORY_FIELDS` on first load and are not user-extensible.
+
+**`supabase/functions/parse-lore-file/index.ts`**
+- Added `"Magic & Abilities"` to the characters entry in the sections list of the system prompt, matching `CATEGORY_SECTIONS["characters"]` in `EntityDetailPage`.
+
+---
+
 ## 2026-04-13 (sessions 16–17 consolidated)
 
 ### Type cleanup, timeline entity links, lore entry upload, README + LICENSE
