@@ -750,7 +750,7 @@ const EntityDetailInner = () => {
                     <div
                       contentEditable
                       suppressContentEditableWarning
-                      className="font-prose text-base leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
+                      className="font-prose text-lg leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
                       data-placeholder={SECTION_PLACEHOLDER_TEXT[section] || "Write here…"}
                       onInput={(e) => handleSectionInput(section, (e.target as HTMLDivElement).innerHTML)}
                       ref={(el) => {
