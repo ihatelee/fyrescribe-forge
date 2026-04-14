@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import DOMPurify from "dompurify";
 import { useParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -555,7 +556,7 @@ const ManuscriptPage = () => {
     (el: HTMLDivElement | null) => {
       (ref as React.MutableRefObject<HTMLDivElement | null>).current = el;
       if (el && !el.dataset.initialized && activeScene) {
-        el.innerHTML = getInitialContent(activeScene);
+        el.innerHTML = DOMPurify.sanitize(getInitialContent(activeScene));
         el.dataset.initialized = "true";
         if (pendingAutoFocus.current) {
           el.focus();
