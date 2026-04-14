@@ -1,4 +1,8 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.mjs";
+
+// Disable the worker requirement — no Worker API in the Deno edge runtime.
+pdfjsLib.GlobalWorkerOptions.workerSrc = "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,50 +10,22 @@ const corsHeaders = {
 };
 
 // ---------------------------------------------------------------------------
-// PDF text extraction — binary-safe printable-ASCII approach.
-// Decodes the raw bytes as latin1 then pulls every run of printable ASCII
-// chars (0x20–0x7E) that is >= 4 chars long, discarding binary noise and
-// PDF operator tokens. Works on compressed streams, CIDFont, and Type3 fonts
-// where BT/ET block scanning fails.
+// PDF text extraction via pdfjs-dist.
+// Handles FlateDecode compressed streams, CIDFont, and Type3 fonts.
 // ---------------------------------------------------------------------------
-
-const PDF_KEYWORDS = new Set([
-  "obj", "endobj", "stream", "endstream", "xref", "trailer", "startxref",
-  "null", "true", "false", "dict", "array",
-]);
-
-function extractTextFromPdf(buffer: Uint8Array): string {
-  const raw = new TextDecoder("latin1").decode(buffer);
-
-  // Pull all runs of printable ASCII that are 4+ chars
-  const chunks = raw.match(/[\x20-\x7E]{4,}/g) ?? [];
-
-  const filtered = chunks.filter((chunk) => {
-    const t = chunk.trim();
-    if (!t) return false;
-
-    // Drop pure PDF operator tokens: 1–3 uppercase letters (BT, ET, Tf, Td…)
-    if (/^[A-Z]{1,3}$/.test(t)) return false;
-
-    // Drop known PDF structural keywords
-    if (PDF_KEYWORDS.has(t.toLowerCase())) return false;
-
-    // Drop numeric-only strings (object numbers, offsets)
-    if (/^\d+$/.test(t)) return false;
-
-    // Drop PDF object references like "12 0 R" — these come through as
-    // separate chunks so the above catches them, but also drop short
-    // hex strings that are clearly encoding artefacts
-    if (/^[0-9A-Fa-f]+$/.test(t) && t.length <= 8) return false;
-
-    // Require at least one letter so we keep words, not just punctuation runs
-    if (!/[a-zA-Z]/.test(t)) return false;
-
-    return true;
-  });
-
-  const text = filtered.join(" ").replace(/\s+/g, " ").trim();
-  return text.slice(0, 8000);
+async function extractTextFromPdf(bytes: Uint8Array): Promise<string> {
+  const loadingTask = pdfjsLib.getDocument({ data: bytes });
+  const pdf = await loadingTask.promise;
+  const pages: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items
+      .map((item: any) => ("str" in item ? item.str : ""))
+      .join(" ");
+    pages.push(pageText);
+  }
+  return pages.join("\n").slice(0, 8000);
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +75,7 @@ serve(async (req) => {
     if (isTxt) {
       extractedText = new TextDecoder("utf-8").decode(buffer);
     } else {
-      extractedText = extractTextFromPdf(buffer);
+      extractedText = await extractTextFromPdf(buffer);
       if (!extractedText) {
         return new Response(
           JSON.stringify({ error: "Could not extract text from PDF. Ensure it is a text-based (not scanned) PDF." }),
