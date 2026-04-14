@@ -12,6 +12,34 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")!;
+
+    // ── Auth: verify JWT and get user ──────────────────────────────────
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claimsData.claims.sub;
+
     const { project_id } = await req.json();
     if (!project_id) {
       return new Response(JSON.stringify({ error: "project_id is required" }), {
@@ -20,11 +48,23 @@ serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")!;
+    // ── Verify project ownership via user-scoped client ────────────────
+    const { data: project, error: projectError } = await userClient
+      .from("projects")
+      .select("id")
+      .eq("id", project_id)
+      .eq("user_id", userId)
+      .single();
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    if (projectError || !project) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Service-role client for data operations ────────────────────────
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch Events and History entities (include id for entity_id linking)
     const { data: entities } = await supabase
@@ -133,7 +173,7 @@ Include world history events and story-level events separately. Aim for 6–14 e
     });
   } catch (err) {
     console.error("Unexpected error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

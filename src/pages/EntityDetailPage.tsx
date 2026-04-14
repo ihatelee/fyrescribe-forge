@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import DOMPurify from "dompurify";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -755,7 +756,7 @@ const EntityDetailInner = () => {
                       onInput={(e) => handleSectionInput(section, (e.target as HTMLDivElement).innerHTML)}
                       ref={(el) => {
                         if (el && !el.dataset.initialized) {
-                          el.innerHTML = sections[section] || "";
+                          el.innerHTML = DOMPurify.sanitize(sections[section] || "");
                           el.dataset.initialized = "true";
                         }
                       }}
@@ -777,7 +778,7 @@ const EntityDetailInner = () => {
                   onInput={(e) => handleSectionInput("Magic & Abilities", (e.target as HTMLDivElement).innerHTML)}
                   ref={(el) => {
                     if (el && !el.dataset.initialized) {
-                      el.innerHTML = sections["Magic & Abilities"] || "";
+                      el.innerHTML = DOMPurify.sanitize(sections["Magic & Abilities"] || "");
                       el.dataset.initialized = "true";
                     }
                   }}
