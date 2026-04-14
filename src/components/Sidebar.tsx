@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import LoreSearchModal from "@/components/LoreSearchModal";
 
 const WRITE_KEYS = ["manuscript", "timeline"] as const;
 const WRITE_LABELS: Record<string, string> = {
@@ -52,6 +54,7 @@ const Sidebar = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [fullSyncNote, setFullSyncNote] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const fetchPendingCount = useCallback(async () => {
     if (!activeProject) {
@@ -69,6 +72,17 @@ const Sidebar = () => {
   useEffect(() => {
     fetchPendingCount();
   }, [fetchPendingCount]);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   const handleSync = async (force = false) => {
     if (!activeProject || syncing) return;
@@ -134,6 +148,7 @@ const Sidebar = () => {
   const InboxIcon = icons.inbox;
 
   return (
+    <>
     <div className="fixed left-0 top-12 bottom-0 w-[190px] bg-fyrescribe-base border-r border-border flex flex-col z-40">
       <div className="flex-1 overflow-y-auto py-4 px-2 space-y-6">
         <div>
@@ -153,8 +168,17 @@ const Sidebar = () => {
         </div>
 
         <div>
-          <div className="px-3 mb-2 text-[10px] font-medium uppercase tracking-widest text-text-dimmed">
-            World & Lore
+          <div className="px-3 mb-2 flex items-center justify-between">
+            <span className="text-[10px] font-medium uppercase tracking-widest text-text-dimmed">
+              World & Lore
+            </span>
+            <button
+              onClick={() => setSearchOpen(true)}
+              title="Search lore (⌘K)"
+              className="p-0.5 rounded text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+            >
+              <Search size={12} />
+            </button>
           </div>
           <div className="space-y-0.5">
             {WORLD_KEYS.map((key) => (
@@ -221,6 +245,9 @@ const Sidebar = () => {
       </div>
 
     </div>
+
+    <LoreSearchModal open={searchOpen} onOpenChange={setSearchOpen} />
+    </>
   );
 };
 

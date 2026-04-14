@@ -119,6 +119,7 @@ const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps)
   const payload = suggestion.payload;
   const config = TYPE_CONFIG[suggestion.type];
   const Icon = config.icon;
+  const navigate = useNavigate();
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(payload.name ?? "");
@@ -251,6 +252,23 @@ const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps)
             {payload.description}
           </p>
         )
+      )}
+
+      {/* Source sentence */}
+      {!editing && payload.source_sentence && (
+        <div className="mt-3">
+          <blockquote className="border-l-2 border-gold/40 pl-3 py-0.5">
+            <p className="text-[12px] text-text-dimmed italic leading-relaxed">
+              {payload.source_sentence}
+            </p>
+          </blockquote>
+          <button
+            onClick={() => navigate("/manuscript")}
+            className="mt-1.5 flex items-center gap-1 text-[11px] text-text-dimmed hover:text-gold transition-colors"
+          >
+            View in manuscript <ExternalLink size={10} />
+          </button>
+        </div>
       )}
 
       {/* Footer: fields preview, tags, confidence, source */}
