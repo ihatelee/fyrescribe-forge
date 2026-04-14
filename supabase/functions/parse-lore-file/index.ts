@@ -11,19 +11,21 @@ const corsHeaders = {
 
 // ---------------------------------------------------------------------------
 // PDF text extraction via pdfjs-dist.
-// DEBUG MODE: returns raw item structure for first page so we can inspect
-// what Canva's custom glyph encoding looks like before fixing extraction.
+// Handles FlateDecode compressed streams, CIDFont, and Type3 fonts.
 // ---------------------------------------------------------------------------
-async function extractTextFromPdf(
-  bytes: Uint8Array,
-): Promise<{ debug: true; items: any[] } | { debug: false; text: string }> {
+async function extractTextFromPdf(bytes: Uint8Array): Promise<string> {
   const loadingTask = pdfjsLib.getDocument({ data: bytes });
   const pdf = await loadingTask.promise;
-
-  // Return raw items for page 1 so we can see the actual structure
-  const page1 = await pdf.getPage(1);
-  const content1 = await page1.getTextContent();
-  return { debug: true, items: content1.items.slice(0, 20) };
+  const pages: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items
+      .map((item: any) => ("str" in item ? item.str : ""))
+      .join("");
+    pages.push(pageText);
+  }
+  return pages.join("\n").slice(0, 8000);
 }
 
 // ---------------------------------------------------------------------------
@@ -73,17 +75,7 @@ serve(async (req) => {
     if (isTxt) {
       extractedText = new TextDecoder("utf-8").decode(buffer);
     } else {
-      const result = await extractTextFromPdf(buffer);
-
-      // DEBUG: return raw item structure so we can inspect Canva glyph encoding
-      if (result.debug) {
-        return new Response(
-          JSON.stringify({ _debug_items: result.items }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      extractedText = result.text;
+      extractedText = await extractTextFromPdf(buffer);
       if (!extractedText) {
         return new Response(
           JSON.stringify({ error: "Could not extract text from PDF. Ensure it is a text-based (not scanned) PDF." }),
@@ -125,6 +117,7 @@ serve(async (req) => {
           "  sections: Record<string, string>\n" +
           "}\n\n" +
           "Rules:\n" +
+          "- The source document may be structured or unstructured. Extract whatever relevant information is present even if it doesn't match the exact field labels. If a field label in the document differs from the expected key name, map it to the closest matching key. If a field has no corresponding data in the document, return an empty string for that key — do not omit it.\n" +
           "- name: the entity's name\n" +
           "- summary: a 1-2 sentence visual/descriptive summary combining physical appearance, title, race, occupation\n" +
           "- fields: use ONLY these exact key names per category (no others):\n" +
