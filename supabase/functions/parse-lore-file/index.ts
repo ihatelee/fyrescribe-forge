@@ -150,7 +150,7 @@ serve(async (req) => {
           "  doctrine: Type, Regional Origin, Followers, Core Belief, First Mentioned\n" +
           "  history: Date/Era, Location, Key Factions, Outcome\n" +
           "- sections: use ONLY these exact key names per category (no others):\n" +
-          "  characters: Overview, Background, Personality, Relationships, Notable Events\n" +
+          "  characters: Overview, Background, Personality, Relationships, Notable Events, Magic & Abilities\n" +
           "  places: Description, History, Notable Inhabitants, Points of Interest\n" +
           "  creatures: Appearance, Behaviour, Abilities, Habitat, Lore\n" +
           "  artifacts: Description, History, Powers, Current Whereabouts\n" +
