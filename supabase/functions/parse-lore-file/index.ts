@@ -1,11 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.mjs";
-
-// Point workerSrc at the matching worker bundle on the same CDN.
-// The Deno edge runtime has no native Worker API, but pdfjs will fall back to
-// running the worker inline when the URL is a resolvable string it can fetch.
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.worker.mjs";
+import { parsePdf } from "https://esm.sh/unpdf@0.11.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,22 +7,11 @@ const corsHeaders = {
 };
 
 // ---------------------------------------------------------------------------
-// PDF text extraction via pdfjs-dist.
-// Handles FlateDecode compressed streams, CIDFont, and Type3 fonts.
+// PDF text extraction via unpdf — built for edge/serverless, no Worker dep.
 // ---------------------------------------------------------------------------
 async function extractTextFromPdf(bytes: Uint8Array): Promise<string> {
-  const loadingTask = pdfjsLib.getDocument({ data: bytes });
-  const pdf = await loadingTask.promise;
-  const pages: string[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const pageText = content.items
-      .map((item: any) => ("str" in item ? item.str : ""))
-      .join("");
-    pages.push(pageText);
-  }
-  return pages.join("\n").slice(0, 8000);
+  const { text } = await parsePdf(bytes, { splitPages: false });
+  return text.slice(0, 8000);
 }
 
 // ---------------------------------------------------------------------------
