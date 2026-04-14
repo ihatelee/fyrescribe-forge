@@ -47,14 +47,6 @@ interface LoreUploadModalProps {
   onClose: () => void;
 }
 
-function mockParse(category: EntityCategory, fileName: string): ExtractedField[] {
-  const fields = CATEGORY_FIELDS[category] ?? ["Name", "Description"];
-  return fields.map((key) => ({
-    key,
-    value: key === "Name" ? fileName.replace(/\.(pdf|txt)$/i, "") : "",
-    included: true,
-  }));
-}
 
 const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModalProps) => {
   const navigate = useNavigate();
@@ -94,9 +86,23 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
     setError(null);
 
     try {
-      // TODO: Replace with real edge function call
-      await new Promise((r) => setTimeout(r, 1500));
-      const extracted = mockParse(category, file.name);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", category);
+
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "parse-lore-file",
+        { body: formData },
+      );
+
+      if (invokeError || !data?.fields) {
+        throw new Error(data?.error ?? invokeError?.message ?? "Unknown error");
+      }
+
+      const extracted: ExtractedField[] = (
+        data.fields as { key: string; value: string }[]
+      ).map((f) => ({ key: f.key, value: f.value, included: true }));
+
       setFields(extracted);
       setState("fields_ready");
     } catch (err) {
