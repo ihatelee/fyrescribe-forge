@@ -111,7 +111,7 @@ serve(async (req) => {
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!anthropicKey) {
       return new Response(
-        JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured" }),
+        JSON.stringify({ error: "ANTHROPIC_API_KEY not set" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -142,10 +142,10 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      console.error("Anthropic API error:", err);
+      const responseText = await response.text();
+      console.error("Anthropic API error:", responseText);
       return new Response(
-        JSON.stringify({ error: "Failed to extract fields" }),
+        JSON.stringify({ error: "Anthropic API error: " + responseText }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -173,7 +173,7 @@ serve(async (req) => {
     } catch {
       console.error("Failed to parse Claude response:", rawText);
       return new Response(
-        JSON.stringify({ error: "Failed to extract fields" }),
+        JSON.stringify({ error: "Claude returned invalid JSON: " + rawText }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -181,10 +181,10 @@ serve(async (req) => {
     return new Response(JSON.stringify({ fields }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    console.error("Unexpected error:", err);
+  } catch (e) {
+    console.error("Unexpected error:", e);
     return new Response(
-      JSON.stringify({ error: String(err) }),
+      JSON.stringify({ error: "Unhandled: " + (e instanceof Error ? e.message : String(e)) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
