@@ -202,7 +202,7 @@ serve(async (req) => {
             Object.entries(parsed.sections).filter(([, v]) => typeof v === "string"),
           ) as Record<string, string>
         : {};
-    } catch {
+    } catch (_parseErr) {
       console.error("Failed to parse Claude response:", rawText);
       return new Response(
         JSON.stringify({ error: "Failed to parse AI response" }),
