@@ -65,6 +65,34 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")!;
+
+    // ── Auth: verify JWT and get user ──────────────────────────────────
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claimsData.claims.sub as string;
+
     const body = await req.json().catch(() => ({}));
     const { project_id, trigger = "manual", force = false } = body as {
       project_id?: string;
@@ -72,22 +100,39 @@ serve(async (req) => {
       force?: boolean;
     };
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")!;
-
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Determine which projects to process.
+    // Determine which projects to process — only user-owned projects.
     let projectIds: string[];
     if (project_id) {
+      // Verify ownership
+      const { data: project, error: projectError } = await userClient
+        .from("projects")
+        .select("id")
+        .eq("id", project_id)
+        .eq("user_id", userId)
+        .single();
+      if (projectError || !project) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       projectIds = [project_id];
     } else {
+      // Only sync projects owned by the authenticated user
+      const { data: userProjects } = await userClient
+        .from("projects")
+        .select("id")
+        .eq("user_id", userId);
+      const userProjectIds = new Set((userProjects ?? []).map((p) => p.id));
+
       const { data: dirtyScenes } = await supabase
         .from("scenes")
         .select("project_id")
         .eq("is_dirty", true);
-      projectIds = [...new Set((dirtyScenes ?? []).map((s) => s.project_id))];
+      projectIds = [...new Set((dirtyScenes ?? []).map((s) => s.project_id))]
+        .filter((pid) => userProjectIds.has(pid));
     }
 
     if (projectIds.length === 0) {
@@ -108,7 +153,7 @@ serve(async (req) => {
     });
   } catch (err) {
     console.error("Unexpected error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
