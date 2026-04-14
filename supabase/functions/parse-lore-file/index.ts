@@ -1,9 +1,11 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.mjs";
 
-// Disable the worker requirement — no Worker API in the Deno edge runtime.
-// Empty string is not accepted by 4.4.168; false suppresses the worker check.
-pdfjsLib.GlobalWorkerOptions.workerSrc = false as any;
+// Point workerSrc at the matching worker bundle on the same CDN.
+// The Deno edge runtime has no native Worker API, but pdfjs will fall back to
+// running the worker inline when the URL is a resolvable string it can fetch.
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.worker.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
