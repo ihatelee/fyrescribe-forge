@@ -32,6 +32,13 @@ const AuthPage = () => {
 
     try {
       if (isSignUp) {
+        // Check email allowlist before attempting signup
+        const { data: isAllowed, error: allowlistError } = await supabase.rpc("is_email_allowed", {
+          check_email: email,
+        });
+        if (allowlistError) throw new Error("Unable to verify email eligibility.");
+        if (!isAllowed) throw new Error("Registration is not available for this email address.");
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
