@@ -4,6 +4,21 @@ All notable changes to Fyrescribe are recorded here.
 
 ---
 
+## 2026-04-13 (session 19)
+
+### Codebase audit — no code changes
+
+Read-only audit against the outstanding feature list. Findings recorded in CLAUDE.md "What is NOT yet built":
+
+- `LoreInboxPage.tsx:373` — one `as unknown as SuggestionPayload` cast remains (Supabase types `payload` as `Json`).
+- `source_sentence` — stored in `payload` JSONB and typed in `SuggestionPayload` but never rendered in any JSX. Only `source_location` is displayed.
+- `sync-lore` — only ever emits `new_entity` suggestions; `field_update`, `contradiction`, `new_tag` types exist in the DB enum but are never produced.
+- `parse-lore-file` PDF extraction — `extractTextFromPdf()` BT/ET regex approach untested against real PDFs; no PDF-related fixes in git history.
+- `LoreUploadModal.handleCreate` — inserts entity but writes nothing to `entity_links` or `entity_tags`; uploaded entities arrive unlinked.
+- Global lore search — does not exist anywhere in the frontend.
+
+---
+
 ## 2026-04-13 (session 18)
 
 ### Lovable pull — remove "+ Add field" button; parse-lore-file prompt fix

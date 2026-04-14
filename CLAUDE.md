@@ -69,9 +69,13 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 - POV tracker logic.
 - Word count tracking (column exists on `scenes`, not yet wired up).
 - Project archiving (column `archived_at` exists on `projects`, not yet used in UI).
-- Lore Inbox: `field_update`, `contradiction`, and `new_tag` suggestion types are displayed but the sync function only produces `new_entity` suggestions today.
+- Lore Inbox: `field_update`, `contradiction`, and `new_tag` suggestion types are displayed but `sync-lore` only emits `new_entity` — the single insert at `sync-lore/index.ts:265` hardcodes `type: "new_entity" as const`.
 - Sync Lore progress UI — no per-scene progress feedback while sync is running; sidebar just shows a spinner for the full duration.
-- `source_sentence` and `source_location` stored in suggestion payload; `source_location` now displayed in the Lore Inbox card. `source_sentence` stored but not yet surfaced in the UI.
+- `source_sentence` — stored in the `payload` JSONB by `sync-lore` and typed in `SuggestionPayload` (`LoreInboxPage.tsx:33`) but never rendered in any JSX. Only `source_location` is displayed in the Lore Inbox card.
+- `LoreUploadModal` entity links — after `handleCreate` inserts the entity, nothing is written to `entity_links` or `entity_tags`. Uploaded entities arrive completely unlinked.
+- `parse-lore-file` PDF extraction — the `extractTextFromPdf()` BT/ET regex approach has never been tested against a real PDF (no PDF-related fixes in git history). Will silently return empty string on scanned PDFs, compressed streams, or CIDFont PDFs, triggering the 422 path.
+- One remaining `as unknown as` cast: `LoreInboxPage.tsx:373` — `(row.payload ?? {}) as unknown as SuggestionPayload`. Requires Supabase generated types to narrow `lore_suggestions.payload` beyond `Json`.
+- Global lore search — no component or query searches across entity `name`, `fields`, or `sections`. No `ilike` or full-text search exists in the frontend.
 
 ---
 
@@ -83,6 +87,26 @@ Fyrescribe is a fantasy novel writing companion app. Users manage a project (a n
 ---
 
 ## Where We Left Off
+
+**Session: 2026-04-13 (session 19 — codebase audit)**
+
+No code changes. Audit findings:
+
+1. **`LoreInboxPage.tsx:373`** — one `as unknown as SuggestionPayload` cast remains. Root cause: Supabase generated types type `lore_suggestions.payload` as `Json`; can't be eliminated without a generated types regen or runtime narrowing.
+2. **`source_sentence`** — stored in `payload` JSONB by `sync-lore`, typed in `SuggestionPayload`, but never rendered in any JSX. `source_location` is rendered at `LoreInboxPage.tsx:335–339`; `source_sentence` is dead UI.
+3. **`sync-lore` suggestion types** — only ever emits `new_entity`. The single insert at `sync-lore/index.ts:265` hardcodes `type: "new_entity" as const`. `field_update`, `contradiction`, `new_tag` are never produced.
+4. **`parse-lore-file` PDF testing** — no PDF-related fixes in git history. `extractTextFromPdf()` BT/ET regex is untested against real documents. Will 422 on scanned/compressed PDFs.
+5. **`LoreUploadModal` entity links** — `handleCreate` inserts the entity but writes nothing to `entity_links` or `entity_tags`. Uploaded entities are completely unlinked.
+6. **Global lore search** — does not exist. No `ilike`, `textSearch`, or cross-entity query anywhere in the frontend.
+
+**Pending / next logical steps:**
+- Surface `source_sentence` in the Lore Inbox card.
+- Test `parse-lore-file` with a real PDF; fix extraction if needed.
+- Add `entity_tags` write to `LoreUploadModal.handleCreate` (match the `LoreInboxPage` accept flow).
+- Add sync progress feedback to the sidebar.
+- Word count tracking — wire up `scenes.word_count`.
+
+---
 
 **Session: 2026-04-13 (session 18 — Lovable pull + parse-lore-file prompt fix)**
 
