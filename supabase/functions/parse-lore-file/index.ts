@@ -11,21 +11,19 @@ const corsHeaders = {
 
 // ---------------------------------------------------------------------------
 // PDF text extraction via pdfjs-dist.
-// Handles FlateDecode compressed streams, CIDFont, and Type3 fonts.
+// DEBUG MODE: returns raw item structure for first page so we can inspect
+// what Canva's custom glyph encoding looks like before fixing extraction.
 // ---------------------------------------------------------------------------
-async function extractTextFromPdf(bytes: Uint8Array): Promise<string> {
+async function extractTextFromPdf(
+  bytes: Uint8Array,
+): Promise<{ debug: true; items: any[] } | { debug: false; text: string }> {
   const loadingTask = pdfjsLib.getDocument({ data: bytes });
   const pdf = await loadingTask.promise;
-  const pages: string[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const pageText = content.items
-      .map((item: any) => ("str" in item ? item.str : ""))
-      .join(" ");
-    pages.push(pageText);
-  }
-  return pages.join("\n").slice(0, 8000);
+
+  // Return raw items for page 1 so we can see the actual structure
+  const page1 = await pdf.getPage(1);
+  const content1 = await page1.getTextContent();
+  return { debug: true, items: content1.items.slice(0, 20) };
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +73,17 @@ serve(async (req) => {
     if (isTxt) {
       extractedText = new TextDecoder("utf-8").decode(buffer);
     } else {
-      extractedText = await extractTextFromPdf(buffer);
+      const result = await extractTextFromPdf(buffer);
+
+      // DEBUG: return raw item structure so we can inspect Canva glyph encoding
+      if (result.debug) {
+        return new Response(
+          JSON.stringify({ _debug_items: result.items }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      extractedText = result.text;
       if (!extractedText) {
         return new Response(
           JSON.stringify({ error: "Could not extract text from PDF. Ensure it is a text-based (not scanned) PDF." }),
