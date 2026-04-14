@@ -125,13 +125,44 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
+        max_tokens: 2048,
         system:
-          "You are a lore extraction assistant for a fantasy world-building app. " +
-          "Extract structured fields from the provided document. Return ONLY a JSON array " +
-          "of objects with shape { key: string, value: string }. Use field names " +
-          "appropriate for the entity category provided. Do not include any explanation or " +
-          "markdown, just the raw JSON array.",
+          "You are a lore extraction assistant for a fantasy world-building app called Fyrescribe.\n" +
+          "Extract structured fields from the provided document and map them to the exact field\n" +
+          "names listed below for the given category. Return ONLY a JSON object with this shape:\n" +
+          "{\n" +
+          "  name: string,\n" +
+          "  summary: string,\n" +
+          "  fields: Record<string, string>,\n" +
+          "  sections: Record<string, string>\n" +
+          "}\n\n" +
+          "Rules:\n" +
+          "- name: the entity's name\n" +
+          "- summary: a 1-2 sentence visual/descriptive summary combining physical appearance, title, race, occupation\n" +
+          "- fields: use ONLY these exact key names per category (no others):\n" +
+          "  characters: Place of Birth, Currently Residing, Eye Color, Hair Color, Height, Allegiance, First Appearance, First Mentioned\n" +
+          "  places: Region, Climate, Population, Government, Notable Landmarks, First Mentioned\n" +
+          "  events: Date/Era, Location, Key Participants, Outcome, First Mentioned\n" +
+          "  artifacts: Type, Origin, Current Owner, Powers, First Mentioned\n" +
+          "  creatures: Classification, Habitat, Average Size, Diet, Threat Level, First Mentioned\n" +
+          "  magic: Type, Regional Origin, Rarity, First Recorded Use\n" +
+          "  factions: Type, Founded, Leader, Headquarters, Allegiance, First Mentioned\n" +
+          "  doctrine: Type, Regional Origin, Followers, Core Belief, First Mentioned\n" +
+          "  history: Date/Era, Location, Key Factions, Outcome\n" +
+          "- sections: use ONLY these exact key names per category (no others):\n" +
+          "  characters: Overview, Background, Personality, Relationships, Notable Events\n" +
+          "  places: Description, History, Notable Inhabitants, Points of Interest\n" +
+          "  creatures: Appearance, Behaviour, Abilities, Habitat, Lore\n" +
+          "  artifacts: Description, History, Powers, Current Whereabouts\n" +
+          "  events: Summary, Causes, Key Participants, Consequences, Aftermath\n" +
+          "  magic: Description, Regional Origin, Known Users, Imbued Weapons & Artifacts\n" +
+          "  factions: Overview, History, Structure, Notable Members, Goals\n" +
+          "  doctrine: Core Tenets, Origins, Followers, Contradictions\n" +
+          "  history: Overview, Causes, Key Figures, Consequences, Legacy\n" +
+          "- Only populate fields and sections where the source document contains relevant content\n" +
+          "- Leave fields/sections as empty string if no relevant content found\n" +
+          "- Do not invent information not present in the document\n" +
+          "- Return raw JSON only, no markdown or explanation",
         messages: [
           {
             role: "user",
@@ -151,7 +182,7 @@ serve(async (req) => {
     }
 
     const aiResult = await response.json();
-    const rawText: string = aiResult.content?.[0]?.text ?? "[]";
+    const rawText: string = aiResult.content?.[0]?.text ?? "{}";
 
     // Strip accidental code fences
     const jsonText = rawText
@@ -159,17 +190,27 @@ serve(async (req) => {
       .replace(/```\s*$/i, "")
       .trim();
 
-    let fields: { key: string; value: string }[];
+    let name: string;
+    let summary: string;
+    let fields: Record<string, string>;
+    let sections: Record<string, string>;
     try {
       const parsed = JSON.parse(jsonText);
-      if (!Array.isArray(parsed)) throw new Error("Expected array");
-      fields = parsed.filter(
-        (item) =>
-          item &&
-          typeof item === "object" &&
-          typeof item.key === "string" &&
-          typeof item.value === "string",
-      );
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("Expected object");
+      }
+      name = typeof parsed.name === "string" ? parsed.name : "";
+      summary = typeof parsed.summary === "string" ? parsed.summary : "";
+      fields = parsed.fields && typeof parsed.fields === "object" && !Array.isArray(parsed.fields)
+        ? Object.fromEntries(
+            Object.entries(parsed.fields).filter(([, v]) => typeof v === "string"),
+          ) as Record<string, string>
+        : {};
+      sections = parsed.sections && typeof parsed.sections === "object" && !Array.isArray(parsed.sections)
+        ? Object.fromEntries(
+            Object.entries(parsed.sections).filter(([, v]) => typeof v === "string"),
+          ) as Record<string, string>
+        : {};
     } catch {
       console.error("Failed to parse Claude response:", rawText);
       return new Response(
@@ -178,7 +219,7 @@ serve(async (req) => {
       );
     }
 
-    return new Response(JSON.stringify({ fields }), {
+    return new Response(JSON.stringify({ name, summary, fields, sections }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

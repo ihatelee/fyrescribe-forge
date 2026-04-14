@@ -35,6 +35,7 @@ interface ExtractedField {
   key: string;
   value: string;
   included: boolean;
+  group: "field" | "section";
 }
 
 // "ready" = initial form (category + file), "importing" = parsing in progress,
@@ -57,6 +58,8 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
   const [state, setState] = useState<ModalState>("ready");
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<ExtractedField[]>([]);
+  const [extractedName, setExtractedName] = useState("");
+  const [extractedSummary, setExtractedSummary] = useState("");
   const [createdEntityId, setCreatedEntityId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -95,15 +98,22 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
         { body: formData },
       );
 
-      if (invokeError || !data?.fields) {
+      if (invokeError || (!data?.fields && !data?.sections)) {
         throw new Error(data?.error ?? invokeError?.message ?? "Unknown error");
       }
 
-      const extracted: ExtractedField[] = (
-        data.fields as { key: string; value: string }[]
-      ).map((f) => ({ key: f.key, value: f.value, included: true }));
+      setExtractedName(typeof data.name === "string" ? data.name : "");
+      setExtractedSummary(typeof data.summary === "string" ? data.summary : "");
 
-      setFields(extracted);
+      const fieldEntries: ExtractedField[] = Object.entries(
+        (data.fields ?? {}) as Record<string, string>,
+      ).map(([key, value]) => ({ key, value, included: true, group: "field" as const }));
+
+      const sectionEntries: ExtractedField[] = Object.entries(
+        (data.sections ?? {}) as Record<string, string>,
+      ).map(([key, value]) => ({ key, value, included: true, group: "section" as const }));
+
+      setFields([...fieldEntries, ...sectionEntries]);
       setState("fields_ready");
     } catch (err) {
       console.error("Parse error:", err);
@@ -120,21 +130,22 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
     setFields((prev) => prev.map((f, i) => i === index ? { ...f, value } : f));
   };
 
-  const hasIncluded = fields.some((f) => f.included && f.value.trim());
+  const hasIncluded = fields.some((f) => f.included && f.value.trim()) || !!extractedName.trim();
 
   const handleCreate = async () => {
     setState("applying");
 
-    const included = fields.filter((f) => f.included && f.value.trim());
-    const nameField = included.find((f) => f.key === "Name");
-    const entityName = nameField?.value.trim() || file?.name.replace(/\.(pdf|txt)$/i, "") || "Unnamed Entity";
-    const descField = included.find((f) => f.key === "Description");
+    const entityName =
+      extractedName.trim() ||
+      file?.name.replace(/\.(pdf|txt)$/i, "") ||
+      "Unnamed Entity";
 
     const entityFields: Record<string, string> = {};
-    for (const f of included) {
-      if (f.key !== "Name" && f.key !== "Description") {
-        entityFields[f.key] = f.value;
-      }
+    const entitySections: Record<string, string> = {};
+    for (const f of fields) {
+      if (!f.included) continue;
+      if (f.group === "field") entityFields[f.key] = f.value;
+      else entitySections[f.key] = f.value;
     }
 
     const { data, error: insertError } = await supabase
@@ -143,8 +154,9 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
         name: entityName,
         category,
         project_id: projectId,
-        summary: descField?.value.trim() || null,
+        summary: extractedSummary.trim() || null,
         fields: entityFields,
+        sections: entitySections,
       })
       .select("id")
       .single();
@@ -198,43 +210,97 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
         ) : state === "fields_ready" || state === "applying" ? (
           /* ─── Field preview (after import/parse) ─── */
           <>
-            {fields.length > 0 && (
-              <div className="flex-1 min-h-0 overflow-y-auto mb-4 space-y-2">
-                <label className="text-[10px] uppercase tracking-widest text-text-dimmed mb-2 block">
-                  Extracted Fields
-                </label>
-                {fields.map((field, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-start gap-2.5 rounded-lg border px-3 py-2 transition-colors ${
-                      field.included
-                        ? "border-border bg-fyrescribe-hover"
-                        : "border-transparent bg-transparent opacity-40"
-                    }`}
-                  >
-                    <button
-                      onClick={() => toggleField(i)}
-                      disabled={state === "applying"}
-                      className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                        field.included
-                          ? "bg-gold border-gold text-primary-foreground"
-                          : "border-border hover:border-text-dimmed"
-                      }`}
-                    >
-                      {field.included && <Check size={10} />}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] text-text-dimmed uppercase tracking-wide mb-1">{field.key}</p>
-                      <input
-                        value={field.value}
-                        onChange={(e) => updateFieldValue(i, e.target.value)}
-                        disabled={state === "applying" || !field.included}
-                        placeholder={`Enter ${field.key.toLowerCase()}…`}
-                        className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-text-dimmed disabled:opacity-60"
-                      />
-                    </div>
+            {(extractedName || extractedSummary || fields.length > 0) && (
+              <div className="flex-1 min-h-0 overflow-y-auto mb-4 space-y-4">
+                {/* Name + summary read-only preview */}
+                {(extractedName || extractedSummary) && (
+                  <div className="space-y-1 pb-2 border-b border-border">
+                    {extractedName && (
+                      <p className="text-sm text-foreground font-medium">{extractedName}</p>
+                    )}
+                    {extractedSummary && (
+                      <p className="text-xs text-text-secondary leading-relaxed">{extractedSummary}</p>
+                    )}
                   </div>
-                ))}
+                )}
+
+                {/* At a Glance fields */}
+                {fields.filter((f) => f.group === "field").length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-widest text-text-dimmed">At a Glance</p>
+                    {fields.map((field, i) => field.group !== "field" ? null : (
+                      <div
+                        key={i}
+                        className={`flex items-start gap-2.5 rounded-lg border px-3 py-2 transition-colors ${
+                          field.included
+                            ? "border-border bg-fyrescribe-hover"
+                            : "border-transparent bg-transparent opacity-40"
+                        }`}
+                      >
+                        <button
+                          onClick={() => toggleField(i)}
+                          disabled={state === "applying"}
+                          className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                            field.included
+                              ? "bg-gold border-gold text-primary-foreground"
+                              : "border-border hover:border-text-dimmed"
+                          }`}
+                        >
+                          {field.included && <Check size={10} />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-text-dimmed uppercase tracking-wide mb-1">{field.key}</p>
+                          <input
+                            value={field.value}
+                            onChange={(e) => updateFieldValue(i, e.target.value)}
+                            disabled={state === "applying" || !field.included}
+                            placeholder={`Enter ${field.key.toLowerCase()}…`}
+                            className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-text-dimmed disabled:opacity-60"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Sections */}
+                {fields.filter((f) => f.group === "section").length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-widest text-text-dimmed">Sections</p>
+                    {fields.map((field, i) => field.group !== "section" ? null : (
+                      <div
+                        key={i}
+                        className={`flex items-start gap-2.5 rounded-lg border px-3 py-2 transition-colors ${
+                          field.included
+                            ? "border-border bg-fyrescribe-hover"
+                            : "border-transparent bg-transparent opacity-40"
+                        }`}
+                      >
+                        <button
+                          onClick={() => toggleField(i)}
+                          disabled={state === "applying"}
+                          className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                            field.included
+                              ? "bg-gold border-gold text-primary-foreground"
+                              : "border-border hover:border-text-dimmed"
+                          }`}
+                        >
+                          {field.included && <Check size={10} />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-text-dimmed uppercase tracking-wide mb-1">{field.key}</p>
+                          <input
+                            value={field.value}
+                            onChange={(e) => updateFieldValue(i, e.target.value)}
+                            disabled={state === "applying" || !field.included}
+                            placeholder={`Enter ${field.key.toLowerCase()}…`}
+                            className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-text-dimmed disabled:opacity-60"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
