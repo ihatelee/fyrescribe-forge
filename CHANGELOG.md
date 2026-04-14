@@ -4,6 +4,19 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-14 (session 20 closeout)
+
+### Completed
+- source_sentence displayed in Lore Inbox suggestion cards with link back to manuscript
+- Global lore search added (useLoreSearch hook + LoreSearchModal + Cmd+K trigger)
+- PDF extraction overhauled: replaced BT/ET regex → pdfjs-dist → unpdf (final solution). unpdf is Deno-compatible with no worker dependency. Successfully extracts text from Canva PDFs.
+- System prompt loosened to handle unstructured lore documents
+
+### Known limitation
+- "View in manuscript →" link on Lore Inbox cards goes to /manuscript only — no scene_id in payload. Will be fixed in Task 3 (sync-lore suggestion types).
+
+---
+
 ## 2026-04-14 (session 20)
 
 ### `parse-lore-file` PDF extraction replaced with binary-safe printable-ASCII approach
