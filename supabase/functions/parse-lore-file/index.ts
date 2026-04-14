@@ -167,7 +167,7 @@ serve(async (req) => {
       const responseText = await response.text();
       console.error("Anthropic API error:", responseText);
       return new Response(
-        JSON.stringify({ error: "Anthropic API error: " + responseText }),
+        JSON.stringify({ error: "AI processing failed" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -205,7 +205,7 @@ serve(async (req) => {
     } catch {
       console.error("Failed to parse Claude response:", rawText);
       return new Response(
-        JSON.stringify({ error: "Claude returned invalid JSON: " + rawText }),
+        JSON.stringify({ error: "Failed to parse AI response" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -216,7 +216,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("Unexpected error:", e);
     return new Response(
-      JSON.stringify({ error: "Unhandled: " + (e instanceof Error ? e.message : String(e)) }),
+      JSON.stringify({ error: "An unexpected error occurred" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
