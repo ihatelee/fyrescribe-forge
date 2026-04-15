@@ -205,10 +205,10 @@ const ManuscriptPage = () => {
 
   type TextSize = "small" | "medium" | "large" | "xl";
   const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
-    small: "text-[16px] leading-[1.8]",
-    medium: "text-[20px] leading-[1.9]",
-    large: "text-[24px] leading-[2.0]",
-    xl: "text-[28px] leading-[2.1]",
+    small: "text-[16px]",
+    medium: "text-[20px]",
+    large: "text-[24px]",
+    xl: "text-[28px]",
   };
   const SCENE_TITLE_CLASSES: Record<TextSize, string> = {
     small: "text-[16px]",
@@ -223,6 +223,14 @@ const ManuscriptPage = () => {
     xl: "text-[56px]",
   };
   const [textSize, setTextSize] = useState<TextSize>("medium");
+
+  type LineHeight = "single" | "1.5" | "double";
+  const LINE_HEIGHT_CLASSES: Record<LineHeight, string> = {
+    single: "leading-[1.4]",
+    "1.5": "leading-[1.7]",
+    double: "leading-[2.0]",
+  };
+  const [lineHeight, setLineHeight] = useState<LineHeight>("1.5");
 
   type ColumnWidth = "narrow" | "wide" | "full";
   const COLUMN_WIDTH_CLASSES: Record<ColumnWidth, string> = {
