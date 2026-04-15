@@ -6,6 +6,10 @@ import logoSrc from "@/assets/fyrescribe_logo_white.svg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { motion } from "framer-motion";
+import FireIntro from "@/components/FireIntro";
+
+const AUTH_INTRO_KEY = "fyrescribe_intro_seen";
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -17,6 +21,10 @@ const AuthPage = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [showIntro, setShowIntro] = useState(() => {
+    return !sessionStorage.getItem(AUTH_INTRO_KEY);
+  });
+  const [introComplete, setIntroComplete] = useState(false);
 
   useEffect(() => {
     if (!authLoading && session) {
