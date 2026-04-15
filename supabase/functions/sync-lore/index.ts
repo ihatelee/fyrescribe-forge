@@ -9,32 +9,6 @@ const corsHeaders = {
 // Maximum characters of scene content to include per scene in the AI prompt.
 const SCENE_CONTENT_LIMIT = 1200;
 
-// ── Category metadata (mirrors frontend EntityDetailPage constants) ──────────
-
-const CATEGORY_FIELDS: Record<string, string[]> = {
-  characters: ["Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance", "First Appearance", "First Mentioned"],
-  places: ["Region", "Climate", "Population", "Government", "Notable Landmarks", "First Mentioned"],
-  events: ["Date/Era", "Location", "Key Participants", "Outcome", "First Mentioned"],
-  artifacts: ["Type", "Origin", "Current Owner", "Powers", "First Mentioned"],
-  creatures: ["Classification", "Habitat", "Average Size", "Diet", "Threat Level", "First Mentioned"],
-  magic: ["Type", "Regional Origin", "Rarity", "First Recorded Use"],
-  factions: ["Type", "Founded", "Leader", "Headquarters", "Allegiance", "First Mentioned"],
-  doctrine: ["Type", "Regional Origin", "Followers", "Core Belief", "First Mentioned"],
-  history: ["Date/Era", "Location", "Key Factions", "Outcome"],
-};
-
-const CATEGORY_SECTIONS: Record<string, string[]> = {
-  characters: ["Overview", "Background", "Personality", "Relationships", "Notable Events"],
-  places: ["Description", "History", "Notable Inhabitants", "Points of Interest"],
-  creatures: ["Appearance", "Behaviour", "Abilities", "Habitat", "Lore"],
-  artifacts: ["Description", "History", "Powers", "Current Whereabouts"],
-  events: ["Summary", "Causes", "Key Participants", "Consequences", "Aftermath"],
-  magic: ["Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts"],
-  factions: ["Overview", "History", "Structure", "Notable Members", "Goals"],
-  doctrine: ["Core Tenets", "Origins", "Followers", "Contradictions"],
-  history: ["Overview", "Causes", "Key Figures", "Consequences", "Legacy"],
-};
-
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type SuggestionType = "character" | "location" | "item" | "lore";
@@ -43,8 +17,11 @@ type SuggestionType = "character" | "location" | "item" | "lore";
 interface AISuggestion {
   type: SuggestionType;
   name: string;
-  description: string;
   source_sentence: string;
+  /** Article-body content keyed by section name (Overview, Background, etc.) */
+  sections: Record<string, string>;
+  /** At-a-Glance key/value pairs (Eye Color, Region, Type, etc.) */
+  at_a_glance: Record<string, string>;
   /** Stamped server-side after the AI call — never from the client. */
   scene_id?: string;
   source_location?: string;
@@ -274,20 +251,33 @@ async function syncProject(
 
     const rows = suggestions
       .filter((s) => s.name?.trim() && validTypes.has(s.type))
-      .map((s) => ({
-        project_id: projectId,
-        scene_id: s.scene_id ?? null,
-        type: "new_entity" as const,
-        payload: {
-          type: s.type,
-          name: s.name.trim(),
-          category: TYPE_TO_CATEGORY[s.type] ?? "magic",
-          description: s.description?.trim() ?? "",
-          source_sentence: s.source_sentence?.trim() ?? null,
-          source_location: s.source_location?.trim() ?? null,
-        },
-        status: "pending" as const,
-      }));
+      .map((s) => {
+        const sections = s.sections ?? {};
+        const at_a_glance = s.at_a_glance ?? {};
+        // Derive a short description from the most relevant section.
+        const description = (
+          sections["Overview"] ?? sections["Description"] ?? sections["Summary"] ?? ""
+        ).trim();
+        return {
+          project_id: projectId,
+          scene_id: s.scene_id ?? null,
+          type: "new_entity" as const,
+          payload: {
+            type: s.type,
+            name: s.name.trim(),
+            category: TYPE_TO_CATEGORY[s.type] ?? "magic",
+            description,
+            source_sentence: s.source_sentence?.trim() ?? null,
+            source_location: s.source_location?.trim() ?? null,
+            sections,
+            at_a_glance,
+            /** Stamped server-side — never AI-generated. */
+            first_mentioned: s.source_sentence?.trim() ?? null,
+            first_appearance: s.scene_id ?? null,
+          },
+          status: "pending" as const,
+        };
+      });
 
     let suggestionsCreated = 0;
     if (rows.length > 0) {
@@ -396,7 +386,7 @@ async function finaliseLog(supabase: any, logId: string | undefined, status: str
 
 function buildPrompt(sceneTitle: string, chapterTitle: string, sceneText: string, entityContext: string): string {
   const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
-  return `Extract all named characters, locations, items, and lore facts from this scene.
+  return `Extract all named entities from this scene.
 
 EXISTING ENTITIES — do NOT re-suggest these:
 ${entityContext || "(none yet)"}
@@ -411,10 +401,19 @@ Return a JSON array. Each element must have exactly these keys:
   - character: named people or beings
   - location: named places, buildings, regions
   - item: named objects, artifacts, weapons
-  - lore: named magic systems, factions, events, history, creatures, doctrines
+  - lore: named magic systems, factions, events, creatures, doctrines, historical periods
 - "name": the proper name, 1–5 words
-- "description": max 40 words, factual, based only on what the scene says
 - "source_sentence": the exact sentence from the scene where this entity first appears, copied verbatim
+- "sections": object with article-style content. Only include a key when the scene has clear evidence for it. Max 60 words per value.
+  - character → allowed keys: "Overview", "Background", "Personality", "Relationships"
+  - location  → allowed keys: "Description", "History", "Notable Inhabitants", "Points of Interest"
+  - item      → allowed keys: "Description", "History", "Powers", "Current Whereabouts"
+  - lore      → allowed keys: "Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts"
+- "at_a_glance": object with short factual fields. Only include a key when the scene has clear evidence. Values must be 1–8 words.
+  - character → allowed keys: "Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance"
+  - location  → allowed keys: "Region", "Climate", "Population", "Government", "Notable Landmarks"
+  - item      → allowed keys: "Type", "Origin", "Current Owner", "Powers"
+  - lore      → allowed keys: "Type", "Regional Origin", "Rarity"
 
 Include every named entity. Return [] if the scene has no named entities.
 Output only the JSON array. No prose, no markdown fences.`;

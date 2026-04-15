@@ -31,26 +31,17 @@ interface SuggestionPayload {
   /** "Chapter Title › Scene Title" — preferred display label */
   source_location?: string | null;
   source_sentence?: string | null;
-  /** At a Glance key/value pairs — all category field keys present, empty string if unknown */
-  fields?: Record<string, string>;
+  /** At-a-Glance key/value pairs emitted by sync-lore */
+  at_a_glance?: Record<string, string>;
   /** Article section content — only sections the AI had evidence for */
   sections?: Record<string, string>;
+  /** Verbatim sentence where entity first appears — stamped server-side */
+  first_mentioned?: string | null;
+  /** Scene UUID where entity first appears — stamped server-side */
+  first_appearance?: string | null;
   /** Suggested tag strings */
   tags?: string[];
 }
-
-// At a Glance field keys per category (mirrors EntityDetailPage)
-const CATEGORY_FIELDS: Record<string, string[]> = {
-  characters: ["Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance", "First Appearance", "First Mentioned"],
-  places: ["Region", "Climate", "Population", "Government", "Notable Landmarks", "First Mentioned"],
-  events: ["Date/Era", "Location", "Key Participants", "Outcome", "First Mentioned"],
-  artifacts: ["Type", "Origin", "Current Owner", "Powers", "First Mentioned"],
-  creatures: ["Classification", "Habitat", "Average Size", "Diet", "Threat Level", "First Mentioned"],
-  magic: ["Type", "Regional Origin", "Rarity", "First Recorded Use"],
-  factions: ["Type", "Founded", "Leader", "Headquarters", "Allegiance", "First Mentioned"],
-  doctrine: ["Type", "Regional Origin", "Followers", "Core Belief", "First Mentioned"],
-  history: ["Date/Era", "Location", "Key Factions", "Outcome"],
-};
 
 interface LoreSuggestion {
   id: string;
@@ -407,11 +398,17 @@ const LoreInboxPage = () => {
     const name = overrides?.name ?? payload.name;
     const description = overrides?.description ?? payload.description;
 
-    // Build fields: ensure all category keys are present; AI values override blanks.
-    const expectedFieldKeys = CATEGORY_FIELDS[payload.category] ?? [];
-    const fieldsToWrite: Record<string, string> = Object.fromEntries(
-      expectedFieldKeys.map((key) => [key, payload.fields?.[key] ?? ""]),
-    );
+    // Build fields from AI at_a_glance + server-stamped first_mentioned / first_appearance.
+    const fieldsToWrite: Record<string, string> = {};
+    for (const [k, v] of Object.entries(payload.at_a_glance ?? {})) {
+      if (v.trim()) fieldsToWrite[k] = v.trim();
+    }
+    if (payload.first_mentioned?.trim()) {
+      fieldsToWrite["First Mentioned"] = payload.first_mentioned.trim();
+    }
+    if (payload.first_appearance?.trim() && payload.category === "characters") {
+      fieldsToWrite["First Appearance"] = payload.first_appearance.trim();
+    }
 
     // Keep only non-empty section values.
     const sectionsToWrite: Record<string, string> = {};
