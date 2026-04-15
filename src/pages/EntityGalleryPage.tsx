@@ -754,6 +754,13 @@ const EntityGalleryPage = () => {
           onClose={() => setShowUploadModal(false)}
         />
       )}
+
+      {showLinkModal && activeProject && (
+        <LinkLoreModal
+          projectId={activeProject.id}
+          onClose={() => setShowLinkModal(false)}
+        />
+      )}
     </AppLayout>
   );
 };
