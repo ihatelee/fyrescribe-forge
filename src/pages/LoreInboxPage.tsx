@@ -267,7 +267,7 @@ const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps)
         <div className="mt-3 space-y-2.5">
           {/* Populated At a Glance fields */}
           {(() => {
-            const fields = (payload as Record<string, unknown>).fields as Record<string, string> | undefined;
+            const fields = (payload as unknown as Record<string, unknown>).fields as Record<string, string> | undefined;
             const populated = Object.entries(fields ?? {}).filter(([, v]) => typeof v === "string" && v.trim());
             if (!populated.length) return null;
             return (
