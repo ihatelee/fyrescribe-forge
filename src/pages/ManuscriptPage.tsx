@@ -11,7 +11,7 @@ import OutrunMusicPlayer from "@/components/OutrunMusicPlayer";
 import {
   Bold,
   Italic,
-  BookOpen,
+  
   Maximize,
   ChevronRight,
   FileText,
