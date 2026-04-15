@@ -4,6 +4,21 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-14 (session 21 — Task 3)
+
+### sync-lore emits all 4 suggestion types + scene_id on every row
+
+- `supabase/migrations/20260414230000_add_scene_id_to_lore_suggestions.sql` — adds `scene_id UUID REFERENCES public.scenes(id) ON DELETE SET NULL` to `lore_suggestions`. Nullable so existing rows are unaffected.
+- `supabase/functions/sync-lore/index.ts` — replaced 9-category `AISuggestion` interface with 4-type system (`character | location | item | lore`); simplified prompt to one JSON-array call per scene; `scene_id` and `source_location` stamped server-side after the AI call; deduplication now keys on `type:name` (case-insensitive), first occurrence wins; row builder stores `scene_id` at top level and `type` + `category` (mapped via `TYPE_TO_CATEGORY`) in payload; `CATEGORY_FIELDS`/`CATEGORY_SECTIONS`/confidence/fields/sections/tags removed from this path.
+- `src/integrations/supabase/types.ts` — added `scene_id: string | null` to `lore_suggestions` Row, Insert, Update types.
+- `src/types/lore.ts` — new file; exports `LoreSuggestionType`, `LoreSuggestion` interface, and `LORE_TYPE_TO_CATEGORY` map for use by frontend consumers.
+
+### Known follow-ups
+- `LoreInboxPage` still reads `payload.category`, `payload.confidence`, `payload.fields`, `payload.sections` — new suggestions will have `payload.type` + `payload.category` (mapped) but no fields/sections/confidence. UI update is a separate task.
+- "View in manuscript →" link can now be wired to `scene_id` (was blocked on this column existing).
+
+---
+
 ## 2026-04-14 (session 20 closeout)
 
 ### Completed

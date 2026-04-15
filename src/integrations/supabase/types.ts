@@ -194,6 +194,7 @@ export type Database = {
           payload: Json | null
           project_id: string
           reviewed_at: string | null
+          scene_id: string | null
           status: Database["public"]["Enums"]["lore_suggestion_status"]
           type: Database["public"]["Enums"]["lore_suggestion_type"]
         }
@@ -204,6 +205,7 @@ export type Database = {
           payload?: Json | null
           project_id: string
           reviewed_at?: string | null
+          scene_id?: string | null
           status?: Database["public"]["Enums"]["lore_suggestion_status"]
           type: Database["public"]["Enums"]["lore_suggestion_type"]
         }
@@ -214,6 +216,7 @@ export type Database = {
           payload?: Json | null
           project_id?: string
           reviewed_at?: string | null
+          scene_id?: string | null
           status?: Database["public"]["Enums"]["lore_suggestion_status"]
           type?: Database["public"]["Enums"]["lore_suggestion_type"]
         }

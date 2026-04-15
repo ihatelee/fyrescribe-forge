@@ -37,20 +37,26 @@ const CATEGORY_SECTIONS: Record<string, string[]> = {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+type SuggestionType = "character" | "location" | "item" | "lore";
+
+/** Shape returned by the AI for each entity in a scene. */
 interface AISuggestion {
+  type: SuggestionType;
   name: string;
-  category: string;
   description: string;
-  confidence: number;
-  source_scene_title?: string;
-  /** "Chapter Title › Scene Title" — stamped by syncProject after the AI call */
+  source_sentence: string;
+  /** Stamped server-side after the AI call — never from the client. */
+  scene_id?: string;
   source_location?: string;
-  /** Verbatim sentence from the scene where the entity first appears */
-  source_sentence?: string;
-  fields?: Record<string, string>;
-  sections?: Record<string, string>;
-  tags?: string[];
 }
+
+/** Maps the 4 suggestion types to the closest entity_category for UI display. */
+const TYPE_TO_CATEGORY: Record<SuggestionType, string> = {
+  character: "characters",
+  location: "places",
+  item: "artifacts",
+  lore: "magic",
+};
 
 interface SceneRow {
   id: string;
@@ -241,7 +247,7 @@ async function syncProject(
         : scene.title;
 
       for (const s of sceneSuggestions) {
-        s.source_scene_title = scene.title;
+        s.scene_id = scene.id;
         s.source_location = sourceLocation;
         allSuggestions.push(s);
       }
@@ -249,86 +255,39 @@ async function syncProject(
 
     console.log(`[sync-lore] project=${projectId} scenes=${scenes.length} raw_suggestions=${allSuggestions.length}`);
 
-    // ── Deduplicate by name (case-insensitive) ───────────────────────────────
-    // Keep the highest-confidence version when the same entity appears in
-    // multiple scenes.
-    const seenNames = new Map<string, AISuggestion>();
+    // ── Deduplicate by name+type (case-insensitive) ──────────────────────────
+    // Keep first occurrence — scenes are processed in manuscript order so the
+    // earliest mention wins.
+    const seenKeys = new Set<string>();
+    const suggestions: AISuggestion[] = [];
     for (const s of allSuggestions) {
-      const key = s.name.trim().toLowerCase();
-      const existing = seenNames.get(key);
-      if (!existing || s.confidence > existing.confidence) {
-        seenNames.set(key, s);
+      const key = `${s.type}:${s.name.trim().toLowerCase()}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        suggestions.push(s);
       }
     }
-    const suggestions = [...seenNames.values()];
     console.log(`[sync-lore] after dedup: ${suggestions.length} unique suggestions`);
 
     // ── Map to lore_suggestions rows ─────────────────────────────────────────
-    const validCategories = new Set([
-      "characters", "places", "events", "history", "artifacts",
-      "creatures", "magic", "factions", "doctrine",
-    ]);
+    const validTypes = new Set<string>(["character", "location", "item", "lore"]);
 
     const rows = suggestions
-      .filter(
-        (s) =>
-          s.name &&
-          validCategories.has(s.category) &&
-          typeof s.confidence === "number" &&
-          s.confidence >= 0.4,
-      )
-      .map((s) => {
-        // Case-insensitive field key lookup so casing variations don't drop data.
-        const aiFieldsLower: Record<string, string> = {};
-        for (const [k, v] of Object.entries(s.fields ?? {})) {
-          if (typeof v === "string") aiFieldsLower[k.toLowerCase()] = v;
-        }
-        const expectedFields = CATEGORY_FIELDS[s.category] ?? [];
-        const fields = Object.fromEntries(
-          expectedFields.map((key) => [key, aiFieldsLower[key.toLowerCase()] ?? ""]),
-        );
-
-        // Case-insensitive section key lookup.
-        const aiSectionsLower: Record<string, string> = {};
-        for (const [k, v] of Object.entries(s.sections ?? {})) {
-          if (typeof v === "string" && v.trim()) aiSectionsLower[k.toLowerCase()] = v.trim();
-        }
-        const expectedSections = CATEGORY_SECTIONS[s.category] ?? [];
-        const sections: Record<string, string> = {};
-        for (const sectionKey of expectedSections) {
-          const val = aiSectionsLower[sectionKey.toLowerCase()];
-          if (val) sections[sectionKey] = val;
-        }
-        for (const [k, v] of Object.entries(s.sections ?? {})) {
-          if (typeof v === "string" && v.trim() && !sections[k]) {
-            sections[k] = v.trim();
-          }
-        }
-
-        return {
-          project_id: projectId,
-          type: "new_entity" as const,
-          payload: {
-            name: s.name,
-            category: s.category,
-            description: s.description ?? "",
-            confidence: Math.min(1, Math.max(0, s.confidence)),
-            source_scene_title: s.source_scene_title ?? null,
-            source_location: typeof s.source_location === "string" && s.source_location.trim()
-              ? s.source_location.trim()
-              : (s.source_scene_title ?? null),
-            source_sentence: typeof s.source_sentence === "string" && s.source_sentence.trim()
-              ? s.source_sentence.trim()
-              : null,
-            fields,
-            sections,
-            tags: Array.isArray(s.tags)
-              ? s.tags.map((t: string) => String(t).trim().toLowerCase()).filter(Boolean)
-              : [],
-          },
-          status: "pending" as const,
-        };
-      });
+      .filter((s) => s.name?.trim() && validTypes.has(s.type))
+      .map((s) => ({
+        project_id: projectId,
+        scene_id: s.scene_id ?? null,
+        type: "new_entity" as const,
+        payload: {
+          type: s.type,
+          name: s.name.trim(),
+          category: TYPE_TO_CATEGORY[s.type] ?? "magic",
+          description: s.description?.trim() ?? "",
+          source_sentence: s.source_sentence?.trim() ?? null,
+          source_location: s.source_location?.trim() ?? null,
+        },
+        status: "pending" as const,
+      }));
 
     let suggestionsCreated = 0;
     if (rows.length > 0) {
@@ -435,43 +394,28 @@ async function finaliseLog(supabase: any, logId: string | undefined, status: str
     .eq("id", logId);
 }
 
-function buildCategoryReference(): string {
-  const lines: string[] = ["CATEGORY REFERENCE:"];
-  for (const cat of Object.keys(CATEGORY_FIELDS)) {
-    const fields = CATEGORY_FIELDS[cat].join(", ");
-    const sections = (CATEGORY_SECTIONS[cat] ?? []).join(", ");
-    lines.push(`  ${cat}: fields=[${fields}] sections=[${sections}]`);
-  }
-  return lines.join("\n");
-}
-
 function buildPrompt(sceneTitle: string, chapterTitle: string, sceneText: string, entityContext: string): string {
   const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
-  return `You are a world-building database for a fantasy novel. Your job is to extract EVERY named entity from the scene — err heavily on the side of inclusion. If something has a name, suggest it.
+  return `Extract all named characters, locations, items, and lore facts from this scene.
 
 EXISTING ENTITIES — do NOT re-suggest these:
 ${entityContext || "(none yet)"}
 
-${buildCategoryReference()}
-
-LOCATION: ${locationLabel}
-SCENE CONTENT:
+SCENE: ${locationLabel}
+"""
 ${sceneText}
+"""
 
-Extract ALL named entities: every named character (including minor ones), every named place (cities, regions, buildings, streets), every named organisation or faction, every named object or artifact, every named creature species, every named event, every named belief system or doctrine, every named magic system. If it has a proper noun, it belongs in the database.
+Return a JSON array. Each element must have exactly these keys:
+- "type": one of "character", "location", "item", "lore"
+  - character: named people or beings
+  - location: named places, buildings, regions
+  - item: named objects, artifacts, weapons
+  - lore: named magic systems, factions, events, history, creatures, doctrines
+- "name": the proper name, 1–5 words
+- "description": max 40 words, factual, based only on what the scene says
+- "source_sentence": the exact sentence from the scene where this entity first appears, copied verbatim
 
-Return a JSON array with one object per entity. Return an empty array [] if the scene has no proper nouns at all. There is no cap — return every named entity you find.
-
-Each object must have exactly these keys:
-- "name": string — the proper name, 1–5 words
-- "category": one of "characters"|"places"|"events"|"history"|"artifacts"|"creatures"|"magic"|"factions"|"doctrine"
-- "description": string — max 40 words, factual, based only on what the scene says
-- "confidence": number 0.4–1.0 — use 0.4–0.6 for entities mentioned only briefly, 0.7–1.0 for entities with meaningful detail
-- "source_scene_title": string — always "${sceneTitle}"
-- "source_sentence": string — the single sentence from the scene where this entity first appears, copied verbatim
-- "fields": object — only include keys from CATEGORY REFERENCE whose values you can infer from the text
-- "sections": object — at most 1 section, max 40 words; use exact section name from CATEGORY REFERENCE
-- "tags": array of 2–3 lowercase strings
-
+Include every named entity. Return [] if the scene has no named entities.
 Output only the JSON array. No prose, no markdown fences.`;
 }
