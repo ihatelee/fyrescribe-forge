@@ -259,7 +259,6 @@ async function syncProject(
         ).trim();
         return {
           project_id: projectId,
-          scene_id: s.scene_id ?? null,
           type: "new_entity" as const,
           payload: {
             type: s.type,
@@ -268,9 +267,9 @@ async function syncProject(
             description,
             source_sentence: s.source_sentence?.trim() ?? null,
             source_location: s.source_location?.trim() ?? null,
+            scene_id: s.scene_id ?? null,
             sections,
             at_a_glance,
-            /** Stamped server-side — never AI-generated. */
             first_mentioned: s.source_sentence?.trim() ?? null,
             first_appearance: s.scene_id ?? null,
           },
@@ -280,10 +279,13 @@ async function syncProject(
 
     let suggestionsCreated = 0;
     if (rows.length > 0) {
-      const { data: inserted } = await supabase
+      const { data: inserted, error: insertError } = await supabase
         .from("lore_suggestions")
         .insert(rows)
         .select("id");
+      if (insertError) {
+        console.error("[sync-lore] insert error:", insertError.message);
+      }
       suggestionsCreated = inserted?.length ?? 0;
     }
 
