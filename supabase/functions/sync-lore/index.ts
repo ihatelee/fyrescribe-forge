@@ -279,10 +279,13 @@ async function syncProject(
 
     let suggestionsCreated = 0;
     if (rows.length > 0) {
-      const { data: inserted } = await supabase
+      const { data: inserted, error: insertError } = await supabase
         .from("lore_suggestions")
         .insert(rows)
         .select("id");
+      if (insertError) {
+        console.error("[sync-lore] insert error:", insertError.message);
+      }
       suggestionsCreated = inserted?.length ?? 0;
     }
 
