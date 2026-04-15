@@ -211,10 +211,10 @@ const ManuscriptPage = () => {
     xl: "text-[28px] leading-[2.1]",
   };
   const SCENE_TITLE_CLASSES: Record<TextSize, string> = {
-    small: "text-[24px]",
-    medium: "text-[30px]",
-    large: "text-[36px]",
-    xl: "text-[42px]",
+    small: "text-[16px]",
+    medium: "text-[20px]",
+    large: "text-[24px]",
+    xl: "text-[28px]",
   };
   const CHAPTER_TITLE_CLASSES: Record<TextSize, string> = {
     small: "text-[32px]",
