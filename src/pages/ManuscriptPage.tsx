@@ -885,7 +885,12 @@ const ManuscriptPage = () => {
                 </div>
               ) : (
                 <>
-                  <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} />
+                  {activeChapter && (
+                    <h1 className={`font-display ${CHAPTER_TITLE_CLASSES[textSize]} text-foreground/90 mb-2 tracking-wide`}>
+                      {activeChapter.title}
+                    </h1>
+                  )}
+                  <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} sizeClass={SCENE_TITLE_CLASSES[textSize]} />
                   <div
                     key={activeSceneId}
                     ref={makeEditorRef(editorRef)}
