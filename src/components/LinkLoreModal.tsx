@@ -12,6 +12,8 @@ interface SuggestedLink {
   entity_a: EntityRef;
   entity_b: EntityRef;
   relationship: string;
+  source_scene: string | null;
+  source_chapter: string | null;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -227,6 +229,16 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
                         className="flex-1 bg-fyrescribe-hover border border-border rounded px-2 py-1 text-xs text-gold italic outline-none focus:border-gold/40 transition-colors"
                       />
                     </div>
+
+                    {/* Source context */}
+                    {(s.source_scene || s.source_chapter) && (
+                      <p className="text-[11px] text-text-dimmed mb-3 pl-2">
+                        ·{" "}
+                        {s.source_chapter && s.source_scene
+                          ? `${s.source_chapter} › ${s.source_scene}`
+                          : s.source_scene ?? s.source_chapter}
+                      </p>
+                    )}
 
                     {/* Entity B */}
                     <div className="flex items-center gap-2 mb-3">

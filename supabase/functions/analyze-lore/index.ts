@@ -81,6 +81,14 @@ serve(async (req) => {
       );
     }
 
+    // Fetch scenes with chapter info for context
+    const { data: scenes } = await userClient
+      .from("scenes")
+      .select("id, title, order, chapter_id, content, chapters(title, order)")
+      .eq("project_id", project_id)
+      .order("order")
+      .limit(200);
+
     // Fetch existing links to avoid duplicates
     const entityIds = entities.map((e: any) => e.id);
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -100,6 +108,16 @@ serve(async (req) => {
     // Build entity list for AI prompt
     const entityList = entities
       .map((e: any) => `- ${e.name} [${e.category}]: ${e.summary ?? "No summary"}`)
+      .join("\n");
+
+    // Build scene context for AI — truncated content snippets
+    const sceneList = (scenes ?? [])
+      .map((s: any) => {
+        const chapterTitle = s.chapters?.title ?? "Untitled Chapter";
+        const chapterOrder = s.chapters?.order ?? 0;
+        const snippet = (s.content ?? "").slice(0, 300);
+        return `- Chapter ${chapterOrder + 1} "${chapterTitle}" › Scene ${s.order + 1} "${s.title}": ${snippet}`;
+      })
       .join("\n");
 
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
@@ -122,23 +140,26 @@ serve(async (req) => {
         max_tokens: 4096,
         system:
           "You are a lore relationship analyst for a fantasy world-building app called Fyrescribe.\n" +
-          "Given a list of world entities (characters, places, items, factions, etc.), analyze potential relationships between them.\n" +
+          "Given a list of world entities and manuscript scenes, analyze potential relationships between entities.\n" +
           "Return ONLY a JSON array of suggested links. Each link:\n" +
           "{\n" +
           '  "entity_a_name": string,\n' +
           '  "entity_b_name": string,\n' +
-          '  "relationship": string (short label like "ally of", "ruler of", "located in", "created by", "member of", "rival of")\n' +
+          '  "relationship": string (short label like "ally of", "ruler of", "located in", "created by", "member of", "rival of"),\n' +
+          '  "source_scene": string | null (the scene title where this relationship is most evident, or null if inferred from summaries alone),\n' +
+          '  "source_chapter": string | null (the chapter title containing that scene, or null)\n' +
           "}\n\n" +
           "Rules:\n" +
-          "- Only suggest relationships that are strongly implied by the entity names, categories, and summaries\n" +
+          "- Only suggest relationships that are strongly implied by the entity names, categories, summaries, or scene content\n" +
           "- Keep relationship labels concise (2-4 words)\n" +
-          "- Do not duplicate: if A→B exists, don't also suggest B→A\n" +
+          "- The SAME two entities CAN appear multiple times with DIFFERENT relationships if supported by different scenes\n" +
+          "- Always include source_scene and source_chapter when the relationship comes from a specific scene\n" +
           "- Return between 0 and 20 suggestions, ranked by confidence\n" +
           "- Return raw JSON array only, no markdown or explanation",
         messages: [
           {
             role: "user",
-            content: `Entities:\n${entityList}`,
+            content: `Entities:\n${entityList}\n\nScenes:\n${sceneList || "(no scenes available)"}`,
           },
         ],
       }),
@@ -164,6 +185,8 @@ serve(async (req) => {
       entity_a_name: string;
       entity_b_name: string;
       relationship: string;
+      source_scene: string | null;
+      source_chapter: string | null;
     }>;
 
     try {
@@ -190,12 +213,13 @@ serve(async (req) => {
         const a = nameMap.get(s.entity_a_name.toLowerCase());
         const b = nameMap.get(s.entity_b_name.toLowerCase());
         if (!a || !b || a.id === b.id) return null;
-        const key = [a.id, b.id].sort().join("|");
-        if (existingSet.has(key)) return null;
+        // Don't deduplicate same entity pairs — different relationships from different scenes are valid
         return {
           entity_a: { id: a.id, name: a.name, category: a.category },
           entity_b: { id: b.id, name: b.name, category: b.category },
           relationship: s.relationship,
+          source_scene: s.source_scene || null,
+          source_chapter: s.source_chapter || null,
         };
       })
       .filter(Boolean);
