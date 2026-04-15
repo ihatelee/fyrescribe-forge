@@ -4,6 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import LoreUploadModal from "@/components/LoreUploadModal";
+import LinkLoreModal from "@/components/LinkLoreModal";
 import ModalSelect from "@/components/ModalSelect";
 import {
   Plus,
@@ -15,6 +16,7 @@ import {
   List,
   ChevronDown,
   Upload,
+  Link2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -190,6 +192,7 @@ const EntityGalleryPage = () => {
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
 
   // View mode persisted to localStorage
@@ -395,6 +398,13 @@ const EntityGalleryPage = () => {
 
             {activeProject && (
               <>
+                <button
+                  onClick={() => setShowLinkModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 border border-border text-sm text-text-secondary rounded-lg hover:text-foreground hover:border-text-dimmed transition-colors"
+                >
+                  <Link2 size={14} />
+                  Link Lore
+                </button>
                 <button
                   onClick={() => setShowUploadModal(true)}
                   className="flex items-center gap-2 px-3 py-1.5 border border-border text-sm text-text-secondary rounded-lg hover:text-foreground hover:border-text-dimmed transition-colors"
@@ -742,6 +752,13 @@ const EntityGalleryPage = () => {
           projectId={activeProject.id}
           defaultCategory={defaultNewCategory}
           onClose={() => setShowUploadModal(false)}
+        />
+      )}
+
+      {showLinkModal && activeProject && (
+        <LinkLoreModal
+          projectId={activeProject.id}
+          onClose={() => setShowLinkModal(false)}
         />
       )}
     </AppLayout>
