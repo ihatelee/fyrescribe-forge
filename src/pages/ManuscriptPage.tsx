@@ -11,7 +11,7 @@ import OutrunMusicPlayer from "@/components/OutrunMusicPlayer";
 import {
   Bold,
   Italic,
-  BookOpen,
+  
   Maximize,
   ChevronRight,
   FileText,
@@ -205,10 +205,10 @@ const ManuscriptPage = () => {
 
   type TextSize = "small" | "medium" | "large" | "xl";
   const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
-    small: "text-[16px] leading-[1.8]",
-    medium: "text-[20px] leading-[1.9]",
-    large: "text-[24px] leading-[2.0]",
-    xl: "text-[28px] leading-[2.1]",
+    small: "text-[16px]",
+    medium: "text-[20px]",
+    large: "text-[24px]",
+    xl: "text-[28px]",
   };
   const SCENE_TITLE_CLASSES: Record<TextSize, string> = {
     small: "text-[16px]",
@@ -223,6 +223,14 @@ const ManuscriptPage = () => {
     xl: "text-[56px]",
   };
   const [textSize, setTextSize] = useState<TextSize>("medium");
+
+  type LineHeight = "single" | "1.5" | "double";
+  const LINE_HEIGHT_CLASSES: Record<LineHeight, string> = {
+    single: "leading-[1.4]",
+    "1.5": "leading-[1.7]",
+    double: "leading-[2.0]",
+  };
+  const [lineHeight, setLineHeight] = useState<LineHeight>("1.5");
 
   type ColumnWidth = "narrow" | "wide" | "full";
   const COLUMN_WIDTH_CLASSES: Record<ColumnWidth, string> = {
@@ -581,7 +589,101 @@ const ManuscriptPage = () => {
 
   // ─── Render helpers ─────────────────────────────────────────────────
 
-  const toolbar = (
+  // ─── Icon-based toolbar selectors ────────────────────────────────────
+
+  const TextSizeSelector = () => (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] text-text-dimmed uppercase tracking-wider">Size</span>
+      <div className="flex items-center gap-0.5">
+        {(["small", "medium", "large", "xl"] as TextSize[]).map((s) => (
+          <button
+            key={s}
+            onClick={() => setTextSize(s)}
+            title={s === "xl" ? "Extra Large" : s.charAt(0).toUpperCase() + s.slice(1)}
+            className={`px-1.5 py-0.5 rounded transition-colors font-serif ${
+              textSize === s
+                ? "text-foreground bg-fyrescribe-raised"
+                : "text-text-dimmed hover:text-text-secondary"
+            }`}
+            style={{ fontSize: s === "small" ? 10 : s === "medium" ? 12 : s === "large" ? 14 : 16 }}
+          >
+            Aa
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const LineHeightSelector = () => (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] text-text-dimmed uppercase tracking-wider">Height</span>
+      <div className="flex items-center gap-0.5">
+        {([
+          { value: "single" as LineHeight, label: "1×", title: "Single spacing" },
+          { value: "1.5" as LineHeight, label: "1.5×", title: "1.5 spacing" },
+          { value: "double" as LineHeight, label: "2×", title: "Double spacing" },
+        ]).map((h) => (
+          <button
+            key={h.value}
+            onClick={() => setLineHeight(h.value)}
+            title={h.title}
+            className={`px-1.5 py-0.5 text-[10px] rounded transition-colors font-mono ${
+              lineHeight === h.value
+                ? "text-foreground bg-fyrescribe-raised"
+                : "text-text-dimmed hover:text-text-secondary"
+            }`}
+          >
+            {h.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const ColumnWidthSelector = () => (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] text-text-dimmed uppercase tracking-wider">Width</span>
+      <div className="flex items-center gap-0.5">
+        {([
+          { value: "narrow" as ColumnWidth, title: "Narrow" },
+          { value: "wide" as ColumnWidth, title: "Wide" },
+          { value: "full" as ColumnWidth, title: "Full width" },
+        ]).map((w) => (
+          <button
+            key={w.value}
+            onClick={() => setColumnWidth(w.value)}
+            title={w.title}
+            className={`p-1 rounded transition-colors ${
+              columnWidth === w.value
+                ? "text-foreground bg-fyrescribe-raised"
+                : "text-text-dimmed hover:text-text-secondary"
+            }`}
+          >
+            {/* Column width icons as inline SVGs */}
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+              {w.value === "narrow" && (
+                <>
+                  <rect x="4" y="1" width="8" height="10" rx="1" />
+                </>
+              )}
+              {w.value === "wide" && (
+                <>
+                  <rect x="2" y="1" width="12" height="10" rx="1" />
+                </>
+              )}
+              {w.value === "full" && (
+                <>
+                  <rect x="0.5" y="1" width="15" height="10" rx="1" />
+                </>
+              )}
+            </svg>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const formattingControls = (
     <div className="flex items-center gap-1">
       <button
         onClick={() => applyFormat("bold")}
@@ -596,13 +698,11 @@ const ManuscriptPage = () => {
         <Italic size={14} />
       </button>
       <div className="w-px h-4 bg-border mx-1" />
-      <button
-        onClick={handleThesaurus}
-        className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
-      >
-        <BookOpen size={14} />
-        Thesaurus
-      </button>
+      <TextSizeSelector />
+      <div className="w-px h-4 bg-border mx-1" />
+      <LineHeightSelector />
+      <div className="w-px h-4 bg-border mx-1" />
+      <ColumnWidthSelector />
     </div>
   );
 
@@ -612,7 +712,7 @@ const ManuscriptPage = () => {
     return (
       <div className="fixed inset-0 bg-background z-[100] flex flex-col">
         <div className="flex items-center justify-between p-3">
-          {toolbar}
+          {formattingControls}
           <button
             onClick={() => setFocusMode(false)}
             className="text-text-dimmed hover:text-text-secondary text-xs flex items-center gap-1 transition-colors"
@@ -623,7 +723,7 @@ const ManuscriptPage = () => {
         <div className="flex-1 flex justify-center overflow-y-auto pb-24 relative">
           <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
             {activeChapter && (
-              <h1 className={`font-display ${CHAPTER_TITLE_CLASSES[textSize]} text-foreground/90 mb-2 tracking-wide`}>
+              <h1 className={`font-display ${CHAPTER_TITLE_CLASSES[textSize]} text-text-dimmed mb-2 tracking-wide`}>
                 {activeChapter.title}
               </h1>
             )}
@@ -631,7 +731,7 @@ const ManuscriptPage = () => {
             <div
               key={activeSceneId ?? "empty"}
               ref={makeEditorRef(focusEditorRef)}
-                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
+                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} ${LINE_HEIGHT_CLASSES[lineHeight]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
               contentEditable
               suppressContentEditableWarning
               onInput={handleEditorInput}
@@ -814,41 +914,9 @@ const ManuscriptPage = () => {
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Toolbar */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-fyrescribe-base">
-            <div className="flex items-center gap-1">
-              {toolbar}
-              <div className="w-px h-4 bg-border mx-1" />
-              <div className="flex items-center gap-0.5 bg-fyrescribe-hover rounded-md p-0.5">
-                {(["small", "medium", "large", "xl"] as TextSize[]).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setTextSize(s)}
-                    className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
-                      textSize === s
-                        ? "bg-fyrescribe-raised text-foreground"
-                        : "text-text-dimmed hover:text-text-secondary"
-                    }`}
-                  >
-                    {s === "xl" ? "XL" : s.charAt(0).toUpperCase() + s.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <div className="w-px h-4 bg-border mx-1" />
-              <div className="flex items-center gap-0.5 bg-fyrescribe-hover rounded-md p-0.5">
-                {(["narrow", "wide", "full"] as ColumnWidth[]).map((w) => (
-                  <button
-                    key={w}
-                    onClick={() => setColumnWidth(w)}
-                    className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
-                      columnWidth === w
-                        ? "bg-fyrescribe-raised text-foreground"
-                        : "text-text-dimmed hover:text-text-secondary"
-                    }`}
-                  >
-                    {w.charAt(0).toUpperCase() + w.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <div className="w-px h-4 bg-border mx-1" />
+            <div className="flex items-center gap-1 flex-1">
+              {formattingControls}
+              <div className="flex-1" />
               <button
                 onClick={() => setFocusMode(true)}
                 className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
@@ -856,11 +924,6 @@ const ManuscriptPage = () => {
                 <Maximize size={14} />
                 Focus
               </button>
-            </div>
-            <div className="text-text-dimmed text-xs" style={labelStyle}>
-              {activeChapter && activeScene
-                ? `Ch ${activeChapter.order} · ${activeScene.title}`
-                : "—"}
             </div>
           </div>
 
@@ -885,16 +948,11 @@ const ManuscriptPage = () => {
                 </div>
               ) : (
                 <>
-                  {activeChapter && (
-                    <h1 className={`font-display ${CHAPTER_TITLE_CLASSES[textSize]} text-foreground/90 mb-2 tracking-wide`}>
-                      {activeChapter.title}
-                    </h1>
-                  )}
                   <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} sizeClass={SCENE_TITLE_CLASSES[textSize]} />
                   <div
                     key={activeSceneId}
                     ref={makeEditorRef(editorRef)}
-                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
+                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} ${LINE_HEIGHT_CLASSES[lineHeight]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
