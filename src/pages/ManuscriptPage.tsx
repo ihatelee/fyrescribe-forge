@@ -589,7 +589,101 @@ const ManuscriptPage = () => {
 
   // ─── Render helpers ─────────────────────────────────────────────────
 
-  const toolbar = (
+  // ─── Icon-based toolbar selectors ────────────────────────────────────
+
+  const TextSizeSelector = () => (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] text-text-dimmed uppercase tracking-wider">Size</span>
+      <div className="flex items-center gap-0.5">
+        {(["small", "medium", "large", "xl"] as TextSize[]).map((s) => (
+          <button
+            key={s}
+            onClick={() => setTextSize(s)}
+            title={s === "xl" ? "Extra Large" : s.charAt(0).toUpperCase() + s.slice(1)}
+            className={`px-1.5 py-0.5 rounded transition-colors font-serif ${
+              textSize === s
+                ? "text-foreground bg-fyrescribe-raised"
+                : "text-text-dimmed hover:text-text-secondary"
+            }`}
+            style={{ fontSize: s === "small" ? 10 : s === "medium" ? 12 : s === "large" ? 14 : 16 }}
+          >
+            Aa
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const LineHeightSelector = () => (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] text-text-dimmed uppercase tracking-wider">Height</span>
+      <div className="flex items-center gap-0.5">
+        {([
+          { value: "single" as LineHeight, label: "1×", title: "Single spacing" },
+          { value: "1.5" as LineHeight, label: "1.5×", title: "1.5 spacing" },
+          { value: "double" as LineHeight, label: "2×", title: "Double spacing" },
+        ]).map((h) => (
+          <button
+            key={h.value}
+            onClick={() => setLineHeight(h.value)}
+            title={h.title}
+            className={`px-1.5 py-0.5 text-[10px] rounded transition-colors font-mono ${
+              lineHeight === h.value
+                ? "text-foreground bg-fyrescribe-raised"
+                : "text-text-dimmed hover:text-text-secondary"
+            }`}
+          >
+            {h.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const ColumnWidthSelector = () => (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] text-text-dimmed uppercase tracking-wider">Width</span>
+      <div className="flex items-center gap-0.5">
+        {([
+          { value: "narrow" as ColumnWidth, title: "Narrow" },
+          { value: "wide" as ColumnWidth, title: "Wide" },
+          { value: "full" as ColumnWidth, title: "Full width" },
+        ]).map((w) => (
+          <button
+            key={w.value}
+            onClick={() => setColumnWidth(w.value)}
+            title={w.title}
+            className={`p-1 rounded transition-colors ${
+              columnWidth === w.value
+                ? "text-foreground bg-fyrescribe-raised"
+                : "text-text-dimmed hover:text-text-secondary"
+            }`}
+          >
+            {/* Column width icons as inline SVGs */}
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+              {w.value === "narrow" && (
+                <>
+                  <rect x="4" y="1" width="8" height="10" rx="1" />
+                </>
+              )}
+              {w.value === "wide" && (
+                <>
+                  <rect x="2" y="1" width="12" height="10" rx="1" />
+                </>
+              )}
+              {w.value === "full" && (
+                <>
+                  <rect x="0.5" y="1" width="15" height="10" rx="1" />
+                </>
+              )}
+            </svg>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const formattingControls = (
     <div className="flex items-center gap-1">
       <button
         onClick={() => applyFormat("bold")}
@@ -604,13 +698,11 @@ const ManuscriptPage = () => {
         <Italic size={14} />
       </button>
       <div className="w-px h-4 bg-border mx-1" />
-      <button
-        onClick={handleThesaurus}
-        className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
-      >
-        <BookOpen size={14} />
-        Thesaurus
-      </button>
+      <TextSizeSelector />
+      <div className="w-px h-4 bg-border mx-1" />
+      <LineHeightSelector />
+      <div className="w-px h-4 bg-border mx-1" />
+      <ColumnWidthSelector />
     </div>
   );
 
