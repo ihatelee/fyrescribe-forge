@@ -6,6 +6,10 @@ import logoSrc from "@/assets/fyrescribe_logo_white.svg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { motion } from "framer-motion";
+import FireIntro from "@/components/FireIntro";
+
+const AUTH_INTRO_KEY = "fyrescribe_intro_seen";
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -17,6 +21,10 @@ const AuthPage = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [showIntro, setShowIntro] = useState(() => {
+    return !sessionStorage.getItem(AUTH_INTRO_KEY);
+  });
+  const [introComplete, setIntroComplete] = useState(false);
 
   useEffect(() => {
     if (!authLoading && session) {
@@ -57,11 +65,23 @@ const AuthPage = () => {
     }
   };
 
+  const handleIntroComplete = () => {
+    sessionStorage.setItem(AUTH_INTRO_KEY, "1");
+    setIntroComplete(true);
+  };
+
   if (authLoading) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0a0c12" }}>
-      <div className="w-full max-w-sm flex flex-col items-center gap-8 px-4">
+    <div className="min-h-screen flex items-center justify-center relative" style={{ backgroundColor: "#0a0c12" }}>
+      {showIntro && !introComplete && <FireIntro onComplete={handleIntroComplete} />}
+
+      <motion.div
+        className="w-full max-w-sm flex flex-col items-center gap-8 px-4"
+        initial={showIntro ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+        animate={(!showIntro || introComplete) ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+        transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+      >
         <div className="flex flex-col items-center gap-3">
           <img src={logoSrc} alt="Fyrescribe" className="h-8" />
           <p className="text-muted-foreground text-sm italic font-['EB_Garamond']">
@@ -144,7 +164,7 @@ const AuthPage = () => {
             {isSignUp ? "Already have an account? Log in" : "Don't have an account? Sign up"}
           </button>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 };
