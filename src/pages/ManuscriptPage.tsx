@@ -712,7 +712,7 @@ const ManuscriptPage = () => {
     return (
       <div className="fixed inset-0 bg-background z-[100] flex flex-col">
         <div className="flex items-center justify-between p-3">
-          {toolbar}
+          {formattingControls}
           <button
             onClick={() => setFocusMode(false)}
             className="text-text-dimmed hover:text-text-secondary text-xs flex items-center gap-1 transition-colors"
@@ -914,41 +914,9 @@ const ManuscriptPage = () => {
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Toolbar */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-fyrescribe-base">
-            <div className="flex items-center gap-1">
-              {toolbar}
-              <div className="w-px h-4 bg-border mx-1" />
-              <div className="flex items-center gap-0.5 bg-fyrescribe-hover rounded-md p-0.5">
-                {(["small", "medium", "large", "xl"] as TextSize[]).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setTextSize(s)}
-                    className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
-                      textSize === s
-                        ? "bg-fyrescribe-raised text-foreground"
-                        : "text-text-dimmed hover:text-text-secondary"
-                    }`}
-                  >
-                    {s === "xl" ? "XL" : s.charAt(0).toUpperCase() + s.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <div className="w-px h-4 bg-border mx-1" />
-              <div className="flex items-center gap-0.5 bg-fyrescribe-hover rounded-md p-0.5">
-                {(["narrow", "wide", "full"] as ColumnWidth[]).map((w) => (
-                  <button
-                    key={w}
-                    onClick={() => setColumnWidth(w)}
-                    className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
-                      columnWidth === w
-                        ? "bg-fyrescribe-raised text-foreground"
-                        : "text-text-dimmed hover:text-text-secondary"
-                    }`}
-                  >
-                    {w.charAt(0).toUpperCase() + w.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <div className="w-px h-4 bg-border mx-1" />
+            <div className="flex items-center gap-1 flex-1">
+              {formattingControls}
+              <div className="flex-1" />
               <button
                 onClick={() => setFocusMode(true)}
                 className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
@@ -956,11 +924,6 @@ const ManuscriptPage = () => {
                 <Maximize size={14} />
                 Focus
               </button>
-            </div>
-            <div className="text-text-dimmed text-xs" style={labelStyle}>
-              {activeChapter && activeScene
-                ? `Ch ${activeChapter.order} · ${activeScene.title}`
-                : "—"}
             </div>
           </div>
 
