@@ -208,6 +208,18 @@ const ManuscriptPage = () => {
     large: "text-[24px] leading-[2.0]",
     xl: "text-[28px] leading-[2.1]",
   };
+  const SCENE_TITLE_CLASSES: Record<TextSize, string> = {
+    small: "text-[24px]",
+    medium: "text-[30px]",
+    large: "text-[36px]",
+    xl: "text-[42px]",
+  };
+  const CHAPTER_TITLE_CLASSES: Record<TextSize, string> = {
+    small: "text-[32px]",
+    medium: "text-[40px]",
+    large: "text-[48px]",
+    xl: "text-[56px]",
+  };
   const [textSize, setTextSize] = useState<TextSize>("medium");
 
   type ColumnWidth = "narrow" | "wide" | "full";
