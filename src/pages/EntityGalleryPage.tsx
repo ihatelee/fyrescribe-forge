@@ -4,6 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import LoreUploadModal from "@/components/LoreUploadModal";
+import LinkLoreModal from "@/components/LinkLoreModal";
 import ModalSelect from "@/components/ModalSelect";
 import {
   Plus,
