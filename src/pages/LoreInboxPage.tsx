@@ -267,7 +267,8 @@ const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps)
         <div className="mt-3 space-y-2.5">
           {/* Populated At a Glance fields */}
           {(() => {
-            const populated = Object.entries(payload.fields ?? {}).filter(([, v]) => v.trim());
+            const fields = (payload as unknown as Record<string, unknown>).fields as Record<string, string> | undefined;
+            const populated = Object.entries(fields ?? {}).filter(([, v]) => typeof v === "string" && v.trim());
             if (!populated.length) return null;
             return (
               <div>
@@ -278,7 +279,7 @@ const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps)
                   {populated.map(([k, v]) => (
                     <div key={k} className="flex gap-1.5 min-w-0">
                       <span className="text-[11px] text-text-dimmed shrink-0">{k}:</span>
-                      <span className="text-[11px] text-text-secondary truncate">{v}</span>
+                      <span className="text-[11px] text-text-secondary truncate">{String(v)}</span>
                     </div>
                   ))}
                 </div>
