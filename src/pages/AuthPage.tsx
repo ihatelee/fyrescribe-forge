@@ -21,9 +21,7 @@ const AuthPage = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [showIntro, setShowIntro] = useState(() => {
-    return !sessionStorage.getItem(AUTH_INTRO_KEY);
-  });
+  const [showIntro] = useState(true);
   const [introComplete, setIntroComplete] = useState(false);
 
   useEffect(() => {
@@ -66,7 +64,6 @@ const AuthPage = () => {
   };
 
   const handleIntroComplete = () => {
-    sessionStorage.setItem(AUTH_INTRO_KEY, "1");
     setIntroComplete(true);
   };
 
@@ -84,8 +81,8 @@ const AuthPage = () => {
       >
         <div className="flex flex-col items-center gap-3">
           <img src={logoSrc} alt="Fyrescribe" className="h-16" />
-          <p className="text-muted-foreground text-lg font-semibold italic font-['EB_Garamond']">
-            Tell us a tale beside the fire
+          <p className="text-muted-foreground text-lg font-normal font-['EB_Garamond']">
+            Tell us a tale beside the fyre
           </p>
         </div>
 
