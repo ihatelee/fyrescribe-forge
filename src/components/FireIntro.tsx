@@ -177,7 +177,7 @@ const FireIntro = ({ onComplete }: FireIntroProps) => {
             <motion.img
               src={logoSrc}
               alt="Fyrescribe"
-              className="h-12 md:h-16 relative z-10"
+              className="h-24 md:h-32 relative z-10"
               style={{
                 filter: "drop-shadow(0 0 20px hsla(30, 100%, 50%, 0.5)) drop-shadow(0 0 40px hsla(20, 100%, 40%, 0.3))",
               }}
@@ -187,12 +187,12 @@ const FireIntro = ({ onComplete }: FireIntroProps) => {
             />
 
             <motion.p
-              className="text-muted-foreground text-sm italic font-['EB_Garamond'] relative z-10"
+              className="text-muted-foreground text-2xl md:text-3xl font-normal font-['EB_Garamond'] relative z-10"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 2, ease: "easeOut" }}
             >
-              Tell us a tale beside the fire
+              Tell us a tale beside the fyre
             </motion.p>
           </motion.div>
         </motion.div>
