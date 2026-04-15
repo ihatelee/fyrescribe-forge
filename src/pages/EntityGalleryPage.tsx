@@ -399,6 +399,13 @@ const EntityGalleryPage = () => {
             {activeProject && (
               <>
                 <button
+                  onClick={() => setShowLinkModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 border border-border text-sm text-text-secondary rounded-lg hover:text-foreground hover:border-text-dimmed transition-colors"
+                >
+                  <Link2 size={14} />
+                  Link Lore
+                </button>
+                <button
                   onClick={() => setShowUploadModal(true)}
                   className="flex items-center gap-2 px-3 py-1.5 border border-border text-sm text-text-secondary rounded-lg hover:text-foreground hover:border-text-dimmed transition-colors"
                 >
