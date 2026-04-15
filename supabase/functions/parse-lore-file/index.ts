@@ -12,7 +12,8 @@ const corsHeaders = {
 // ---------------------------------------------------------------------------
 async function extractTextFromPdf(bytes: Uint8Array): Promise<string> {
   const { text } = await extractText(bytes);
-  return text.slice(0, 8000);
+  const combined = Array.isArray(text) ? text.join("\n") : text;
+  return combined.slice(0, 8000);
 }
 
 // ---------------------------------------------------------------------------
