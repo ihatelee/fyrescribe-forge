@@ -83,8 +83,8 @@ const AuthPage = () => {
         transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
       >
         <div className="flex flex-col items-center gap-3">
-          <img src={logoSrc} alt="Fyrescribe" className="h-8" />
-          <p className="text-muted-foreground text-sm italic font-['EB_Garamond']">
+          <img src={logoSrc} alt="Fyrescribe" className="h-16" />
+          <p className="text-muted-foreground text-lg font-semibold italic font-['EB_Garamond']">
             Tell us a tale beside the fire
           </p>
         </div>
