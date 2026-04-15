@@ -122,9 +122,11 @@ const ThesaurusPanel = ({
 const EditableSceneTitle = ({
   scene,
   onSave,
+  sizeClass = "text-sm",
 }: {
   scene: Scene | undefined;
   onSave: (id: string, title: string) => void;
+  sizeClass?: string;
 }) => {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
@@ -155,7 +157,7 @@ const EditableSceneTitle = ({
           if (e.key === "Enter") commit();
           if (e.key === "Escape") setEditing(false);
         }}
-        className="font-display text-sm text-gold mb-6 tracking-wide bg-transparent border-b border-gold/50 outline-none w-full"
+        className={`font-display ${sizeClass} text-gold mb-6 tracking-wide bg-transparent border-b border-gold/50 outline-none w-full`}
       />
     );
   }
@@ -163,7 +165,7 @@ const EditableSceneTitle = ({
   return (
     <div
       onClick={start}
-      className="font-display text-sm text-gold mb-6 tracking-wide cursor-text hover:border-b hover:border-gold/30 inline-block"
+      className={`font-display ${sizeClass} text-gold mb-6 tracking-wide cursor-text hover:border-b hover:border-gold/30 inline-block`}
       title="Click to rename"
     >
       {scene.title}
