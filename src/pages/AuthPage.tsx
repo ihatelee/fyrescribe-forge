@@ -85,13 +85,13 @@ const AuthPage = () => {
         <div className="flex flex-col items-center gap-3">
           <img src={logoSrc} alt="Fyrescribe" className="h-8" />
           <p className="text-muted-foreground text-sm italic font-['EB_Garamond']">
-            Your world. Your words. Your lore.
+            Tell us a tale beside the fire
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4 bg-card border border-border rounded-xl p-6">
           <h2 className="text-foreground text-lg font-semibold text-center font-['Cinzel']">
-            {isSignUp ? "Create Account" : "Welcome Back"}
+            {isSignUp ? "Create Account" : "Welcome"}
           </h2>
 
           {error && (
