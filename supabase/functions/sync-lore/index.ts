@@ -259,7 +259,6 @@ async function syncProject(
         ).trim();
         return {
           project_id: projectId,
-          scene_id: s.scene_id ?? null,
           type: "new_entity" as const,
           payload: {
             type: s.type,
@@ -268,9 +267,9 @@ async function syncProject(
             description,
             source_sentence: s.source_sentence?.trim() ?? null,
             source_location: s.source_location?.trim() ?? null,
+            scene_id: s.scene_id ?? null,
             sections,
             at_a_glance,
-            /** Stamped server-side — never AI-generated. */
             first_mentioned: s.source_sentence?.trim() ?? null,
             first_appearance: s.scene_id ?? null,
           },
