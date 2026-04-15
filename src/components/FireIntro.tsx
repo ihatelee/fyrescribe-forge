@@ -192,7 +192,7 @@ const FireIntro = ({ onComplete }: FireIntroProps) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 2, ease: "easeOut" }}
             >
-              Your world. Your words. Your lore.
+              Tell us a tale beside the fire
             </motion.p>
           </motion.div>
         </motion.div>
