@@ -122,9 +122,11 @@ const ThesaurusPanel = ({
 const EditableSceneTitle = ({
   scene,
   onSave,
+  sizeClass = "text-sm",
 }: {
   scene: Scene | undefined;
   onSave: (id: string, title: string) => void;
+  sizeClass?: string;
 }) => {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
@@ -155,7 +157,7 @@ const EditableSceneTitle = ({
           if (e.key === "Enter") commit();
           if (e.key === "Escape") setEditing(false);
         }}
-        className="font-display text-sm text-gold mb-6 tracking-wide bg-transparent border-b border-gold/50 outline-none w-full"
+        className={`font-display ${sizeClass} text-gold mb-6 tracking-wide bg-transparent border-b border-gold/50 outline-none w-full`}
       />
     );
   }
@@ -163,7 +165,7 @@ const EditableSceneTitle = ({
   return (
     <div
       onClick={start}
-      className="font-display text-sm text-gold mb-6 tracking-wide cursor-text hover:border-b hover:border-gold/30 inline-block"
+      className={`font-display ${sizeClass} text-gold mb-6 tracking-wide cursor-text hover:border-b hover:border-gold/30 inline-block`}
       title="Click to rename"
     >
       {scene.title}
@@ -207,6 +209,18 @@ const ManuscriptPage = () => {
     medium: "text-[20px] leading-[1.9]",
     large: "text-[24px] leading-[2.0]",
     xl: "text-[28px] leading-[2.1]",
+  };
+  const SCENE_TITLE_CLASSES: Record<TextSize, string> = {
+    small: "text-[24px]",
+    medium: "text-[30px]",
+    large: "text-[36px]",
+    xl: "text-[42px]",
+  };
+  const CHAPTER_TITLE_CLASSES: Record<TextSize, string> = {
+    small: "text-[32px]",
+    medium: "text-[40px]",
+    large: "text-[48px]",
+    xl: "text-[56px]",
   };
   const [textSize, setTextSize] = useState<TextSize>("medium");
 
@@ -608,7 +622,12 @@ const ManuscriptPage = () => {
         </div>
         <div className="flex-1 flex justify-center overflow-y-auto pb-24 relative">
           <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
-            <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} />
+            {activeChapter && (
+              <h1 className={`font-display ${CHAPTER_TITLE_CLASSES[textSize]} text-foreground/90 mb-2 tracking-wide`}>
+                {activeChapter.title}
+              </h1>
+            )}
+            <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} sizeClass={SCENE_TITLE_CLASSES[textSize]} />
             <div
               key={activeSceneId ?? "empty"}
               ref={makeEditorRef(focusEditorRef)}
@@ -866,7 +885,12 @@ const ManuscriptPage = () => {
                 </div>
               ) : (
                 <>
-                  <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} />
+                  {activeChapter && (
+                    <h1 className={`font-display ${CHAPTER_TITLE_CLASSES[textSize]} text-foreground/90 mb-2 tracking-wide`}>
+                      {activeChapter.title}
+                    </h1>
+                  )}
+                  <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} sizeClass={SCENE_TITLE_CLASSES[textSize]} />
                   <div
                     key={activeSceneId}
                     ref={makeEditorRef(editorRef)}
