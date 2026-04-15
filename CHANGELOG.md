@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-14 (session 21 — Task 4)
+
+### sync-lore extracts structured sections + at_a_glance per entity type
+
+- `supabase/functions/sync-lore/index.ts` — removed dead `CATEGORY_FIELDS`/`CATEGORY_SECTIONS` constants; updated `AISuggestion` interface: dropped `description`, added `sections: Record<string,string>` (article body) and `at_a_glance: Record<string,string>` (short facts); rebuilt `buildPrompt` to request per-type allowed keys for both objects (e.g. character sections = Overview/Background/Personality/Relationships, at_a_glance = Place of Birth/Eye Color/etc.) with evidence-only inclusion; row builder derives `description` from `sections.Overview ?? sections.Description`; stamps `first_mentioned = source_sentence` and `first_appearance = scene_id` server-side into payload (never AI-generated); auth switched from `getClaims` → `getUser` (Lovable fix); `scene_id` moved inside payload (Lovable fix); insert error now logged.
+- `src/pages/LoreInboxPage.tsx` — `SuggestionPayload` interface updated: replaced `fields` with `at_a_glance`, added `first_mentioned` and `first_appearance`; removed `CATEGORY_FIELDS` constant; `handleAccept` now builds `fieldsToWrite` from `payload.at_a_glance` directly, appends `First Mentioned` and (for characters) `First Appearance` from server-stamped values; no longer depends on any hardcoded field-key list.
+
+---
+
 ## 2026-04-14 (session 21 — Task 3)
 
 ### sync-lore emits all 4 suggestion types + scene_id on every row
