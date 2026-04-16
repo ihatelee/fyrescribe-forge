@@ -427,6 +427,12 @@ const ManuscriptPage = () => {
     await supabase.from("scenes").update({ title: newTitle }).eq("id", sceneId);
   };
 
+  const handlePOVChange = (sceneId: string, povCharacterId: string | null) => {
+    setScenes((prev) =>
+      prev.map((s) => (s.id === sceneId ? { ...s, pov_character_id: povCharacterId } : s)),
+    );
+  };
+
   const toggleChapter = (id: string) => {
     setExpandedChapters((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
