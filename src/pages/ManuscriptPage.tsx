@@ -8,6 +8,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { stripRtf, parseManuscript } from "@/lib/manuscriptParser";
 import OutrunMusicPlayer from "@/components/OutrunMusicPlayer";
+import POVSelector from "@/components/POVSelector";
 import {
   Bold,
   Italic,
