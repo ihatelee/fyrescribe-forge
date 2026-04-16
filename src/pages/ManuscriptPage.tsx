@@ -8,6 +8,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { stripRtf, parseManuscript } from "@/lib/manuscriptParser";
 import OutrunMusicPlayer from "@/components/OutrunMusicPlayer";
+import POVSelector from "@/components/POVSelector";
 import {
   Bold,
   Italic,
@@ -424,6 +425,12 @@ const ManuscriptPage = () => {
   const handleSceneTitleSave = async (sceneId: string, newTitle: string) => {
     setScenes((prev) => prev.map((s) => s.id === sceneId ? { ...s, title: newTitle } : s));
     await supabase.from("scenes").update({ title: newTitle }).eq("id", sceneId);
+  };
+
+  const handlePOVChange = (sceneId: string, povCharacterId: string | null) => {
+    setScenes((prev) =>
+      prev.map((s) => (s.id === sceneId ? { ...s, pov_character_id: povCharacterId } : s)),
+    );
   };
 
   const toggleChapter = (id: string) => {
@@ -956,6 +963,13 @@ const ManuscriptPage = () => {
             <div className="flex items-center gap-1 flex-1">
               {formattingControls}
               <div className="flex-1" />
+              <POVSelector
+                projectId={projectId}
+                sceneId={activeSceneId}
+                povCharacterId={activeScene?.pov_character_id ?? null}
+                onChange={handlePOVChange}
+              />
+              <div className="w-px h-4 bg-border mx-1" />
               <button
                 onClick={() => setFocusMode(true)}
                 className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
