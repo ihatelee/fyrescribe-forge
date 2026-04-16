@@ -963,6 +963,13 @@ const ManuscriptPage = () => {
             <div className="flex items-center gap-1 flex-1">
               {formattingControls}
               <div className="flex-1" />
+              <POVSelector
+                projectId={projectId}
+                sceneId={activeSceneId}
+                povCharacterId={activeScene?.pov_character_id ?? null}
+                onChange={handlePOVChange}
+              />
+              <div className="w-px h-4 bg-border mx-1" />
               <button
                 onClick={() => setFocusMode(true)}
                 className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
