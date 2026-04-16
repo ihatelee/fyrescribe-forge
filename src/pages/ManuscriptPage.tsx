@@ -22,18 +22,6 @@ import {
 
 // ─── Utilities ────────────────────────────────────────────────────────
 
-const THESAURUS_DATA: Record<string, string[]> = {
-  wind: ["gale", "breeze", "gust", "zephyr", "draft", "squall"],
-  blade: ["sword", "knife", "edge", "dagger", "steel", "cutlass"],
-  cold: ["frigid", "icy", "bitter", "frozen", "chilling", "glacial"],
-  dark: ["shadowy", "dim", "murky", "gloomy", "obsidian", "tenebrous"],
-  stone: ["rock", "granite", "slab", "boulder", "masonry", "bedrock"],
-  fire: ["flame", "blaze", "inferno", "pyre", "ember", "conflagration"],
-  fear: ["dread", "terror", "horror", "panic", "fright", "apprehension"],
-  wall: ["barrier", "rampart", "bulwark", "fortification", "partition"],
-  old: ["ancient", "aged", "venerable", "archaic", "primordial", "antique"],
-  voice: ["tone", "utterance", "whisper", "murmur", "call", "cry"],
-};
 
 const countWords = (html: string): number => {
   const text = html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").trim();
@@ -66,11 +54,13 @@ interface Scene {
 const ThesaurusPanel = ({
   word,
   synonyms,
+  loading,
   onClose,
   onReplace,
 }: {
   word: string;
   synonyms: string[];
+  loading: boolean;
   onClose: () => void;
   onReplace: (s: string) => void;
 }) => (
@@ -87,7 +77,11 @@ const ThesaurusPanel = ({
       {word ? (
         <>
           <div className="text-sm text-foreground mb-1 font-display">"{word}"</div>
-          {synonyms.length > 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 size={16} className="animate-spin text-text-dimmed" />
+            </div>
+          ) : synonyms.length > 0 ? (
             <>
               <div className="text-[10px] uppercase tracking-widest text-text-dimmed mb-3">Synonyms</div>
               <div className="space-y-1.5">
@@ -110,7 +104,7 @@ const ThesaurusPanel = ({
         </>
       ) : (
         <p className="text-text-dimmed text-xs">
-          Select a word in the editor, then click Thesaurus to see synonyms.
+          Select a word in the editor to see synonyms.
         </p>
       )}
     </div>
@@ -196,6 +190,8 @@ const ManuscriptPage = () => {
   const [thesaurusOpen, setThesaurusOpen] = useState(false);
   const [thesaurusWord, setThesaurusWord] = useState("");
   const [thesaurusSynonyms, setThesaurusSynonyms] = useState<string[]>([]);
+  const [thesaurusLoading, setThesaurusLoading] = useState(false);
+  const savedRangeRef = useRef<Range | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -545,28 +541,58 @@ const ManuscriptPage = () => {
     document.execCommand(command, false);
   }, []);
 
-  const handleThesaurus = useCallback(() => {
-    const word = window.getSelection()?.toString().trim().toLowerCase() || "";
-    setThesaurusWord(word);
-    setThesaurusSynonyms(word ? THESAURUS_DATA[word] || [] : []);
+  const handleThesaurus = useCallback(async () => {
+    const sel = window.getSelection();
+    const raw = sel?.toString().trim() ?? "";
+    const word = raw.toLowerCase().replace(/[^a-z'-]/g, "");
+    if (word.length < 3 || raw.includes(" ")) return;
+
+    savedRangeRef.current = (sel && sel.rangeCount > 0)
+      ? sel.getRangeAt(0).cloneRange()
+      : null;
+
+    setThesaurusWord(raw);
+    setThesaurusSynonyms([]);
+    setThesaurusLoading(true);
     setThesaurusOpen(true);
+
+    try {
+      const res = await fetch(
+        `https://api.datamuse.com/words?rel_syn=${encodeURIComponent(word)}&max=10`
+      );
+      const data: { word: string }[] = await res.json();
+      setThesaurusSynonyms(data.map((d) => d.word));
+    } catch {
+      setThesaurusSynonyms([]);
+    } finally {
+      setThesaurusLoading(false);
+    }
   }, []);
 
   const replaceWithSynonym = useCallback(
     (synonym: string) => {
       const editor = focusMode ? focusEditorRef.current : editorRef.current;
       if (!editor) return;
-      editor.focus();
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
+      const range = savedRangeRef.current;
+      if (range) {
+        editor.focus();
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
         range.deleteContents();
         range.insertNode(document.createTextNode(synonym));
-        selection.collapseToEnd();
+        sel?.collapseToEnd();
+        savedRangeRef.current = null;
+        const content = editor.innerHTML;
+        if (activeSceneId) {
+          contentCache.current.set(activeSceneId, content);
+          setWordCount(countWords(content));
+          saveScene(activeSceneId, content);
+        }
       }
       setThesaurusOpen(false);
     },
-    [focusMode]
+    [focusMode, activeSceneId, saveScene]
   );
 
   // ─── Shared editor ref callback ─────────────────────────────────────
@@ -731,16 +757,18 @@ const ManuscriptPage = () => {
             <div
               key={activeSceneId ?? "empty"}
               ref={makeEditorRef(focusEditorRef)}
-                    className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} ${LINE_HEIGHT_CLASSES[lineHeight]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
+              className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} ${LINE_HEIGHT_CLASSES[lineHeight]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
               contentEditable
               suppressContentEditableWarning
               onInput={handleEditorInput}
+              onMouseUp={handleThesaurus}
             />
           </div>
           {thesaurusOpen && (
             <ThesaurusPanel
               word={thesaurusWord}
               synonyms={thesaurusSynonyms}
+              loading={thesaurusLoading}
               onClose={() => setThesaurusOpen(false)}
               onReplace={replaceWithSynonym}
             />
@@ -956,6 +984,7 @@ const ManuscriptPage = () => {
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
+                    onMouseUp={handleThesaurus}
                   />
                 </>
               )}
@@ -967,6 +996,7 @@ const ManuscriptPage = () => {
             <ThesaurusPanel
               word={thesaurusWord}
               synonyms={thesaurusSynonyms}
+              loading={thesaurusLoading}
               onClose={() => setThesaurusOpen(false)}
               onReplace={replaceWithSynonym}
             />

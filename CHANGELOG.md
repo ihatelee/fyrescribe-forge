@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-16 — Thesaurus wired to Datamuse API
+
+- `src/pages/ManuscriptPage.tsx` — removed hardcoded `THESAURUS_DATA` dict; `handleThesaurus` now calls `https://api.datamuse.com/words?rel_syn=<word>&max=10` directly from the frontend (no edge function); returns early for words under 3 characters or multi-word selections; saves the selection `Range` before opening the panel so clicking a synonym (which blurs the editor) can still restore and replace it; `replaceWithSynonym` updated to use the saved range and trigger a debounced save after DOM mutation. `ThesaurusPanel` gains a `loading` prop that shows a spinner while the fetch is in flight. Both contentEditable divs (main editor + focus mode) wire `onMouseUp` to `handleThesaurus`, so double-clicking a word auto-fetches synonyms.
+
+---
+
 ## 2026-04-16 — LoreUploadModal writes entity_tags on create
 
 - `src/components/LoreUploadModal.tsx` — added `extractedTags` state; `handleImport` now captures `data.tags` from the `parse-lore-file` response (guards against absent/non-array values); `handleCreate` writes to `entity_tags` after inserting the entity row using the same upsert-or-create pattern as `LoreInboxPage.handleAccept` — fetches existing project tags by name, inserts only genuinely new ones, then bulk-inserts `entity_tags` rows. If no tags are returned, nothing is inserted.
