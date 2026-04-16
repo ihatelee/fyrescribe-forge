@@ -60,6 +60,7 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
   const [fields, setFields] = useState<ExtractedField[]>([]);
   const [extractedName, setExtractedName] = useState("");
   const [extractedSummary, setExtractedSummary] = useState("");
+  const [extractedTags, setExtractedTags] = useState<string[]>([]);
   const [createdEntityId, setCreatedEntityId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -104,6 +105,7 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
 
       setExtractedName(typeof data.name === "string" ? data.name : "");
       setExtractedSummary(typeof data.summary === "string" ? data.summary : "");
+      setExtractedTags(Array.isArray(data.tags) ? (data.tags as string[]).filter(Boolean) : []);
 
       const fieldEntries: ExtractedField[] = Object.entries(
         (data.fields ?? {}) as Record<string, string>,
@@ -166,6 +168,37 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
       setError("Failed to create entity. Please try again.");
       setState("fields_ready");
       return;
+    }
+
+    const tagNames = extractedTags.filter(Boolean);
+    if (tagNames.length > 0) {
+      const { data: existingTags } = await supabase
+        .from("tags")
+        .select("id, name")
+        .eq("project_id", projectId)
+        .in("name", tagNames);
+
+      const existingNameSet = new Set((existingTags ?? []).map((t) => t.name.toLowerCase()));
+      const newTagNames = tagNames.filter((n) => !existingNameSet.has(n.toLowerCase()));
+
+      let createdTags: { id: string }[] = [];
+      if (newTagNames.length > 0) {
+        const { data: inserted } = await supabase
+          .from("tags")
+          .insert(newTagNames.map((name) => ({ project_id: projectId, name })))
+          .select("id");
+        createdTags = inserted ?? [];
+      }
+
+      const allTagIds = [
+        ...(existingTags ?? []).map((t) => t.id),
+        ...createdTags.map((t) => t.id),
+      ];
+      if (allTagIds.length > 0) {
+        await supabase
+          .from("entity_tags")
+          .insert(allTagIds.map((tag_id) => ({ entity_id: data.id, tag_id })));
+      }
     }
 
     setCreatedEntityId(data.id);
