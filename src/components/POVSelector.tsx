@@ -19,9 +19,11 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
   const [characters, setCharacters] = useState<CharacterOption[]>([]);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Load accepted character entities for the project
+  // Load POV-flagged character entities for the project
   useEffect(() => {
     if (!projectId) {
       setCharacters([]);
@@ -34,6 +36,7 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
         .select("id, name")
         .eq("project_id", projectId)
         .eq("category", "characters")
+        .eq("is_pov_character", true)
         .is("archived_at", null)
         .order("name", { ascending: true });
       if (cancelled) return;
@@ -70,6 +73,15 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
 
   const selected = characters.find((c) => c.id === povCharacterId) ?? null;
 
+  const handleToggle = () => {
+    if (!sceneId) return;
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 6, left: rect.left });
+    }
+    setOpen((o) => !o);
+  };
+
   const handleSelect = async (nextId: string | null) => {
     setOpen(false);
     if (!sceneId || nextId === povCharacterId) return;
@@ -91,8 +103,9 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => sceneId && setOpen((o) => !o)}
+        onClick={handleToggle}
         disabled={!sceneId}
         title={selected ? `POV: ${selected.name}` : "Set point-of-view character"}
         className={cn(
@@ -110,11 +123,12 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
         />
       </button>
 
-      {open && (
+      {open && dropdownPos && (
         <div
           role="listbox"
+          style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left }}
           className={cn(
-            "absolute right-0 top-full mt-1.5 z-50",
+            "z-[9999]",
             "min-w-[200px] max-h-72 overflow-y-auto",
             "bg-fyrescribe-raised border border-border rounded-md shadow-xl",
             "animate-fade-in py-1",
@@ -143,7 +157,7 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
 
           {characters.length === 0 ? (
             <div className="px-3 py-2 text-[11px] text-text-dimmed">
-              No characters yet. Accept character lore suggestions to populate this list.
+              No POV characters set. Mark characters as POV on their entity pages.
             </div>
           ) : (
             characters.map((c) => {

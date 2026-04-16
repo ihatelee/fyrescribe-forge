@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-16 — POV dropdown: clipping fix, alignment fix, POV-only filter
+
+- `src/components/POVSelector.tsx` — three fixes in one file:
+  1. **Clipping (Fix 1)**: dropdown now uses `position: fixed` with coordinates computed from `buttonRef.getBoundingClientRect()` at open time, escaping any `overflow: hidden` ancestor (the table wrapper's `rounded-xl` clip).
+  2. **Alignment (Fix 2)**: fixed left edge aligns to the button's left edge rather than the container's right edge, sitting flush in its column.
+  3. **POV-only filter (Fix 3)**: query now adds `.eq("is_pov_character", true)`; empty state message updated to "No POV characters set. Mark characters as POV on their entity pages."
+
+---
+
 ## 2026-04-16 — POV Tracker dropdown + POV Character checkbox
 
 **POV Tracker dropdown styling**
