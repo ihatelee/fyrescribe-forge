@@ -4,8 +4,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check } from "lucide-react";
 import type { Json, Database } from "@/integrations/supabase/types";
+import { cn } from "@/lib/utils";
 
 type EntityCategory = Database["public"]["Enums"]["entity_category"];
 
@@ -629,6 +630,43 @@ const EntityDetailInner = () => {
       <div className="p-6 max-w-5xl relative">
         {/* Top-right controls */}
         <div className="absolute top-4 right-4 flex items-center gap-2">
+          {/* POV Character toggle — characters only */}
+          {entity.category === "characters" && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPovCharacter}
+              onClick={async () => {
+                const next = !isPovCharacter;
+                setIsPovCharacter(next);
+                const { error } = await supabase
+                  .from("entities")
+                  .update({ is_pov_character: next })
+                  .eq("id", entity.id);
+                if (error) {
+                  console.error("Failed to update POV flag:", error);
+                  setIsPovCharacter(!next);
+                }
+              }}
+              title={isPovCharacter ? "POV character — click to unmark" : "Mark as POV character"}
+              className={cn(
+                "h-8 px-2.5 rounded-full border flex items-center gap-1.5 text-[11px] uppercase tracking-wider transition-colors",
+                isPovCharacter
+                  ? "bg-gold/10 border-gold/40 text-gold hover:bg-gold/15"
+                  : "bg-fyrescribe-raised border-border text-text-dimmed hover:text-foreground hover:border-gold/30",
+              )}
+            >
+              <span
+                className={cn(
+                  "w-3 h-3 rounded-sm border flex items-center justify-center transition-colors",
+                  isPovCharacter ? "bg-gold border-gold" : "border-text-dimmed",
+                )}
+              >
+                {isPovCharacter && <Check size={10} className="text-fyrescribe-raised" strokeWidth={3} />}
+              </span>
+              POV
+            </button>
+          )}
           {/* Actions menu */}
           <div className="relative">
             <button
@@ -649,29 +687,6 @@ const EntityDetailInner = () => {
               </div>
             )}
           </div>
-          {/* POV Character toggle — characters only */}
-          {entity.category === "characters" && (
-            <label className="flex items-center gap-1.5 cursor-pointer select-none">
-              <span className="text-[11px] text-text-dimmed whitespace-nowrap">POV Character?</span>
-              <input
-                type="checkbox"
-                checked={isPovCharacter}
-                onChange={async (e) => {
-                  const next = e.target.checked;
-                  setIsPovCharacter(next);
-                  const { error } = await supabase
-                    .from("entities")
-                    .update({ is_pov_character: next })
-                    .eq("id", entity.id);
-                  if (error) {
-                    console.error("Failed to update POV flag:", error);
-                    setIsPovCharacter(!next);
-                  }
-                }}
-                className="w-3.5 h-3.5 accent-[hsl(var(--gold))] cursor-pointer"
-              />
-            </label>
-          )}
           {/* Close */}
           <button
             onClick={() => navigate(`/world/${entity.category}`)}

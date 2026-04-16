@@ -1,0 +1,1 @@
+ALTER TABLE public.entities ADD COLUMN IF NOT EXISTS is_pov_character boolean NOT NULL DEFAULT false;

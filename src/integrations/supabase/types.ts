@@ -74,6 +74,7 @@ export type Database = {
           gallery_image_urls: string[] | null
           id: string
           is_dirty: boolean | null
+          is_pov_character: boolean
           name: string
           project_id: string
           sections: Json | null
@@ -89,6 +90,7 @@ export type Database = {
           gallery_image_urls?: string[] | null
           id?: string
           is_dirty?: boolean | null
+          is_pov_character?: boolean
           name: string
           project_id: string
           sections?: Json | null
@@ -104,6 +106,7 @@ export type Database = {
           gallery_image_urls?: string[] | null
           id?: string
           is_dirty?: boolean | null
+          is_pov_character?: boolean
           name?: string
           project_id?: string
           sections?: Json | null
