@@ -4,8 +4,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check } from "lucide-react";
 import type { Json, Database } from "@/integrations/supabase/types";
+import { cn } from "@/lib/utils";
 
 type EntityCategory = Database["public"]["Enums"]["entity_category"];
 
