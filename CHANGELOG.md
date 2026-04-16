@@ -4,6 +4,17 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-16 — POV Tracker dropdown + POV Character checkbox
+
+**POV Tracker dropdown styling**
+- `src/pages/POVTrackerPage.tsx` — replaced native `<select>` with `POVSelector` component; removed the now-redundant characters fetch and `saving` state (both handled inside `POVSelector`); `handlePovChange` simplified to a local state updater only. Dropdown now matches the manuscript editor POV control exactly.
+
+**POV Character checkbox on character sheets**
+- `supabase/migrations/20260416000100_add_is_pov_character_to_entities.sql` — `ADD COLUMN IF NOT EXISTS is_pov_character BOOLEAN DEFAULT false` on `entities`.
+- `src/pages/EntityDetailPage.tsx` — added `isPovCharacter` state, seeded from `dbEntity.is_pov_character` on fetch; added a "POV Character?" label + checkbox in the top-right controls area (between the MoreVertical menu and the X button), rendered only when `entity.category === 'characters'`; toggling writes `is_pov_character` immediately to Supabase with optimistic update and rollback on error.
+
+---
+
 ## 2026-04-16 — POV Tracker wired to live data
 
 - `supabase/migrations/20260416000000_add_pov_character_id_to_scenes.sql` — `ADD COLUMN IF NOT EXISTS pov_character_id UUID REFERENCES entities(id) ON DELETE SET NULL` on `scenes`.

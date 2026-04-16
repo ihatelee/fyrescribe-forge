@@ -364,6 +364,7 @@ const EntityDetailInner = () => {
   const [isLinkingMagic, setIsLinkingMagic] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [isPovCharacter, setIsPovCharacter] = useState(false);
 
   const sectionsRef = useRef<EntitySections>({});
   const sectionList = CATEGORY_SECTIONS[entity?.category || "characters"] || [];
@@ -382,6 +383,7 @@ const EntityDetailInner = () => {
         setEntity(dbEntity);
         setProjectId(dbEntity.project_id);
         setSummary(dbEntity.summary || "");
+        setIsPovCharacter(!!dbEntity.is_pov_character);
 
         // Structured fields: seed from CATEGORY_FIELDS if entity has none
         const existingFields = (dbEntity.fields as EntityFields) || {};
@@ -647,6 +649,29 @@ const EntityDetailInner = () => {
               </div>
             )}
           </div>
+          {/* POV Character toggle — characters only */}
+          {entity.category === "characters" && (
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <span className="text-[11px] text-text-dimmed whitespace-nowrap">POV Character?</span>
+              <input
+                type="checkbox"
+                checked={isPovCharacter}
+                onChange={async (e) => {
+                  const next = e.target.checked;
+                  setIsPovCharacter(next);
+                  const { error } = await supabase
+                    .from("entities")
+                    .update({ is_pov_character: next })
+                    .eq("id", entity.id);
+                  if (error) {
+                    console.error("Failed to update POV flag:", error);
+                    setIsPovCharacter(!next);
+                  }
+                }}
+                className="w-3.5 h-3.5 accent-[hsl(var(--gold))] cursor-pointer"
+              />
+            </label>
+          )}
           {/* Close */}
           <button
             onClick={() => navigate(`/world/${entity.category}`)}
