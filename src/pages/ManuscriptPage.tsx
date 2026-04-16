@@ -557,10 +557,13 @@ const ManuscriptPage = () => {
     setThesaurusOpen(true);
 
     try {
-      const res = await fetch(
-        `https://api.datamuse.com/words?rel_syn=${encodeURIComponent(word)}&max=10`
-      );
-      const data: { word: string }[] = await res.json();
+      const encoded = encodeURIComponent(word);
+      let res = await fetch(`https://api.datamuse.com/words?rel_syn=${encoded}&max=10`);
+      let data: { word: string }[] = await res.json();
+      if (data.length === 0) {
+        res = await fetch(`https://api.datamuse.com/words?ml=${encoded}&max=10`);
+        data = await res.json();
+      }
       setThesaurusSynonyms(data.map((d) => d.word));
     } catch {
       setThesaurusSynonyms([]);

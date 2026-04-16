@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-16 — Thesaurus: fallback to `ml` query for common words
+
+- `src/pages/ManuscriptPage.tsx` `handleThesaurus` — if the `rel_syn` (strict synonyms) query returns no results, immediately falls back to a `ml` (means-like) query against the same word. Fixes zero-result lookups for common words like "branch", "river", "stumbled". Strict synonyms are still returned when available.
+
+---
+
 ## 2026-04-16 — Thesaurus wired to Datamuse API
 
 - `src/pages/ManuscriptPage.tsx` — removed hardcoded `THESAURUS_DATA` dict; `handleThesaurus` now calls `https://api.datamuse.com/words?rel_syn=<word>&max=10` directly from the frontend (no edge function); returns early for words under 3 characters or multi-word selections; saves the selection `Range` before opening the panel so clicking a synonym (which blurs the editor) can still restore and replace it; `replaceWithSynonym` updated to use the saved range and trigger a debounced save after DOM mutation. `ThesaurusPanel` gains a `loading` prop that shows a spinner while the fetch is in flight. Both contentEditable divs (main editor + focus mode) wire `onMouseUp` to `handleThesaurus`, so double-clicking a word auto-fetches synonyms.
