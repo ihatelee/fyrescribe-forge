@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-16 — Thesaurus: button-triggered only (no auto-open on selection)
+
+- `src/pages/ManuscriptPage.tsx` — removed `onMouseUp={handleThesaurus}` from both contentEditable divs; added a "Thesaurus" toolbar button (`BookOpen` icon) to `formattingControls` so it appears in both the main editor and focus mode toolbars. The range is now captured at button-click time; the selection persists as an inactive selection after the button receives focus, so `savedRangeRef` logic is unchanged.
+
+---
+
 ## 2026-04-16 — Thesaurus: fallback to `ml` query for common words
 
 - `src/pages/ManuscriptPage.tsx` `handleThesaurus` — if the `rel_syn` (strict synonyms) query returns no results, immediately falls back to a `ml` (means-like) query against the same word. Fixes zero-result lookups for common words like "branch", "river", "stumbled". Strict synonyms are still returned when available.

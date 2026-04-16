@@ -11,7 +11,7 @@ import OutrunMusicPlayer from "@/components/OutrunMusicPlayer";
 import {
   Bold,
   Italic,
-  
+  BookOpen,
   Maximize,
   ChevronRight,
   FileText,
@@ -732,6 +732,15 @@ const ManuscriptPage = () => {
       <LineHeightSelector />
       <div className="w-px h-4 bg-border mx-1" />
       <ColumnWidthSelector />
+      <div className="w-px h-4 bg-border mx-1" />
+      <button
+        onClick={handleThesaurus}
+        title="Thesaurus — select a word first"
+        className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
+      >
+        <BookOpen size={14} />
+        Thesaurus
+      </button>
     </div>
   );
 
@@ -764,7 +773,6 @@ const ManuscriptPage = () => {
               contentEditable
               suppressContentEditableWarning
               onInput={handleEditorInput}
-              onMouseUp={handleThesaurus}
             />
           </div>
           {thesaurusOpen && (
@@ -987,8 +995,7 @@ const ManuscriptPage = () => {
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
-                    onMouseUp={handleThesaurus}
-                  />
+                        />
                 </>
               )}
             </div>
