@@ -119,7 +119,9 @@ const Sidebar = () => {
 
   const isActive = (path: string) => {
     if (path.startsWith("/world/")) return location.pathname.startsWith(path);
-    return location.pathname === path;
+    if (location.pathname === path) return true;
+    const segment = path.replace(/^\//, "");
+    return location.pathname.endsWith(`/${segment}`);
   };
 
   const NavItem = ({ label, path, icon: Icon }: { label: string; path: string; icon: PhosphorIcon }) => {

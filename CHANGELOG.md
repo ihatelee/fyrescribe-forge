@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-16 — Sidebar active state fix
+
+- `src/components/Sidebar.tsx` `isActive` — added fallback check: if the exact path doesn't match, test whether the pathname ends with `/<segment>`. Fixes the Manuscript nav item showing as inactive when the app lands on `/project/:projectId/manuscript` (the route used after project selection and onboarding).
+
+---
+
 ## 2026-04-14 (session 21 — Task 4)
 
 ### sync-lore extracts structured sections + at_a_glance per entity type
