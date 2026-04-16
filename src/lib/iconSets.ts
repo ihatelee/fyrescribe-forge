@@ -3,6 +3,7 @@ import {
   // Fantasy (default)
   BookOpenText as FantasyManuscript,
   Hourglass as FantasyTimeline,
+  Eye as FantasyPov,
   User as FantasyCharacters,
   Mountains as FantasyPlaces,
   CalendarBlank as FantasyEvents,
@@ -17,6 +18,7 @@ import {
   // Sci-fi
   Terminal as SciFiManuscript,
   Timer as SciFiTimeline,
+  Eye as SciFiPov,
   UserCircleGear as SciFiCharacters,
   Planet as SciFiPlaces,
   CalendarStar as SciFiEvents,
@@ -31,6 +33,7 @@ import {
   // Standard
   FileText as StdManuscript,
   Clock as StdTimeline,
+  Eye as StdPov,
   Users as StdCharacters,
   MapPin as StdPlaces,
   CalendarBlank as StdEvents,
@@ -49,6 +52,7 @@ export type IconSetName = "fantasy" | "scifi" | "standard";
 export interface IconSet {
   manuscript: PhosphorIcon;
   timeline: PhosphorIcon;
+  pov: PhosphorIcon;
   characters: PhosphorIcon;
   places: PhosphorIcon;
   events: PhosphorIcon;
@@ -66,6 +70,7 @@ export const ICON_SETS: Record<IconSetName, IconSet> = {
   fantasy: {
     manuscript: FantasyManuscript,
     timeline: FantasyTimeline,
+    pov: FantasyPov,
     characters: FantasyCharacters,
     places: FantasyPlaces,
     events: FantasyEvents,
@@ -81,6 +86,7 @@ export const ICON_SETS: Record<IconSetName, IconSet> = {
   scifi: {
     manuscript: SciFiManuscript,
     timeline: SciFiTimeline,
+    pov: SciFiPov,
     characters: SciFiCharacters,
     places: SciFiPlaces,
     events: SciFiEvents,
@@ -96,6 +102,7 @@ export const ICON_SETS: Record<IconSetName, IconSet> = {
   standard: {
     manuscript: StdManuscript,
     timeline: StdTimeline,
+    pov: StdPov,
     characters: StdCharacters,
     places: StdPlaces,
     events: StdEvents,

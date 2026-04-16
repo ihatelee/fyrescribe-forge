@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-16 — POV Tracker wired to live data
+
+- `supabase/migrations/20260416000000_add_pov_character_id_to_scenes.sql` — `ADD COLUMN IF NOT EXISTS pov_character_id UUID REFERENCES entities(id) ON DELETE SET NULL` on `scenes`.
+- `src/lib/iconSets.ts` — added `pov: Eye` to `IconSet` interface and all three icon sets (fantasy / scifi / standard).
+- `src/components/Sidebar.tsx` — added `"pov"` to `WRITE_KEYS`; label "POV Tracker", path `/pov-tracker`. Nav item now visible and active-state-aware.
+- `src/pages/POVTrackerPage.tsx` — full rewrite; fetches chapters, scenes, and character entities for the active project; renders a table grouped by chapter; each scene row has a POV dropdown populated from `entities` where `category = 'characters'`; selecting a character immediately writes `pov_character_id` to the scene row with a per-row saving spinner; blank option clears the value.
+
+---
+
 ## 2026-04-16 — Thesaurus: button-triggered only (no auto-open on selection)
 
 - `src/pages/ManuscriptPage.tsx` — removed `onMouseUp={handleThesaurus}` from both contentEditable divs; added a "Thesaurus" toolbar button (`BookOpen` icon) to `formattingControls` so it appears in both the main editor and focus mode toolbars. The range is now captured at button-click time; the selection persists as an inactive selection after the button receives focus, so `savedRangeRef` logic is unchanged.

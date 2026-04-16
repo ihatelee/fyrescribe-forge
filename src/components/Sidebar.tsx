@@ -7,14 +7,16 @@ import { useTheme } from "@/contexts/ThemeContext";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import LoreSearchModal from "@/components/LoreSearchModal";
 
-const WRITE_KEYS = ["manuscript", "timeline"] as const;
+const WRITE_KEYS = ["manuscript", "timeline", "pov"] as const;
 const WRITE_LABELS: Record<string, string> = {
   manuscript: "Manuscript",
   timeline: "Timeline",
+  pov: "POV Tracker",
 };
 const WRITE_PATHS: Record<string, string> = {
   manuscript: "/manuscript",
   timeline: "/timeline",
+  pov: "/pov-tracker",
 };
 
 const WORLD_KEYS = [

@@ -1,0 +1,2 @@
+ALTER TABLE public.scenes
+ADD COLUMN IF NOT EXISTS pov_character_id UUID REFERENCES entities(id) ON DELETE SET NULL;
