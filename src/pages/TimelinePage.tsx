@@ -16,6 +16,7 @@ interface TimelineEvent {
   type: TimelineEventType;
   project_id: string;
   entity_id: string | null;
+  significance_score: number | null;
 }
 
 const ERA_OPTIONS = [
@@ -57,6 +58,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
         date_sort: ERA_OPTIONS.find((o) => o.label === dateLabel)?.sort ?? 0,
         type,
         project_id: projectId,
+        significance_score: 10,
       })
       .select("*")
       .single();
@@ -205,6 +207,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
 const TimelinePage = () => {
   const { activeProject } = useActiveProject();
   const [filter, setFilter] = useState<"all" | TimelineEventType>("all");
+  const [majorOnly, setMajorOnly] = useState(true);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -253,8 +256,9 @@ const TimelinePage = () => {
     fetchEvents();
   }, [activeProject]);
 
-  const filtered =
-    filter === "all" ? events : events.filter((e) => e.type === filter);
+  const filtered = events
+    .filter((e) => filter === "all" || e.type === filter)
+    .filter((e) => !majorOnly || (e.significance_score ?? 5) >= 7);
 
   const handleGenerate = async () => {
     if (!activeProject) return;
@@ -446,24 +450,36 @@ const TimelinePage = () => {
           </div>
         )}
 
-        <div className="flex gap-2 mb-8">
-          {(["all", "world_history", "story_event"] as const).map((type) => (
-            <button
-              key={type}
-              onClick={() => setFilter(type)}
-              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                filter === type
-                  ? "border-gold text-gold bg-gold-glow"
-                  : "border-border text-text-secondary hover:text-foreground"
-              }`}
-            >
-              {type === "all"
-                ? "All"
-                : type === "world_history"
-                ? "World History"
-                : "Story Events"}
-            </button>
-          ))}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex gap-2">
+            {(["all", "world_history", "story_event"] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilter(type)}
+                className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                  filter === type
+                    ? "border-gold text-gold bg-gold-glow"
+                    : "border-border text-text-secondary hover:text-foreground"
+                }`}
+              >
+                {type === "all"
+                  ? "All"
+                  : type === "world_history"
+                  ? "World History"
+                  : "Story Events"}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setMajorOnly((v) => !v)}
+            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+              majorOnly
+                ? "border-gold text-gold bg-gold-glow"
+                : "border-border text-text-secondary hover:text-foreground"
+            }`}
+          >
+            {majorOnly ? "Major only (7+)" : "All events"}
+          </button>
         </div>
 
         {/* Timeline */}
@@ -476,7 +492,9 @@ const TimelinePage = () => {
             <div className="text-text-dimmed text-3xl mb-4 leading-none">✦</div>
             <p className="text-text-secondary text-sm mb-1">No timeline events yet</p>
             <p className="text-text-dimmed text-xs mb-6">
-              Add events manually or click "Generate from Lore" to build the timeline from your world-building entities and manuscript scenes.
+              {majorOnly && events.length > 0
+                ? `No major events (score 7+). Toggle "All events" to see everything.`
+                : `Add events manually or click "Generate from Lore" to build the timeline from your world-building entities and manuscript scenes.`}
             </p>
           </div>
         ) : (
@@ -533,6 +551,20 @@ const TimelinePage = () => {
                           >
                             {event.type === "world_history" ? "World History" : "Story Event"}
                           </span>
+                          {event.significance_score != null && (
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full tabular-nums ${
+                                event.significance_score >= 8
+                                  ? "bg-gold/10 text-gold"
+                                  : event.significance_score >= 5
+                                  ? "bg-fyrescribe-hover text-text-secondary"
+                                  : "bg-fyrescribe-hover text-text-dimmed"
+                              }`}
+                              title="Significance score"
+                            >
+                              {event.significance_score}/10
+                            </span>
+                          )}
                         </div>
                         <h3 className="font-display text-sm text-foreground">
                           {event.label}

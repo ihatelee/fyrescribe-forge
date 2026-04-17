@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Timeline significance threshold
+
+- `supabase/migrations/20260417100000_add_significance_score_to_timeline_events.sql` — adds `significance_score INTEGER DEFAULT 5` to `timeline_events`.
+- `supabase/functions/generate-timeline/index.ts` — updated AI prompt to return `significance_score` 1–10 per event (8–10: world-changing; 5–7: notable; 1–4: minor). Score is clamped 1–10 and persisted on insert. Events without a score fall back to 5.
+- `src/pages/TimelinePage.tsx` — added `majorOnly` state (default `true`) filtering to score ≥ 7. Toggle pill "Major only (7+)" / "All events" sits at the right of the filter bar. Score badge appears on each event card. Manually-added events default to score 10 so they always appear. Empty state message hints to toggle "All events" if the threshold is hiding results.
+
+---
+
 ## 2026-04-17 — Move category tag to bottom left of lore tile
 
 - `src/pages/EntityGalleryPage.tsx` — grid tile: removed category tag from the header row and repositioned it as `absolute bottom-3 left-3`, mirroring the delete button on the opposite corner. List view category position unchanged (already left-aligned in the row).

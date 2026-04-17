@@ -109,6 +109,7 @@ Return a JSON array only — no prose, no code fences. Each item must have:
 - "date_label": string (human-readable date/era, e.g. "Year 120", "Present day", "15 years ago")
 - "date_sort": number (integer for sorting; use 0 for ancient history, higher for more recent)
 - "type": "world_history" | "story_event"
+- "significance_score": integer 1–10 (8–10: world-changing events — battles, deaths, major discoveries, regime changes; 5–7: notable plot points and meaningful character moments; 1–4: minor scene events or background colour)
 
 Include world history events and story-level events separately. Aim for 6–14 events total. Output only the JSON array.`;
 
@@ -140,7 +141,7 @@ Include world history events and story-level events separately. Aim for 6–14 e
 
     // Strip any accidental code fences
     const jsonText = rawText.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
-    const events: { label: string; date_label: string; date_sort: number; type: string }[] =
+    const events: { label: string; date_label: string; date_sort: number; type: string; significance_score?: number }[] =
       JSON.parse(jsonText);
 
     // Validate and insert into timeline_events; match label → entity_id where possible
@@ -153,6 +154,9 @@ Include world history events and story-level events separately. Aim for 6–14 e
         date_sort: typeof e.date_sort === "number" ? e.date_sort : null,
         type: e.type as "world_history" | "story_event",
         entity_id: entityIdByName.get(e.label.toLowerCase()) ?? null,
+        significance_score: typeof e.significance_score === "number"
+          ? Math.min(10, Math.max(1, Math.round(e.significance_score)))
+          : 5,
       }));
 
     const { data: inserted, error: insertError } = await supabase
