@@ -443,18 +443,19 @@ const ManuscriptPage = () => {
       setChapters(chapterData);
       setScenes(sceneData);
 
+      // Default: expand all chapters; user can collapse manually
+      setExpandedChapters(chapterData.map((c) => c.id));
+
       // Auto-select: prefer scene from URL ?scene=<id>, otherwise first scene
       if (chapterData.length > 0) {
         const urlScene = targetSceneId ? sceneData.find((s) => s.id === targetSceneId) : null;
         if (urlScene) {
           setActiveSceneId(urlScene.id);
           setActiveChapterId(urlScene.chapter_id);
-          setExpandedChapters([urlScene.chapter_id]);
           setWordCount(urlScene.word_count ?? 0);
         } else {
           const first = chapterData[0];
           setActiveChapterId(first.id);
-          setExpandedChapters([first.id]);
           const firstScene = sceneData.find((s) => s.chapter_id === first.id);
           if (firstScene) {
             setActiveSceneId(firstScene.id);
