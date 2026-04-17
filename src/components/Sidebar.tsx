@@ -6,6 +6,7 @@ import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import LoreSearchModal from "@/components/LoreSearchModal";
+import LinkLoreModal from "@/components/LinkLoreModal";
 
 const WRITE_KEYS = ["manuscript", "timeline", "pov"] as const;
 const WRITE_LABELS: Record<string, string> = {
@@ -61,6 +62,7 @@ const Sidebar = () => {
   const [linkingLore, setLinkingLore] = useState(false);
   const [linkLoreMessage, setLinkLoreMessage] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [linkLoreModalOpen, setLinkLoreModalOpen] = useState(false);
 
   const fetchPendingCount = useCallback(async () => {
     if (!activeProject) {
@@ -173,6 +175,7 @@ const Sidebar = () => {
       setLinkLoreMessage(
         created != null ? `Found ${created} suggested link${created !== 1 ? "s" : ""}` : "Done",
       );
+      setLinkLoreModalOpen(true);
     } catch {
       setLinkLoreMessage("Link Lore failed");
     } finally {
@@ -356,6 +359,12 @@ const Sidebar = () => {
     </div>
 
     <LoreSearchModal open={searchOpen} onOpenChange={setSearchOpen} />
+    {linkLoreModalOpen && activeProject && (
+      <LinkLoreModal
+        projectId={activeProject.id}
+        onClose={() => setLinkLoreModalOpen(false)}
+      />
+    )}
     </>
   );
 };
