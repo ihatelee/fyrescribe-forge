@@ -1279,7 +1279,7 @@ const EntityDetailInner = () => {
         </div>
 
         {/* ===== BODY + AT A GLANCE ===== */}
-        <div className="flex flex-col-reverse lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Left: Article body */}
           <div className="flex-1 min-w-0">
             <div className="space-y-0">
