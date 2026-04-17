@@ -1251,7 +1251,7 @@ const ManuscriptPage = () => {
           </div>
 
           {/* Editor content */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto flex justify-center py-10">
+          <div ref={scrollContainerRef} className="relative z-10 flex-1 overflow-y-auto flex justify-center py-10">
             <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
