@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Upload,
   Link2,
+  Check,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -517,13 +518,13 @@ const EntityGalleryPage = () => {
                         className="flex items-center gap-1.5 cursor-pointer text-text-dimmed hover:text-destructive transition-colors"
                       >
                         <span className="text-[10px]">delete</span>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(entity.id)}
-                          onChange={(e) => { e.stopPropagation(); toggleSelectEntity(entity.id); }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer"
-                        />
+                        <span
+                          className={`w-3 h-3 rounded-sm border flex items-center justify-center transition-colors flex-shrink-0 ${
+                            selectedIds.has(entity.id) ? "bg-gold border-gold" : "border-text-dimmed"
+                          }`}
+                        >
+                          {selectedIds.has(entity.id) && <Check size={10} className="text-fyrescribe-raised" strokeWidth={3} />}
+                        </span>
                       </label>
                     </div>
                     <div className="absolute top-3 right-3">
@@ -618,13 +619,14 @@ const EntityGalleryPage = () => {
                         i !== 0 ? "border-t border-border" : ""
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(entity.id)}
-                        onChange={(e) => { e.stopPropagation(); toggleSelectEntity(entity.id); }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer flex-shrink-0"
-                      />
+                      <span
+                        onClick={(e) => { e.stopPropagation(); toggleSelectEntity(entity.id); }}
+                        className={`w-3 h-3 rounded-sm border flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer ${
+                          selectedIds.has(entity.id) ? "bg-gold border-gold" : "border-text-dimmed"
+                        }`}
+                      >
+                        {selectedIds.has(entity.id) && <Check size={10} className="text-fyrescribe-raised" strokeWidth={3} />}
+                      </span>
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 w-[80px] text-center ${
                           CATEGORY_COLORS[entity.category] || ""

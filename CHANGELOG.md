@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Lore tile delete checkbox styling
+
+- `src/pages/EntityGalleryPage.tsx` — replaced native `<input type="checkbox">` on both grid and list view tiles with a custom `<span>` matching the POV Character checkbox style exactly: 12×12 px, `rounded-sm`, `border-text-dimmed` unchecked, `bg-gold border-gold` with a white `Check` icon when checked.
+
+---
+
 ## 2026-04-17 — Notes editor font size control
 
 - `src/pages/NotesPage.tsx` — added `TextSizeSelector` (Small / Medium / Large / XL) to the notes toolbar, matching the manuscript editor control exactly. Editor body font size now responds to selection; defaults to Small (16 px) to match prior notes styling.
