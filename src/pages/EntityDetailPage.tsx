@@ -1476,10 +1476,58 @@ const EntityDetailInner = () => {
                 <div className="divide-y divide-border">
                   {allFieldKeys.map((key) => {
                     const value = fields[key] ?? "";
+                    const targetCategory = ENTITY_FIELD_MAP[key];
+                    const linkedForField = targetCategory
+                      ? linkedEntities.find((e) => e.relationship === key)
+                      : undefined;
+
                     return (
                       <div key={key} className="px-4 py-2.5">
                         <div className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1">{key}</div>
-                        {editingField === key ? (
+
+                        {/* ENTITY-PICKER FIELD */}
+                        {targetCategory ? (
+                          editingField === key ? (
+                            <EntityFieldPicker
+                              fieldKey={key}
+                              targetCategory={targetCategory}
+                              currentEntityId={id!}
+                              projectId={projectId}
+                              onSelect={(target) => handleSetEntityField(key, target)}
+                              onClose={() => setEditingField(null)}
+                            />
+                          ) : linkedForField ? (
+                            <div className="flex items-center gap-1.5 group">
+                              <button
+                                onClick={() => navigate(`/entity/${linkedForField.id}`)}
+                                className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border border-border hover:border-gold/40 transition-colors ${CATEGORY_COLORS[linkedForField.category] || "bg-fyrescribe-hover text-foreground"}`}
+                              >
+                                <span className="font-display truncate max-w-[150px]">{linkedForField.name}</span>
+                              </button>
+                              <button
+                                onClick={() => setEditingField(key)}
+                                className="text-text-dimmed hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Change"
+                              >
+                                <Pencil size={10} />
+                              </button>
+                              <button
+                                onClick={() => handleClearEntityField(key)}
+                                className="text-text-dimmed hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Clear"
+                              >
+                                <X size={11} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setEditingField(key)}
+                              className="text-sm text-text-dimmed hover:text-text-secondary transition-colors text-left w-full"
+                            >
+                              —
+                            </button>
+                          )
+                        ) : /* FREE-TEXT FIELD */ editingField === key ? (
                           <input
                             autoFocus
                             value={editingFieldValue}
@@ -1488,8 +1536,20 @@ const EntityDetailInner = () => {
                             onKeyDown={(e) => e.key === "Enter" && handleSaveFieldEdit(key)}
                             className="text-sm text-foreground bg-transparent border-b border-gold/40 outline-none w-full"
                           />
+                        ) : value ? (
+                          <button
+                            onClick={() => { setEditingField(key); setEditingFieldValue(value); }}
+                            className="text-sm text-foreground hover:text-gold-bright transition-colors text-left w-full"
+                          >
+                            {value}
+                          </button>
                         ) : (
-                          renderFieldValue(key, value)
+                          <button
+                            onClick={() => { setEditingField(key); setEditingFieldValue(""); }}
+                            className="text-sm text-text-dimmed hover:text-text-secondary transition-colors text-left w-full"
+                          >
+                            —
+                          </button>
                         )}
                       </div>
                     );
