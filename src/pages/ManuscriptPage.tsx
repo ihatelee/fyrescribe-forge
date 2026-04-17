@@ -9,6 +9,8 @@ import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { stripRtf, parseManuscript } from "@/lib/manuscriptParser";
 import OutrunMusicPlayer from "@/components/OutrunMusicPlayer";
 import POVSelector from "@/components/POVSelector";
+import SaveVersionPopover from "@/components/SaveVersionPopover";
+import VersionHistoryPanel, { SceneVersion } from "@/components/VersionHistoryPanel";
 import {
   Bold,
   Italic,
@@ -19,6 +21,8 @@ import {
   X,
   Plus,
   Loader2,
+  History,
+  BookmarkPlus,
 } from "lucide-react";
 
 // ─── Utilities ────────────────────────────────────────────────────────
@@ -252,6 +256,9 @@ const ManuscriptPage = () => {
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [saveVersionOpen, setSaveVersionOpen] = useState(false);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [versionToast, setVersionToast] = useState<string | null>(null);
 
   const [focusMode, setFocusMode] = useState(false);
   const [thesaurusOpen, setThesaurusOpen] = useState(false);
@@ -542,6 +549,94 @@ const ManuscriptPage = () => {
       }
     },
     1000
+  );
+
+  // ─── Versioning ─────────────────────────────────────────────────────
+
+  const handleSaveVersion = useCallback(
+    async (name: string) => {
+      if (!activeSceneId || !projectId || !activeScene) return;
+      // Use the freshest content (cache > DB).
+      const content = contentCache.current.get(activeSceneId) ?? activeScene.content ?? "";
+      const wc = countWords(content);
+
+      // Compute delta vs the most recent prior version (if any).
+      const { data: prior } = await supabase
+        .from("scene_versions")
+        .select("word_count")
+        .eq("scene_id", activeSceneId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const baseline = prior?.word_count ?? 0;
+      const delta = wc - baseline;
+
+      const { data: inserted, error } = await supabase
+        .from("scene_versions")
+        .insert({
+          scene_id: activeSceneId,
+          project_id: projectId,
+          name: name || null,
+          content,
+          word_count: wc,
+          word_delta: delta,
+        })
+        .select("id")
+        .single();
+
+      setSaveVersionOpen(false);
+
+      if (error || !inserted) {
+        console.error("Failed to save version:", error);
+        setVersionToast("Failed to save version");
+      } else {
+        setVersionToast("Version saved");
+        // Fire-and-forget AI summary (panel will poll for it).
+        supabase.functions
+          .invoke("summarize-version", { body: { versionId: inserted.id } })
+          .catch((e) => console.error("Summary generation failed:", e));
+      }
+      setTimeout(() => setVersionToast(null), 2500);
+    },
+    [activeSceneId, projectId, activeScene],
+  );
+
+  const handleRestoreVersion = useCallback(
+    async (v: SceneVersion) => {
+      if (!activeSceneId || v.scene_id !== activeSceneId) return;
+      const wc = countWords(v.content);
+      const { error } = await supabase
+        .from("scenes")
+        .update({ content: v.content, word_count: wc, is_dirty: true })
+        .eq("id", activeSceneId);
+
+      if (error) {
+        console.error("Failed to restore version:", error);
+        return;
+      }
+
+      // Update local state + editor DOM.
+      contentCache.current.set(activeSceneId, v.content);
+      setScenes((prev) =>
+        prev.map((s) => (s.id === activeSceneId ? { ...s, content: v.content, word_count: wc } : s)),
+      );
+      setWordCount(wc);
+
+      const editor = focusMode ? focusEditorRef.current : editorRef.current;
+      if (editor) {
+        editor.innerHTML = DOMPurify.sanitize(v.content);
+        // Re-apply highlights after DOM swap.
+        requestAnimationFrame(() => {
+          if (editor) applyEntityHighlights(editor, entityNamesRef.current);
+        });
+      }
+
+      setVersionHistoryOpen(false);
+      setVersionToast("Version restored");
+      setTimeout(() => setVersionToast(null), 2500);
+    },
+    [activeSceneId, focusMode],
   );
 
   const handleEditorInput = useCallback(
@@ -1202,9 +1297,51 @@ const ManuscriptPage = () => {
 
           {/* Status bar */}
           <div className="flex items-center justify-between px-4 py-1.5 border-t border-border bg-fyrescribe-base text-text-dimmed text-[11px]">
-            <span>{saving ? "Saving…" : "Auto-saved"}</span>
+            <div className="flex items-center gap-3">
+              <span>
+                {versionToast
+                  ? versionToast
+                  : saving
+                  ? "Saving…"
+                  : "Auto-saved"}
+              </span>
+              <div className="w-px h-3 bg-border" />
+              <div className="relative">
+                <button
+                  onClick={() => setSaveVersionOpen((v) => !v)}
+                  disabled={!activeSceneId}
+                  className="flex items-center gap-1 hover:text-text-secondary transition-colors disabled:opacity-40"
+                >
+                  <BookmarkPlus size={11} />
+                  Save Version
+                </button>
+                {saveVersionOpen && (
+                  <SaveVersionPopover
+                    onSave={handleSaveVersion}
+                    onClose={() => setSaveVersionOpen(false)}
+                  />
+                )}
+              </div>
+              <button
+                onClick={() => setVersionHistoryOpen(true)}
+                disabled={!activeSceneId}
+                className="flex items-center gap-1 hover:text-text-secondary transition-colors disabled:opacity-40"
+              >
+                <History size={11} />
+                Version History
+              </button>
+            </div>
             <span>{wordCount.toLocaleString()} words</span>
           </div>
+
+          {versionHistoryOpen && activeSceneId && activeScene && (
+            <VersionHistoryPanel
+              sceneId={activeSceneId}
+              sceneTitle={activeScene.title}
+              onClose={() => setVersionHistoryOpen(false)}
+              onRestore={handleRestoreVersion}
+            />
+          )}
         </div>
 
         {/* Chapter/scene sidebar — RIGHT */}
