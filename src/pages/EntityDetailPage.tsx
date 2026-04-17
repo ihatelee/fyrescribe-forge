@@ -50,6 +50,27 @@ const CATEGORY_FIELDS: Record<string, string[]> = {
   history: ["Date/Era", "Location", "Key Factions", "Outcome"],
 };
 
+// Maps At a Glance field names → target entity category for entity-picker fields.
+// Any field listed here renders as an entity picker / clickable badge instead of free text.
+const ENTITY_FIELD_MAP: Record<string, EntityCategory> = {
+  // characters
+  "Place of Birth": "places",
+  "Currently Residing": "places",
+  "Allegiance": "factions",
+  // artifacts
+  "Current Owner": "characters",
+  "Origin": "places",
+  // factions
+  "Leader": "characters",
+  "Headquarters": "places",
+  // places
+  "Government": "factions",
+  // creatures
+  "Habitat": "places",
+  // events / history
+  "Location": "places",
+};
+
 const SECTION_PLACEHOLDER_TEXT: Record<string, string> = {
   Overview: "Write an overview of this entity here…",
   Background: "Describe the background and origin story…",
