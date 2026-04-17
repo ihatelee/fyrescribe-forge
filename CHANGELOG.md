@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Sync Tags: review modal + Lovable refinements (pull)
+
+- `src/components/SyncTagsModal.tsx` (Lovable) — new review modal matching the LinkLoreModal pattern. `sync-tags` now returns a `suggestions` array (each entry: `entity_id/name/category`, `field_key`, `target_entity_id/name/category`) instead of auto-inserting. Modal groups suggestions by source entity, shows field key and proposed target with category badge. Accept writes to `entity_links` immediately; Reject is local-only (suggestions are stateless — AI may resurface on next run). Empty state shown when no suggestions remain.
+- `supabase/functions/sync-tags/index.ts` (Lovable) — changed return shape: `runFieldTaggingPass` now returns `TagSuggestion[]` instead of a count, and no longer inserts into `entity_links` directly. Edge function returns `{ suggestions: TagSuggestion[] }`. Insertion happens client-side on accept.
+- `supabase/functions/link-lore/index.ts` (Lovable) — updated call to `runFieldTaggingPass` to match new signature.
+- `src/components/Sidebar.tsx` (Lovable) — `handleSyncTagsInner` updated to collect the `suggestions` array; after `handleSyncTags` runs it stores the array in `tagSuggestions` state and opens `SyncTagsModal`.
+
+---
+
 ## 2026-04-17 — Sync Tags: AI-powered At a Glance field population
 
 - `supabase/functions/sync-tags/index.ts` — new standalone edge function. Fetches all non-archived entities and their `entity_mentions` contexts. Builds a prompt targeting structured entity-picker fields by category (characters: Place of Birth / Currently Residing / Allegiance; artifacts: Origin / Current Owner; factions: Leader / Headquarters; creatures: Habitat; magic: Regional Origin). AI returns `[{ entity_id, field_key, target_entity_id }]`. Validates: entity and target IDs must exist in the project, field must be valid for the entity's category, target must be the correct category, field must not already be set. Inserts into `entity_links` with `relationship = field_key`. Never overwrites existing values.
