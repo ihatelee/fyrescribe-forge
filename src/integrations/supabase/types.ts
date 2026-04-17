@@ -478,6 +478,57 @@ export type Database = {
           },
         ]
       }
+      scene_versions: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          name: string | null
+          project_id: string
+          scene_id: string
+          summary: string | null
+          word_count: number
+          word_delta: number
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string | null
+          project_id: string
+          scene_id: string
+          summary?: string | null
+          word_count?: number
+          word_delta?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string | null
+          project_id?: string
+          scene_id?: string
+          summary?: string | null
+          word_count?: number
+          word_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_versions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_versions_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scenes: {
         Row: {
           chapter_id: string
