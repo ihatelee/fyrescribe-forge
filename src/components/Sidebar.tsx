@@ -282,7 +282,7 @@ const Sidebar = () => {
             ))}
             {/* Notes uses a lucide icon (not in themed icon sets) */}
             <button
-              onClick={() => navigate("/notes")}
+              onClick={() => navigateAndClose("/notes")}
               className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] rounded-sm transition-colors relative ${
                 isActive("/notes")
                   ? "text-gold-bright bg-gold-glow border border-gold"
