@@ -1288,40 +1288,51 @@ const EntityDetailInner = () => {
               <input ref={galleryInputRef} type="file" accept="image/*" multiple onChange={handleGalleryUpload} className="hidden" />
             </div>
 
-            {/* ===== GENERIC LINKED ENTITIES ===== */}
+            {/* ===== LINKED ENTITIES ===== */}
             <div className="border-t border-border pt-8 mb-8">
-              <h2 className="font-display text-base text-foreground mb-4 tracking-wide">Linked Entities</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {genericLinked.map((linked) => (
-                  <button
-                    key={linked.id}
-                    onClick={() => navigate(`/entity/${linked.id}`)}
-                    className="flex items-center gap-3 px-4 py-3 bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/20 transition-colors text-left"
-                  >
-                    <span className="font-display text-sm text-foreground">{linked.name}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${CATEGORY_COLORS[linked.category] || ""}`}>
-                      {linked.category}
-                    </span>
-                  </button>
-                ))}
-                {isLinkingEntity ? (
-                  <LinkEntityModal
-                    currentEntityId={id!}
-                    projectId={projectId}
-                    linkedIds={linkedEntities.map((e) => e.id)}
-                    onLinked={handleEntityLinked}
-                    onClose={() => setIsLinkingEntity(false)}
-                  />
-                ) : (
+              <div className="flex items-center justify-between mb-4 gap-4">
+                <h2 className="font-display text-base text-foreground tracking-wide">Linked Entities</h2>
+                {!isLinkingEntity && (
                   <button
                     onClick={() => setIsLinkingEntity(true)}
-                    className="flex items-center justify-center gap-1.5 px-4 py-3 border border-dashed border-border rounded-lg text-text-dimmed hover:text-text-secondary text-xs transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors"
                   >
                     <Plus size={12} />
-                    Link entity
+                    Add Link
                   </button>
                 )}
               </div>
+
+              {isLinkingEntity && (
+                <div className="mb-4">
+                  <AddLinkInline
+                    currentEntityId={id!}
+                    projectId={projectId}
+                    excludeIds={[]}
+                    onLinked={(ent) => { handleEntityLinked(ent); setIsLinkingEntity(false); }}
+                    onCancel={() => setIsLinkingEntity(false)}
+                  />
+                </div>
+              )}
+
+              {genericLinked.length === 0 && !isLinkingEntity ? (
+                <p className="font-prose text-base leading-relaxed text-text-dimmed italic">
+                  No linked entities yet. Add a link to connect this entry to another.
+                </p>
+              ) : genericLinked.length > 0 ? (
+                <div className="divide-y divide-border border border-border rounded-lg overflow-hidden bg-fyrescribe-raised">
+                  {genericLinked.map((linked) => (
+                    <LinkedEntityRow
+                      key={`${linked.id}-${linked.relationship ?? ""}`}
+                      sourceCategory={entity.category}
+                      sourceName={entity.name}
+                      target={linked}
+                      onNavigate={(eid) => navigate(`/entity/${eid}`)}
+                      onRemove={() => handleRemoveLink(linked.id, linked.relationship)}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             {/* ===== CHARACTER: Story History (AI-generated) ===== */}
