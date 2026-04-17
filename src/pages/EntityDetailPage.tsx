@@ -783,6 +783,22 @@ const EntityDetailInner = () => {
     }
   }, [id, generatingHistory]);
 
+  const handleDeleteStoryHistory = useCallback(async () => {
+    if (!id) return;
+    const updated = { ...sectionsRef.current };
+    delete updated["Story History"];
+    sectionsRef.current = updated;
+    setSections(updated);
+    const el = storyHistoryRef.current;
+    if (el) {
+      el.innerHTML = "";
+      el.dataset.initialized = "true";
+    }
+    const { error } = await supabase
+      .from("entities").update({ sections: updated as Json }).eq("id", id);
+    if (error) console.error("Failed to delete story history:", error);
+  }, [id]);
+
   // ─── Save summary / fields ───────────────────────────────────────
 
   const saveSummary = useCallback(async () => {
