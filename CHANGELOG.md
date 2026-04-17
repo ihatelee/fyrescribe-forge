@@ -4,6 +4,16 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Notes page (per-project notepad)
+
+- New `notes` table (project_id, title, content, timestamps) with RLS scoped to project owner; cascade-deletes with project. Migration adds standard `update_updated_at_column` trigger.
+- `src/pages/NotesPage.tsx` — two-panel layout: left list (New Note button, title + snippet, active-note highlight, hover-revealed 3-dot menu with Delete) and right editor (large title input + contentEditable body). Toolbar matches manuscript style: Bold, Italic, Bullet list, Numbered list, Insert checkbox — no font-size controls. Notes persist via debounced (800ms) Supabase updates; `data-initialized` guard on contentEditable prevents cursor reset. Custom-styled checkboxes (gold when checked) toggle in-place by mutating the `checked` attribute so state survives serialisation.
+- `src/App.tsx` — registered `/notes` route under `ProtectedRoute`.
+- `src/components/Sidebar.tsx` — added Notes nav entry under "Write" using lucide `StickyNote` (kept outside the themed icon sets to avoid extending every theme).
+
+---
+
+
 ## 2026-04-16 — Entity name editable inline on entity detail page
 
 - `src/pages/EntityDetailPage.tsx` — replaced static `<h1>` name display with an inline edit pattern: clicking the name enters edit mode (input pre-filled with current name, gold underline); Enter/blur commits if non-empty; Escape reverts; blank input reverts without saving. Pencil icon fades in on hover as edit affordance. Save writes directly to `entities.name` via Supabase and patches local entity state.
