@@ -90,7 +90,7 @@ serve(async (req) => {
       });
     }
 
-    const admin = createClient(supabaseUrl, supabaseServiceKey);
+    const admin = createClient<any>(supabaseUrl, supabaseServiceKey);
 
     const created = await runFieldTaggingPass(admin, project_id, anthropicKey);
 
@@ -107,7 +107,7 @@ serve(async (req) => {
 });
 
 async function runFieldTaggingPass(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   project_id: string,
   anthropicKey: string,
 ): Promise<number> {

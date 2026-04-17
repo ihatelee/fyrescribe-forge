@@ -89,7 +89,7 @@ serve(async (req) => {
       });
     }
 
-    const admin = createClient(supabaseUrl, supabaseServiceKey);
+    const admin = createClient<any>(supabaseUrl, supabaseServiceKey);
 
     // ── Fetch entities ───────────────────────────────────────────────────
     const { data: entities } = await admin
@@ -248,7 +248,7 @@ ${existingLinkLines || "(none)"}
 });
 
 async function runFieldTaggingPass(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   project_id: string,
   anthropicKey: string,
   entities: any[],
