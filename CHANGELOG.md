@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Accessibility panel persistence + high contrast + dyslexia font
+
+- `supabase/migrations/20260417200000_add_accessibility_prefs_to_user_preferences.sql` — idempotent migration adding `interface_scale INTEGER DEFAULT 100`, `high_contrast BOOLEAN DEFAULT false`, `dyslexia_font BOOLEAN DEFAULT false` to `user_preferences`.
+- `src/contexts/ThemeContext.tsx` — `applyTheme` now sets `data-theme` attribute on `<html>` for reliable CSS targeting. Preferences load from DB on auth, apply immediately via `applyAccessibility`, and persist on every change via `persistPrefs`. Scale applied via `root.style.fontSize` (rem-driven). High contrast / dyslexia font applied as CSS classes on `<html>`.
+- `src/index.css` — replaced cdnfonts import with `@font-face` using the jsdelivr woff2 URL (`open-dyslexic@1.0.3`). High contrast CSS strengthened: all text vars lifted to `--text-primary`, borders at 55% opacity, `--bg-raised`/`--bg-hover` surface tokens boosted. Daylight theme gets dark borders via `html[data-theme="daylight"].high-contrast`.
+- `src/components/AccessibilityPanel.tsx` — panel built by Lovable: scale pill buttons (75/100/125/150%) and toggle switches for High Contrast and Dyslexia Font, rendered from the Titlebar.
+
+---
+
 ## 2026-04-17 — Timeline event cap, raised threshold, delete button styling
 
 - `supabase/functions/generate-timeline/index.ts` — prompt now instructs AI to return at most 4 events per scene (0–1 if nothing notable happens).

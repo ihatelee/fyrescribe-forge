@@ -1,0 +1,4 @@
+ALTER TABLE public.user_preferences
+  ADD COLUMN IF NOT EXISTS interface_scale INTEGER DEFAULT 100,
+  ADD COLUMN IF NOT EXISTS high_contrast BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS dyslexia_font BOOLEAN DEFAULT false;

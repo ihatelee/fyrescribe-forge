@@ -323,6 +323,7 @@ function applyTheme(theme: ThemeName) {
   for (const [key, val] of Object.entries(vars)) {
     root.style.setProperty(key, val);
   }
+  root.dataset.theme = theme;
 }
 
 function applyAccessibility(scale: InterfaceScale, highContrast: boolean, dyslexiaFont: boolean) {
