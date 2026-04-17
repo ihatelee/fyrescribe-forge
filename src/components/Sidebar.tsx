@@ -8,6 +8,7 @@ import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import LoreSearchModal from "@/components/LoreSearchModal";
 import LinkLoreModal from "@/components/LinkLoreModal";
 import SyncMentionsModal, { type NewMention } from "@/components/SyncMentionsModal";
+import SyncTagsModal, { type TagSuggestion } from "@/components/SyncTagsModal";
 
 const WRITE_KEYS = ["manuscript", "timeline", "pov"] as const;
 const WRITE_LABELS: Record<string, string> = {
@@ -68,6 +69,8 @@ const Sidebar = () => {
   const [linkLoreModalOpen, setLinkLoreModalOpen] = useState(false);
   const [mentionsModalOpen, setMentionsModalOpen] = useState(false);
   const [newMentions, setNewMentions] = useState<NewMention[]>([]);
+  const [tagsModalOpen, setTagsModalOpen] = useState(false);
+  const [tagSuggestions, setTagSuggestions] = useState<TagSuggestion[]>([]);
 
   const fetchPendingCount = useCallback(async () => {
     if (!activeProject) {
@@ -177,13 +180,13 @@ const Sidebar = () => {
     return data?.suggestions_created as number | undefined;
   };
 
-  const handleSyncTagsInner = async () => {
-    if (!activeProject) return;
+  const handleSyncTagsInner = async (): Promise<TagSuggestion[]> => {
+    if (!activeProject) return [];
     const { data, error } = await supabase.functions.invoke("sync-tags", {
       body: { project_id: activeProject.id },
     });
     if (error) throw error;
-    return data?.field_links_created as number | undefined;
+    return (data?.suggestions as TagSuggestion[]) ?? [];
   };
 
   const handleSyncTags = async () => {
@@ -191,10 +194,12 @@ const Sidebar = () => {
     setSyncingTags(true);
     setTagsMessage(null);
     try {
-      const created = await handleSyncTagsInner();
+      const suggestions = await handleSyncTagsInner();
       setTagsMessage(
-        created != null ? `Tagged ${created} field${created !== 1 ? "s" : ""}` : "Done",
+        `${suggestions.length} suggestion${suggestions.length !== 1 ? "s" : ""}`,
       );
+      setTagSuggestions(suggestions);
+      setTagsModalOpen(true);
     } catch {
       setTagsMessage("Sync failed");
     } finally {
@@ -420,6 +425,12 @@ const Sidebar = () => {
         projectId={activeProject.id}
         mentions={newMentions}
         onClose={() => setMentionsModalOpen(false)}
+      />
+    )}
+    {tagsModalOpen && (
+      <SyncTagsModal
+        suggestions={tagSuggestions}
+        onClose={() => setTagsModalOpen(false)}
       />
     )}
     </>

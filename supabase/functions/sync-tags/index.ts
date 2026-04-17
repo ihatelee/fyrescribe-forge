@@ -92,9 +92,9 @@ serve(async (req) => {
 
     const admin = createClient<any>(supabaseUrl, supabaseServiceKey);
 
-    const created = await runFieldTaggingPass(admin, project_id, anthropicKey);
+    const suggestions = await runFieldTaggingPass(admin, project_id, anthropicKey);
 
-    return new Response(JSON.stringify({ field_links_created: created }), {
+    return new Response(JSON.stringify({ suggestions }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
@@ -106,11 +106,21 @@ serve(async (req) => {
   }
 });
 
+type TagSuggestion = {
+  entity_id: string;
+  entity_name: string;
+  entity_category: string;
+  field_key: string;
+  target_entity_id: string;
+  target_entity_name: string;
+  target_entity_category: string;
+};
+
 async function runFieldTaggingPass(
   admin: any,
   project_id: string,
   anthropicKey: string,
-): Promise<number> {
+): Promise<TagSuggestion[]> {
   // Fetch entities
   const { data: entities } = await admin
     .from("entities")
@@ -122,7 +132,7 @@ async function runFieldTaggingPass(
     (e: any) => !!FIELD_TARGET_MAP[e.category as string],
   );
 
-  if (targetableEntities.length === 0 || (entities ?? []).length < 2) return 0;
+  if (targetableEntities.length === 0 || (entities ?? []).length < 2) return [];
 
   const entityIds = (entities ?? []).map((e: any) => e.id);
 
@@ -238,7 +248,7 @@ ${alreadyFilledLines || "(none)"}
 
   if (!aiRes.ok) {
     console.error("sync-tags AI error:", aiRes.status, await aiRes.text().catch(() => ""));
-    return 0;
+    return [];
   }
 
   const aiJson = await aiRes.json();
@@ -259,42 +269,41 @@ ${alreadyFilledLines || "(none)"}
 
   // Validate
   const validEntityIds = new Set(entityIds);
-  const entityCategoryMap = new Map(
-    (entities ?? []).map((e: any) => [e.id, e.category as string]),
+  const entityById = new Map<string, { name: string; category: string }>(
+    (entities ?? []).map((e: any) => [e.id, { name: e.name, category: e.category as string }]),
   );
 
   const seen = new Set<string>();
-  const toInsert = aiSuggestions.filter((s) => {
-    if (!s.entity_id || !s.field_key || !s.target_entity_id) return false;
-    if (!validEntityIds.has(s.entity_id) || !validEntityIds.has(s.target_entity_id)) return false;
-    if (s.entity_id === s.target_entity_id) return false;
+  const validated: TagSuggestion[] = [];
+  for (const s of aiSuggestions) {
+    if (!s.entity_id || !s.field_key || !s.target_entity_id) continue;
+    if (!validEntityIds.has(s.entity_id) || !validEntityIds.has(s.target_entity_id)) continue;
+    if (s.entity_id === s.target_entity_id) continue;
 
-    const entityCat = entityCategoryMap.get(s.entity_id) ?? "";
-    const fieldSpec = FIELD_TARGET_MAP[entityCat]?.find((f) => f.field === s.field_key);
-    if (!fieldSpec) return false;
+    const sourceMeta = entityById.get(s.entity_id);
+    const targetMeta = entityById.get(s.target_entity_id);
+    if (!sourceMeta || !targetMeta) continue;
 
-    const targetCat = entityCategoryMap.get(s.target_entity_id) ?? "";
-    if (targetCat !== fieldSpec.targetCategory) return false;
+    const fieldSpec = FIELD_TARGET_MAP[sourceMeta.category]?.find((f) => f.field === s.field_key);
+    if (!fieldSpec) continue;
+    if (targetMeta.category !== fieldSpec.targetCategory) continue;
 
-    if (alreadyFilled.has(`${s.entity_id}:${s.field_key}`)) return false;
+    if (alreadyFilled.has(`${s.entity_id}:${s.field_key}`)) continue;
 
-    // One suggestion per entity:field_key — first occurrence wins
     const dedupeKey = `${s.entity_id}:${s.field_key}`;
-    if (seen.has(dedupeKey)) return false;
+    if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
 
-    return true;
-  });
-
-  if (toInsert.length > 0) {
-    const rows = toInsert.map((s) => ({
-      entity_a_id: s.entity_id,
-      entity_b_id: s.target_entity_id,
-      relationship: s.field_key,
-    }));
-    const { error } = await admin.from("entity_links").insert(rows);
-    if (error) console.error("sync-tags insert error:", error);
+    validated.push({
+      entity_id: s.entity_id,
+      entity_name: sourceMeta.name,
+      entity_category: sourceMeta.category,
+      field_key: s.field_key,
+      target_entity_id: s.target_entity_id,
+      target_entity_name: targetMeta.name,
+      target_entity_category: targetMeta.category,
+    });
   }
 
-  return toInsert.length;
+  return validated;
 }
