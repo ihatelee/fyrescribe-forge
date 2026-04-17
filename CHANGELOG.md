@@ -13,7 +13,11 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-16 — text-dimmed +10% lightness across all themes
 
+- `src/contexts/ThemeContext.tsx` — increased `--text-dimmed` lightness by 10 percentage points in all six themes: midnight 30%→40%, fireside 28%→38%, outrun 20%→30%, lavender 28%→38%, daylight 55%→65%, enchanted 26%→36%.
+
+---
 ## 2026-04-16 — Entity name editable inline on entity detail page
 
 - `src/pages/EntityDetailPage.tsx` — replaced static `<h1>` name display with an inline edit pattern: clicking the name enters edit mode (input pre-filled with current name, gold underline); Enter/blur commits if non-empty; Escape reverts; blank input reverts without saving. Pencil icon fades in on hover as edit affordance. Save writes directly to `entities.name` via Supabase and patches local entity state.
