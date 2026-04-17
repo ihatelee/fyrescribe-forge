@@ -23,6 +23,9 @@ import {
   Loader2,
   History,
   BookmarkPlus,
+  PanelRight,
+  Type,
+  MoreHorizontal,
 } from "lucide-react";
 
 // ─── Utilities ────────────────────────────────────────────────────────
@@ -261,6 +264,9 @@ const ManuscriptPage = () => {
   const [versionToast, setVersionToast] = useState<string | null>(null);
 
   const [focusMode, setFocusMode] = useState(false);
+  const [chapterPanelOpen, setChapterPanelOpen] = useState(false);
+  const [formatMenuOpen, setFormatMenuOpen] = useState(false);
+  const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const [thesaurusOpen, setThesaurusOpen] = useState(false);
   const [thesaurusWord, setThesaurusWord] = useState("");
   const [thesaurusSynonyms, setThesaurusSynonyms] = useState<string[]>([]);
@@ -659,6 +665,8 @@ const ManuscriptPage = () => {
     setActiveSceneId(scene.id);
     setActiveChapterId(scene.chapter_id);
     setWordCount(scene.word_count ?? 0);
+    // Auto-close mobile chapter drawer after selecting a scene
+    setChapterPanelOpen(false);
   };
 
   const handleSceneTitleSave = async (sceneId: string, newTitle: string) => {
@@ -1229,9 +1237,58 @@ const ManuscriptPage = () => {
             />
           )}
           {/* Toolbar */}
-          <div className="relative z-10 flex items-center justify-between px-4 py-2 border-b border-border bg-fyrescribe-base">
-            <div className="flex items-center gap-1 flex-1">
-              {formattingControls}
+          <div className="relative z-10 flex items-center justify-between px-2 md:px-4 py-2 border-b border-border bg-fyrescribe-base">
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              {/* Desktop formatting controls */}
+              <div className="hidden md:flex items-center gap-1">
+                {formattingControls}
+              </div>
+
+              {/* Mobile: Format menu */}
+              <div className="md:hidden relative">
+                <button
+                  onClick={() => setFormatMenuOpen((v) => !v)}
+                  className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
+                >
+                  <Type size={14} />
+                  Format
+                </button>
+                {formatMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setFormatMenuOpen(false)}
+                    />
+                    <div className="absolute left-0 top-full mt-1 z-50 bg-card border border-border rounded-md shadow-lg p-3 flex flex-col gap-3 min-w-[260px]">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => applyFormat("bold")}
+                          className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                        >
+                          <Bold size={14} />
+                        </button>
+                        <button
+                          onClick={() => applyFormat("italic")}
+                          className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                        >
+                          <Italic size={14} />
+                        </button>
+                        <button
+                          onClick={() => { handleThesaurus(); setFormatMenuOpen(false); }}
+                          className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
+                        >
+                          <BookOpen size={14} />
+                          Thesaurus
+                        </button>
+                      </div>
+                      <TextSizeSelector />
+                      <LineHeightSelector />
+                      <ColumnWidthSelector />
+                    </div>
+                  </>
+                )}
+              </div>
+
               <div className="flex-1" />
               <POVSelector
                 projectId={projectId}
@@ -1239,13 +1296,21 @@ const ManuscriptPage = () => {
                 povCharacterId={activeScene?.pov_character_id ?? null}
                 onChange={handlePOVChange}
               />
-              <div className="w-px h-4 bg-border mx-1" />
+              <div className="w-px h-4 bg-border mx-1 hidden md:block" />
               <button
                 onClick={() => setFocusMode(true)}
                 className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
               >
                 <Maximize size={14} />
-                Focus
+                <span className="hidden md:inline">Focus</span>
+              </button>
+              {/* Mobile: chapter panel trigger */}
+              <button
+                onClick={() => setChapterPanelOpen(true)}
+                aria-label="Open chapters"
+                className="md:hidden p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+              >
+                <PanelRight size={16} />
               </button>
             </div>
           </div>
@@ -1307,25 +1372,87 @@ const ManuscriptPage = () => {
           )}
 
           {/* Status bar */}
-          <div className="flex items-center justify-between px-4 py-1.5 border-t border-border bg-fyrescribe-base text-text-dimmed text-[11px]">
-            <div className="flex items-center gap-3">
-              <span>
+          <div className="flex items-center justify-between px-3 md:px-4 py-1.5 border-t border-border bg-fyrescribe-base text-text-dimmed text-[11px]">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="truncate">
                 {versionToast
                   ? versionToast
                   : saving
                   ? "Saving…"
                   : "Auto-saved"}
               </span>
-              <div className="w-px h-3 bg-border" />
-              <div className="relative">
+              <div className="w-px h-3 bg-border hidden md:block" />
+
+              {/* Desktop: inline version controls */}
+              <div className="hidden md:flex items-center gap-3">
+                <div className="relative">
+                  <button
+                    onClick={() => setSaveVersionOpen((v) => !v)}
+                    disabled={!activeSceneId}
+                    className="flex items-center gap-1 hover:text-text-secondary transition-colors disabled:opacity-40"
+                  >
+                    <BookmarkPlus size={11} />
+                    Save Version
+                  </button>
+                  {saveVersionOpen && (
+                    <SaveVersionPopover
+                      onSave={handleSaveVersion}
+                      onClose={() => setSaveVersionOpen(false)}
+                    />
+                  )}
+                </div>
                 <button
-                  onClick={() => setSaveVersionOpen((v) => !v)}
+                  onClick={() => setVersionHistoryOpen(true)}
                   disabled={!activeSceneId}
                   className="flex items-center gap-1 hover:text-text-secondary transition-colors disabled:opacity-40"
                 >
-                  <BookmarkPlus size={11} />
-                  Save Version
+                  <History size={11} />
+                  Version History
                 </button>
+              </div>
+
+              {/* Mobile: overflow menu */}
+              <div className="md:hidden relative">
+                <div className="w-px h-3 bg-border inline-block mr-3 align-middle" />
+                <button
+                  onClick={() => setVersionMenuOpen((v) => !v)}
+                  disabled={!activeSceneId}
+                  aria-label="Version actions"
+                  className="hover:text-text-secondary transition-colors disabled:opacity-40 align-middle"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+                {versionMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setVersionMenuOpen(false)}
+                    />
+                    <div className="absolute left-0 bottom-full mb-1 z-50 bg-card border border-border rounded-md shadow-lg py-1 min-w-[180px]">
+                      <button
+                        onClick={() => {
+                          setVersionMenuOpen(false);
+                          setSaveVersionOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                      >
+                        <BookmarkPlus size={12} />
+                        Save Version
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVersionMenuOpen(false);
+                          setVersionHistoryOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                      >
+                        <History size={12} />
+                        Version History
+                      </button>
+                    </div>
+                    {/* Mobile SaveVersionPopover renders relative to its trigger; mount it here too */}
+                  </>
+                )}
                 {saveVersionOpen && (
                   <SaveVersionPopover
                     onSave={handleSaveVersion}
@@ -1333,16 +1460,8 @@ const ManuscriptPage = () => {
                   />
                 )}
               </div>
-              <button
-                onClick={() => setVersionHistoryOpen(true)}
-                disabled={!activeSceneId}
-                className="flex items-center gap-1 hover:text-text-secondary transition-colors disabled:opacity-40"
-              >
-                <History size={11} />
-                Version History
-              </button>
             </div>
-            <span>{wordCount.toLocaleString()} words</span>
+            <span className="flex-shrink-0">{wordCount.toLocaleString()} words</span>
           </div>
 
           {versionHistoryOpen && activeSceneId && activeScene && (
@@ -1355,8 +1474,28 @@ const ManuscriptPage = () => {
           )}
         </div>
 
-        {/* Chapter/scene sidebar — RIGHT */}
-        {chapterSidebar}
+        {/* Chapter/scene sidebar — RIGHT (desktop only) */}
+        <div className="hidden md:flex">{chapterSidebar}</div>
+
+        {/* Mobile chapter slide-over */}
+        {chapterPanelOpen && (
+          <>
+            <div
+              className="md:hidden fixed inset-0 top-20 bg-background/70 backdrop-blur-sm z-40"
+              onClick={() => setChapterPanelOpen(false)}
+            />
+            <div className="md:hidden fixed right-0 top-20 bottom-0 z-50 animate-in slide-in-from-right duration-200 flex">
+              <button
+                onClick={() => setChapterPanelOpen(false)}
+                aria-label="Close chapters"
+                className="self-start mt-2 ml-2 mr-1 p-1.5 rounded text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors bg-fyrescribe-base border border-border"
+              >
+                <X size={14} />
+              </button>
+              {chapterSidebar}
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );

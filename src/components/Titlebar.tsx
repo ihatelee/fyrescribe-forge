@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, LogOut, FolderOpen, Pencil } from "lucide-react";
+import { User, LogOut, FolderOpen, Pencil, Menu } from "lucide-react";
 import logoSrc from "@/assets/fyrescribe_logo_white.svg";
 import logoBitSrc from "@/assets/fyrescribe_logo_bit.svg";
 import { useActiveProject } from "@/contexts/ProjectContext";
@@ -17,7 +17,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const Titlebar = () => {
+interface TitlebarProps {
+  showSidebarToggle?: boolean;
+}
+
+const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
   const { activeProject, setActiveProject } = useActiveProject();
   const { signOut } = useAuth();
   const { theme } = useTheme();
@@ -44,17 +48,36 @@ const Titlebar = () => {
     await supabase.from("projects").update({ title: trimmed }).eq("id", activeProject.id);
   };
 
+  const toggleMobileNav = () => {
+    window.dispatchEvent(new CustomEvent("mobile-nav-toggle"));
+  };
+
   return (
-    <div className="fixed top-0 left-0 right-0 h-20 bg-fyrescribe-base border-b border-border flex items-center justify-between px-4 z-50">
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate("/projects")} className="hover:opacity-80 transition-opacity group/logo">
+    <div className="fixed top-0 left-0 right-0 h-20 bg-fyrescribe-base border-b border-border flex items-center justify-between px-3 md:px-4 z-50">
+      <div className="flex items-center gap-2 md:gap-3 min-w-0">
+        {showSidebarToggle && (
+          <button
+            onClick={toggleMobileNav}
+            aria-label="Open navigation"
+            className="md:hidden p-2 -ml-1 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+          >
+            <Menu size={18} />
+          </button>
+        )}
+        <button onClick={() => navigate("/projects")} className="hover:opacity-80 transition-opacity group/logo flex-shrink-0">
           <img
             src={theme === "outrun" ? logoBitSrc : logoSrc}
             alt="Fyrescribe"
-            className="h-[44px] w-auto transition-[filter] duration-300 group-hover/logo:drop-shadow-[0_0_12px_hsl(var(--gold))]"
+            className="h-[36px] md:h-[44px] w-auto transition-[filter] duration-300 group-hover/logo:drop-shadow-[0_0_12px_hsl(var(--gold))]"
             style={isDaylightTheme(theme) ? { filter: "brightness(0)" } : undefined}
           />
         </button>
+        {/* Mobile-only project title */}
+        {activeProject && (
+          <span className="md:hidden text-text-secondary text-xs truncate min-w-0">
+            {activeProject.title}
+          </span>
+        )}
       </div>
 
       {activeProject && (
@@ -85,14 +108,14 @@ const Titlebar = () => {
         </div>
       )}
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         <div className="flex flex-col items-center gap-0.5">
           <AccessibilityPanel />
-          <span className="text-[10px] text-text-dimmed">Settings</span>
+          <span className="hidden md:inline text-[10px] text-text-dimmed">Settings</span>
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <ThemeSwitcher />
-          <span className="text-[10px] text-text-dimmed">Ambiance</span>
+          <span className="hidden md:inline text-[10px] text-text-dimmed">Ambiance</span>
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <DropdownMenu>
@@ -113,7 +136,7 @@ const Titlebar = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <span className="text-[10px] text-text-dimmed">Profile</span>
+          <span className="hidden md:inline text-[10px] text-text-dimmed">Profile</span>
         </div>
       </div>
     </div>
