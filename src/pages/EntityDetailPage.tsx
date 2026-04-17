@@ -803,6 +803,22 @@ const EntityDetailInner = () => {
     setLinkedEntities((prev) => [...prev, ent]);
   }, []);
 
+  const handleRemoveLink = useCallback(async (linkedId: string, relationship: string | null) => {
+    if (!id) return;
+    setLinkedEntities((prev) => {
+      const idx = prev.findIndex((e) => e.id === linkedId && e.relationship === relationship);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next.splice(idx, 1);
+      return next;
+    });
+    let q = supabase.from("entity_links").delete()
+      .or(`and(entity_a_id.eq.${id},entity_b_id.eq.${linkedId}),and(entity_a_id.eq.${linkedId},entity_b_id.eq.${id})`);
+    q = relationship === null ? q.is("relationship", null) : q.eq("relationship", relationship);
+    const { error } = await q;
+    if (error) console.error("Failed to remove link:", error);
+  }, [id]);
+
   // ─── Delete entity ───────────────────────────────────────────────
 
   const handleDeleteEntity = useCallback(async () => {
@@ -822,47 +838,63 @@ const EntityDetailInner = () => {
     ...Object.keys(fields).filter((k) => !stdFieldKeys.includes(k)),
   ];
 
-  const renderFieldValue = (key: string, value: string) => {
-    if (!value) {
-      return (
-        <button
-          onClick={() => { setEditingField(key); setEditingFieldValue(""); }}
-          className="text-sm text-text-dimmed hover:text-text-secondary transition-colors text-left w-full"
-        >
-          —
-        </button>
-      );
+  // Set / clear an entity-picker At a Glance field. Stores the link in entity_links
+  // (relationship = field key) and mirrors the entity name into the fields jsonb.
+  const handleSetEntityField = useCallback(async (key: string, target: { id: string; name: string; category: string }) => {
+    if (!id) return;
+    const existing = linkedEntities.find((e) => e.relationship === key);
+    if (existing) {
+      await supabase.from("entity_links").delete()
+        .or(`and(entity_a_id.eq.${id},entity_b_id.eq.${existing.id}),and(entity_a_id.eq.${existing.id},entity_b_id.eq.${id})`)
+        .eq("relationship", key);
     }
-    // Auto-convert: if value exactly matches a tag name, render as clickable pill
-    const matchedTag = projectTags.find((t) => t.name.toLowerCase() === value.toLowerCase());
-    if (matchedTag) {
-      return (
-        <button
-          onClick={() => handleTagClick(matchedTag)}
-          className="text-xs px-2 py-0.5 rounded-full bg-fyrescribe-hover text-gold border border-border hover:border-gold/30 transition-colors"
-        >
-          {value}
-        </button>
-      );
+    const { error } = await supabase.from("entity_links").insert({
+      entity_a_id: id,
+      entity_b_id: target.id,
+      relationship: key,
+    });
+    if (error) { console.error("Failed to create field link:", error); return; }
+    setLinkedEntities((prev) => {
+      const filtered = prev.filter((e) => e.relationship !== key);
+      return [...filtered, { ...target, relationship: key }];
+    });
+    const updated = { ...fields, [key]: target.name };
+    setFields(updated);
+    saveFields(updated);
+    setEditingField(null);
+  }, [id, linkedEntities, fields, saveFields]);
+
+  const handleClearEntityField = useCallback(async (key: string) => {
+    if (!id) return;
+    const existing = linkedEntities.find((e) => e.relationship === key);
+    if (existing) {
+      await supabase.from("entity_links").delete()
+        .or(`and(entity_a_id.eq.${id},entity_b_id.eq.${existing.id}),and(entity_a_id.eq.${existing.id},entity_b_id.eq.${id})`)
+        .eq("relationship", key);
+      setLinkedEntities((prev) => prev.filter((e) => e.relationship !== key));
     }
-    return (
-      <button
-        onClick={() => { setEditingField(key); setEditingFieldValue(value); }}
-        className="text-sm text-foreground hover:text-gold-bright transition-colors text-left w-full"
-      >
-        {value}
-      </button>
-    );
-  };
+    const updated = { ...fields, [key]: "" };
+    setFields(updated);
+    saveFields(updated);
+  }, [id, linkedEntities, fields, saveFields]);
 
   // ─── Derived linked sets ─────────────────────────────────────────
+
+  // Relationships consumed by structured At a Glance field-pickers — these render in the
+  // sidebar panel, not the main Linked Entities list.
+  const fieldRelationships = new Set(Object.keys(ENTITY_FIELD_MAP));
 
   const speciesCharacters = linkedEntities.filter(
     (e) => e.category === "characters" && e.relationship === "species"
   );
-  const relatedArtifacts = linkedEntities.filter((e) => e.category === "artifacts");
-  const relatedMagic = linkedEntities.filter((e) => e.category === "magic");
+  const relatedArtifacts = linkedEntities.filter(
+    (e) => e.category === "artifacts" && !fieldRelationships.has(e.relationship || ""),
+  );
+  const relatedMagic = linkedEntities.filter(
+    (e) => e.category === "magic" && !fieldRelationships.has(e.relationship || ""),
+  );
   const genericLinked = linkedEntities.filter((e) => {
+    if (fieldRelationships.has(e.relationship || "")) return false;
     if (entity?.category === "creatures" && e.category === "characters" && e.relationship === "species") return false;
     if (entity?.category === "characters" && (e.category === "artifacts" || e.category === "magic")) return false;
     return true;
