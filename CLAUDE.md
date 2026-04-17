@@ -48,6 +48,10 @@ supabase/
 - **Debounced saves** — 1 s `useDebouncedCallback`; write directly to Supabase with no optimistic UI.
 - **Design tokens** — all theme styles (colours + fonts) flow through CSS variables only. Key tokens: `gold`, `gold-bright`, `fyrescribe-raised`, `fyrescribe-hover`, `text-dimmed`, `text-secondary`. Defined in `tailwind.config.ts`.
 
+## Story History (character pages)
+
+Story History is additive and non-destructive. Max 2 paragraphs. The Update History function passes existing history to the AI as context and builds on it — it never replaces it. The prompt must be strictly factual: summarise only events explicitly present in the manuscript mention contexts. No inference, speculation, or embellishment beyond what is in the text.
+
 ## "Update documentation" means
 
 1. Append a dated entry to **CHANGELOG.md** summarising what was done.

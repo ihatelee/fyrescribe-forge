@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Entity linking wiring + Story History fix + Appearance Log position
+
+- `supabase/migrations/20260419000000_add_scene_id_to_entity_links.sql` — adds nullable `scene_id UUID REFERENCES scenes(id) ON DELETE SET NULL` to `entity_links`.
+- `src/pages/EntityDetailPage.tsx` — `LinkedEntityRow` 3-dot menu: replaced `Trash2` "Remove link" with gold-fill checkbox + "Delete Relationship" label, matching the delete design pattern used on lore tiles and timeline events. Moved `<AppearanceLog>` from end of page to immediately before Related Artifacts (so it appears higher for all entity categories). Story History contentEditable: added `[&_p]:mb-4 [&_p:last-child]:mb-0` so AI-generated `<p>` tags render with paragraph spacing.
+- `supabase/functions/generate-story-history/index.ts` — rewrote system prompt to be strictly factual (no inference or embellishment). Restructured user prompt to two clearly labelled blocks: `Existing history` and `New mention contexts`. Removed unused `fields`/`sections` summary context that invited embellishment.
+- `CLAUDE.md` — added Story History behaviour notes to Hard Rules.
+
+---
+
 ## 2026-04-18 — Appearance Log data wiring
 
 - `src/components/AppearanceLog.tsx` (Lovable) — queries `entity_mentions` with inner joins to `scenes` and `chapters`, sorts by chapter/scene order then character position, bolds entity name in context via `HighlightedContext`, paginates (10/25/50/100), shows empty state, navigates to `/project/:projectId/manuscript?scene=:sceneId` on row click.

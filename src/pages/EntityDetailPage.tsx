@@ -583,13 +583,15 @@ const LinkedEntityRow = ({ sourceCategory, sourceName, target, onNavigate, onRem
           <MoreVertical size={13} />
         </button>
         {menuOpen && (
-          <div className="absolute right-0 mt-1 w-36 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30">
+          <div className="absolute right-0 mt-1 w-44 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30">
             <button
               onClick={() => { setMenuOpen(false); onRemove(); }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-destructive hover:bg-fyrescribe-hover transition-colors rounded-lg"
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-dimmed hover:text-destructive hover:bg-destructive/5 transition-colors rounded-lg"
             >
-              <Trash2 size={11} />
-              Remove link
+              <span className="w-3 h-3 rounded-sm border bg-gold border-gold flex items-center justify-center flex-shrink-0">
+                <Check size={10} className="text-fyrescribe-raised" strokeWidth={3} />
+              </span>
+              Delete Relationship
             </button>
           </div>
         )}
@@ -1261,6 +1263,9 @@ const EntityDetailInner = () => {
               </div>
             )}
 
+            {/* ===== APPEARANCE LOG ===== */}
+            <AppearanceLog entityId={entity.id} entityName={entity.name} projectId={projectId} />
+
             {/* ===== CHARACTER: Related Artifacts ===== */}
             {entity.category === "characters" && (
               <div className="border-t border-border pt-8 mb-8">
@@ -1437,7 +1442,7 @@ const EntityDetailInner = () => {
                     <div
                       contentEditable
                       suppressContentEditableWarning
-                      className="font-prose text-lg leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
+                      className="font-prose text-lg leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none [&_p]:mb-4 [&_p:last-child]:mb-0"
                       data-placeholder="No history yet."
                       onInput={(e) => handleSectionInput("Story History", (e.target as HTMLDivElement).innerHTML)}
                       ref={(el) => {
@@ -1457,8 +1462,6 @@ const EntityDetailInner = () => {
               </div>
             )}
 
-            {/* ===== APPEARANCE LOG ===== */}
-            <AppearanceLog entityId={entity.id} entityName={entity.name} projectId={projectId} />
           </div>
 
           {/* ===== AT A GLANCE PANEL ===== */}

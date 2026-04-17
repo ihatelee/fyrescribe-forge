@@ -74,7 +74,6 @@ Deno.serve(async (req) => {
     }
 
     const sections = (entity.sections ?? {}) as Record<string, string>;
-    const fields = (entity.fields ?? {}) as Record<string, string>;
     const existingHistory = (sections["Story History"] ?? "").trim();
 
     // Pull mention contexts in manuscript order so the AI sees the
@@ -109,16 +108,6 @@ Deno.serve(async (req) => {
     const stripHtml = (html: string) =>
       html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
-    const sectionsSummary = Object.entries(sections)
-      .filter(([k]) => k !== "Story History")
-      .map(([k, v]) => `${k}: ${stripHtml(v ?? "")}`)
-      .filter((line) => line.length > line.indexOf(":") + 2)
-      .join("\n");
-
-    const fieldsSummary = Object.entries(fields)
-      .map(([k, v]) => `${k}: ${v}`)
-      .join("\n");
-
     const mentionLines = orderedMentions
       .slice(0, 60)
       .map(
@@ -127,28 +116,17 @@ Deno.serve(async (req) => {
       )
       .join("\n");
 
-    const systemPrompt = `You are a literary editor writing a concise, in-world "Story History" entry for a character in a novel's wiki. Output flowing prose only — no headings, no bullet points, no meta commentary. Maximum two paragraphs. Stay grounded in the supplied source material; do not invent events that are not implied by it.`;
+    const systemPrompt = `You are summarizing a character's story based strictly on manuscript text provided. Summarize only events that explicitly involve this character. Do not infer, speculate, or add any detail not present in the text. Be factual and concise. Maximum 2 paragraphs. Output flowing prose only — no headings, no bullet points, no meta commentary.`;
 
     const userPrompt = `Character: ${entity.name}
 
-At a Glance:
-${fieldsSummary || "(none)"}
+Existing history:
+"""${existingHistory ? stripHtml(existingHistory) : "(none)"}"""
 
-Summary: ${entity.summary ?? "(none)"}
+New mention contexts (manuscript order):
+"""${mentionLines || "(none yet)"}"""
 
-Existing article sections:
-${sectionsSummary || "(none)"}
-
-Mentions in the manuscript (in story order):
-${mentionLines || "(none yet)"}
-
-${
-  existingHistory
-    ? `EXISTING STORY HISTORY (refine and extend this — preserve its voice and accurate facts, weave in any new events from the mentions above, and tighten the prose. Do not discard what's already here):\n\n${stripHtml(existingHistory)}`
-    : `Write a fresh Story History from scratch using the source above.`
-}
-
-Return only the Story History prose (max 2 paragraphs).`;
+If there is existing history, build on it additively — preserve what is already there and extend it with new information only. If there is no existing history, write from scratch based strictly on the mention contexts above. Return only the Story History prose (max 2 paragraphs).`;
 
     const aiRes = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
