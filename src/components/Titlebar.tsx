@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ThemeSwitcher from "./ThemeSwitcher";
+import AccessibilityPanel from "./AccessibilityPanel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,6 +89,10 @@ const Titlebar = () => {
         <div className="flex flex-col items-center gap-0.5">
           <ThemeSwitcher />
           <span className="text-[10px] text-text-dimmed">Ambiance</span>
+        </div>
+        <div className="flex flex-col items-center gap-0.5">
+          <AccessibilityPanel />
+          <span className="text-[10px] text-text-dimmed">Access</span>
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <DropdownMenu>
