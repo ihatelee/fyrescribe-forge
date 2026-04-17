@@ -219,7 +219,7 @@ const Sidebar = () => {
       );
       setLinkLoreModalOpen(true);
     } catch {
-      setLinkLoreMessage("Link Lore failed");
+      setLinkLoreMessage("Sync Connections failed");
     } finally {
       setLinkingLore(false);
       setTimeout(() => setLinkLoreMessage(null), 4000);
