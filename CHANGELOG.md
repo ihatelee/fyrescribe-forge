@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-18 — Appearance Log data wiring
+
+- `src/components/AppearanceLog.tsx` (Lovable) — queries `entity_mentions` with inner joins to `scenes` and `chapters`, sorts by chapter/scene order then character position, bolds entity name in context via `HighlightedContext`, paginates (10/25/50/100), shows empty state, navigates to `/project/:projectId/manuscript?scene=:sceneId` on row click.
+- `src/pages/EntityDetailPage.tsx` (Lovable) — renders `<AppearanceLog entityId={entity.id} entityName={entity.name} projectId={projectId} />` after the entity body.
+- `src/pages/ManuscriptPage.tsx` (Lovable) — added `useSearchParams` to read `?scene=` on load and jump directly to the referenced scene.
+
+---
+
 ## 2026-04-18 — Sync Mentions
 
 - `supabase/migrations/20260418000000_create_entity_mentions.sql` — creates `entity_mentions` table (entity_id, scene_id, project_id, context TEXT, position INTEGER) with RLS scoped to project owner.
