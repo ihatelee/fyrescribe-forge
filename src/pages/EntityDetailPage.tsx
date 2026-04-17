@@ -1127,10 +1127,10 @@ const EntityDetailInner = () => {
         </button>
 
         {/* ===== HEADER ===== */}
-        <div className="flex gap-6 mb-10">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-10">
           <div
             onClick={() => coverInputRef.current?.click()}
-            className="w-[200px] h-[260px] bg-fyrescribe-raised border border-border rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer hover:border-gold/30 transition-colors overflow-hidden relative group"
+            className="w-[140px] h-[180px] sm:w-[200px] sm:h-[260px] bg-fyrescribe-raised border border-border rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer hover:border-gold/30 transition-colors overflow-hidden relative group"
           >
             {coverImage ? (
               <>
