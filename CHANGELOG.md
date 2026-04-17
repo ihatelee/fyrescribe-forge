@@ -4,6 +4,28 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Code audit and cleanup
+
+### Audit findings
+
+**Dead files removed:**
+- `src/components/NavLink.tsx` — React Router NavLink wrapper component never imported by any file. Deleted.
+- `src/types/lore.ts` — Exported `LoreSuggestionType`, `LoreSuggestion`, and `LORE_TYPE_TO_CATEGORY`, none of which were imported anywhere. The `LoreSuggestion` interface had the wrong shape (fields as top-level columns rather than inside `payload: SuggestionPayload`); the correct interface lives in `LoreInboxPage.tsx`. Deleted.
+
+**No action needed (actively used, not dead code):**
+- `entity_tags` — still in active use across `EntityDetailPage`, `EntityGalleryPage`, `LoreInboxPage`, and `LoreUploadModal`. It stores user-defined coloured label tags; `entity_links` stores structured entity-to-entity field relationships. These are different systems and were never in conflict.
+- `CATEGORY_FIELDS` / `CATEGORY_SECTIONS` — still in active use in `EntityDetailPage` (field key seeding and At a Glance panel) and `LoreUploadModal`. The CHANGELOG note about removing them referred only to the `sync-lore` edge function; the frontend constants remain correct.
+- `console.error` calls — all are genuine error-path logging (40+ occurrences). No casual `console.log` debug statements exist anywhere in `src/`.
+- Duplicate `runFieldTaggingPass` in `link-lore` and `sync-tags` — intentional; Supabase deploys each edge function independently and cannot share module code.
+- All imports across `src/` — verified clean, no unused imports found.
+- All `useState` declarations — verified all setters are called; no dead state.
+
+### Changes made
+- Deleted `src/components/NavLink.tsx`
+- Deleted `src/types/lore.ts`
+
+---
+
 ## 2026-04-17 — Sync Tags: review modal + Lovable refinements (pull)
 
 - `src/components/SyncTagsModal.tsx` (Lovable) — new review modal matching the LinkLoreModal pattern. `sync-tags` now returns a `suggestions` array (each entry: `entity_id/name/category`, `field_key`, `target_entity_id/name/category`) instead of auto-inserting. Modal groups suggestions by source entity, shows field key and proposed target with category badge. Accept writes to `entity_links` immediately; Reject is local-only (suggestions are stateless — AI may resurface on next run). Empty state shown when no suggestions remain.
