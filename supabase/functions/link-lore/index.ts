@@ -31,6 +31,9 @@ const FIELD_TARGET_MAP: Record<string, Array<{ field: string; targetCategory: st
 
 const ALL_FIELD_KEYS = Object.values(FIELD_TARGET_MAP).flat().map((f) => f.field);
 
+const stripHtml = (html: string) =>
+  (html ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -86,7 +89,7 @@ serve(async (req) => {
       });
     }
 
-    const admin = createClient(supabaseUrl, supabaseServiceKey);
+    const admin = createClient<any>(supabaseUrl, supabaseServiceKey);
 
     // ── Fetch entities ───────────────────────────────────────────────────
     const { data: entities } = await admin
@@ -245,7 +248,7 @@ ${existingLinkLines || "(none)"}
 });
 
 async function runFieldTaggingPass(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   project_id: string,
   anthropicKey: string,
   entities: any[],
