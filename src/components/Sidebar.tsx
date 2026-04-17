@@ -341,10 +341,10 @@ const Sidebar = () => {
           <button
             onClick={() => handleSync(true)}
             disabled={syncing}
-            title="Full sync — ignores is_dirty, processes all scenes"
+            title="Full Sync — ignores is_dirty, processes all scenes"
             className="px-2 py-1.5 text-[10px] rounded-md transition-colors text-text-dimmed hover:text-gold hover:bg-fyrescribe-hover disabled:opacity-40"
           >
-            Full sync
+            Full Sync
           </button>
         </div>
         {syncMessage && (
@@ -371,7 +371,7 @@ const Sidebar = () => {
           className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
         >
           <SyncIcon size={12} weight="duotone" className={linkingLore ? "animate-spin" : ""} />
-          {linkingLore ? "Linking…" : "Link Lore"}
+          {linkingLore ? "Linking…" : "Sync Connections"}
         </button>
         {linkLoreMessage && (
           <p className="px-3 text-[10px] text-text-dimmed">{linkLoreMessage}</p>
