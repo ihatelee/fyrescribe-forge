@@ -1263,10 +1263,7 @@ const EntityDetailInner = () => {
               </div>
             )}
 
-            {/* ===== APPEARANCE LOG ===== */}
-            <AppearanceLog entityId={entity.id} entityName={entity.name} projectId={projectId} />
-
-            {/* ===== CHARACTER: Related Artifacts ===== */}
+              {/* ===== CHARACTER: Related Artifacts ===== */}
             {entity.category === "characters" && (
               <div className="border-t border-border pt-8 mb-8">
                 <h2 className="font-display text-base text-foreground mb-4 tracking-wide">Related Artifacts</h2>
