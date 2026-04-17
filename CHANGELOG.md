@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Link Lore AI relationship inference
+
+- `supabase/migrations/20260419100000_create_lore_link_suggestions.sql` — creates `lore_link_suggestions` table (project_id, entity_a_id, entity_b_id, relationship, confidence INTEGER, status TEXT default 'pending', created_at) with RLS scoped to project owner.
+- `supabase/functions/link-lore/index.ts` — new edge function. Fetches all non-archived entities (id, name, category, summary, sections) and existing entity_links for the project. Builds a plain-text context block and sends a single AI call (claude-sonnet-4-20250514) requesting a JSON array of `{ entity_a_id, entity_b_id, relationship, confidence }`. Strips code fences from response, filters to confidence ≥ 7, deduplicates against existing linked pairs. Full-refresh: deletes existing pending suggestions then bulk-inserts new ones. Returns `{ suggestions_created: number }`.
+- `src/components/LinkLoreModal.tsx` — rewritten. On open, loads `lore_link_suggestions` where `status = pending` for the project (ordered by confidence desc). Accept: inserts into `entity_links` + updates suggestion `status = accepted`. Dismiss: updates `status = dismissed`. Both remove the card immediately. Shows confidence score (X/10) per card. Counter "X of Y reviewed" in header. Empty states: no pending suggestions vs. all reviewed.
+- `src/components/Sidebar.tsx` — added `linkingLore` / `linkLoreMessage` state, `handleLinkLoreInner` (shared inner logic), `handleLinkLore` (standalone button handler with loading state + 4 s message). Link Lore button added below Sync Mentions with identical button style. Full Sync chain extended: sync-lore → sync-mentions → link-lore.
+
+---
+
 ## 2026-04-17 — Entity linking wiring + Story History fix + Appearance Log position
 
 - `supabase/migrations/20260419000000_add_scene_id_to_entity_links.sql` — adds nullable `scene_id UUID REFERENCES scenes(id) ON DELETE SET NULL` to `entity_links`.

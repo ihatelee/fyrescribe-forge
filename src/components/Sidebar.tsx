@@ -58,6 +58,8 @@ const Sidebar = () => {
   const [fullSyncNote, setFullSyncNote] = useState(false);
   const [syncingMentions, setSyncingMentions] = useState(false);
   const [mentionsMessage, setMentionsMessage] = useState<string | null>(null);
+  const [linkingLore, setLinkingLore] = useState(false);
+  const [linkLoreMessage, setLinkLoreMessage] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
 
   const fetchPendingCount = useCallback(async () => {
@@ -113,8 +115,11 @@ const Sidebar = () => {
       }
       await fetchPendingCount();
 
-      // Full sync also runs mentions
-      if (force) await handleSyncMentionsInner();
+      // Full sync also runs mentions then link-lore
+      if (force) {
+        await handleSyncMentionsInner();
+        await handleLinkLoreInner();
+      }
     } catch {
       setSyncMessage("Sync failed");
     } finally {
@@ -147,6 +152,32 @@ const Sidebar = () => {
     } finally {
       setSyncingMentions(false);
       setTimeout(() => setMentionsMessage(null), 4000);
+    }
+  };
+
+  const handleLinkLoreInner = async () => {
+    if (!activeProject) return;
+    const { data, error } = await supabase.functions.invoke("link-lore", {
+      body: { project_id: activeProject.id },
+    });
+    if (error) throw error;
+    return data?.suggestions_created as number | undefined;
+  };
+
+  const handleLinkLore = async () => {
+    if (!activeProject || linkingLore) return;
+    setLinkingLore(true);
+    setLinkLoreMessage(null);
+    try {
+      const created = await handleLinkLoreInner();
+      setLinkLoreMessage(
+        created != null ? `Found ${created} suggested link${created !== 1 ? "s" : ""}` : "Done",
+      );
+    } catch {
+      setLinkLoreMessage("Link Lore failed");
+    } finally {
+      setLinkingLore(false);
+      setTimeout(() => setLinkLoreMessage(null), 4000);
     }
   };
 
@@ -286,6 +317,19 @@ const Sidebar = () => {
         </button>
         {mentionsMessage && (
           <p className="px-3 text-[10px] text-text-dimmed">{mentionsMessage}</p>
+        )}
+
+        {/* Link Lore */}
+        <button
+          onClick={handleLinkLore}
+          disabled={linkingLore || !activeProject}
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
+        >
+          <SyncIcon size={12} weight="duotone" className={linkingLore ? "animate-spin" : ""} />
+          {linkingLore ? "Linking…" : "Link Lore"}
+        </button>
+        {linkLoreMessage && (
+          <p className="px-3 text-[10px] text-text-dimmed">{linkLoreMessage}</p>
         )}
 
         {/* Lore Inbox */}

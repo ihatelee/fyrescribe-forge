@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link2, Loader2, Check, X } from "lucide-react";
 
@@ -9,11 +9,11 @@ interface EntityRef {
 }
 
 interface SuggestedLink {
+  id: string;
   entity_a: EntityRef;
   entity_b: EntityRef;
   relationship: string;
-  source_scene: string | null;
-  source_chapter: string | null;
+  confidence: number;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -34,95 +34,73 @@ interface LinkLoreModalProps {
 }
 
 const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
-  const [state, setState] = useState<"idle" | "analyzing" | "results" | "error">("idle");
+  const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<SuggestedLink[]>([]);
-  const [reviewed, setReviewed] = useState<Set<number>>(new Set());
-  const [editedRelationships, setEditedRelationships] = useState<Record<number, string>>({});
-  const [busyIndex, setBusyIndex] = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [totalCount, setTotalCount] = useState(0);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const reviewedCount = reviewed.size;
-  const totalCount = suggestions.length;
+  const reviewedCount = totalCount - suggestions.length;
 
-  const handleAnalyze = async () => {
-    setState("analyzing");
-    setErrorMsg("");
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("lore_link_suggestions")
+        .select(
+          "id, relationship, confidence, entity_a:entity_a_id(id, name, category), entity_b:entity_b_id(id, name, category)",
+        )
+        .eq("project_id", projectId)
+        .eq("status", "pending")
+        .order("confidence", { ascending: false });
 
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) {
-        setErrorMsg("Not authenticated");
-        setState("error");
-        return;
+      if (!error && data) {
+        const mapped: SuggestedLink[] = (data as any[]).map((row) => ({
+          id: row.id,
+          entity_a: row.entity_a,
+          entity_b: row.entity_b,
+          relationship: row.relationship,
+          confidence: row.confidence,
+        }));
+        setSuggestions(mapped);
+        setTotalCount(mapped.length);
       }
+      setLoading(false);
+    };
+    load();
+  }, [projectId]);
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const res = await fetch(`${supabaseUrl}/functions/v1/analyze-lore`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({ project_id: projectId }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMsg(data.error || "Analysis failed");
-        setState("error");
-        return;
-      }
-
-      if (!data.suggestions || data.suggestions.length === 0) {
-        setSuggestions([]);
-        setState("results");
-        return;
-      }
-
-      setSuggestions(data.suggestions);
-      setReviewed(new Set());
-      setEditedRelationships({});
-      setState("results");
-    } catch (err) {
-      console.error("Analyze lore error:", err);
-      setErrorMsg("An unexpected error occurred");
-      setState("error");
-    }
-  };
-
-  const handleAccept = async (index: number) => {
-    const s = suggestions[index];
-    if (!s) return;
-    setBusyIndex(index);
-
-    const relationship = editedRelationships[index] ?? s.relationship;
-
-    const { error } = await supabase.from("entity_links").insert({
-      entity_a_id: s.entity_a.id,
-      entity_b_id: s.entity_b.id,
-      relationship,
+  const handleAccept = async (suggestion: SuggestedLink) => {
+    setBusyId(suggestion.id);
+    await supabase.from("entity_links").insert({
+      entity_a_id: suggestion.entity_a.id,
+      entity_b_id: suggestion.entity_b.id,
+      relationship: suggestion.relationship,
     });
-
-    if (error) {
-      console.error("Failed to create link:", error);
-    }
-
-    setReviewed((prev) => new Set(prev).add(index));
-    setBusyIndex(null);
+    await supabase
+      .from("lore_link_suggestions")
+      .update({ status: "accepted" })
+      .eq("id", suggestion.id);
+    setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
+    setBusyId(null);
   };
 
-  const handleDismiss = (index: number) => {
-    setReviewed((prev) => new Set(prev).add(index));
-  };
-
-  const handleRelationshipChange = (index: number, value: string) => {
-    setEditedRelationships((prev) => ({ ...prev, [index]: value }));
+  const handleDismiss = async (suggestion: SuggestedLink) => {
+    setBusyId(suggestion.id);
+    await supabase
+      .from("lore_link_suggestions")
+      .update({ status: "dismissed" })
+      .eq("id", suggestion.id);
+    setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
+    setBusyId(null);
   };
 
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const confidenceColor = (c: number) => {
+    if (c >= 9) return "text-gold-bright";
+    if (c >= 7) return "text-gold/80";
+    return "text-text-dimmed";
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center" onClick={onClose}>
@@ -131,11 +109,16 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
         className="bg-fyrescribe-raised border border-border rounded-xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-0">
+        <div className="flex items-center justify-between p-6 pb-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Link2 size={16} className="text-gold" />
             <h2 className="font-display text-base text-foreground">Link Lore</h2>
           </div>
+          {!loading && totalCount > 0 && (
+            <span className="text-[10px] uppercase tracking-widest text-text-dimmed">
+              {reviewedCount} of {totalCount} reviewed
+            </span>
+          )}
           <button
             onClick={onClose}
             className="p-1.5 rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
@@ -146,67 +129,40 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
-          {state === "idle" && (
-            <div className="text-center py-8">
-              <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-                Analyze your world entries to discover relationships between characters, locations, items, and lore.
-              </p>
-              <button
-                onClick={handleAnalyze}
-                className="w-full py-2.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
-              >
-                Analyze World
-              </button>
-              <p className="text-[11px] text-text-dimmed mt-3">
-                This may take a moment depending on your world's size.
-              </p>
-            </div>
-          )}
-
-          {state === "analyzing" && (
+          {loading && (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <Loader2 size={24} className="animate-spin text-gold" />
-              <p className="text-sm text-text-secondary">Analyzing your world…</p>
+              <p className="text-sm text-text-secondary">Loading suggestions…</p>
             </div>
           )}
 
-          {state === "error" && (
-            <div className="text-center py-8">
-              <p className="text-sm text-destructive mb-4">{errorMsg}</p>
-              <button
-                onClick={() => setState("idle")}
-                className="px-4 py-2 text-sm text-text-secondary hover:text-foreground transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          )}
-
-          {state === "results" && suggestions.length === 0 && (
+          {!loading && suggestions.length === 0 && (
             <div className="text-center py-8">
               <div className="text-text-dimmed text-3xl mb-4 leading-none">✦</div>
-              <p className="text-sm text-text-secondary mb-1">No new relationships found</p>
-              <p className="text-xs text-text-dimmed">
-                All discoverable links may already exist, or more entities are needed.
-              </p>
+              {totalCount > 0 ? (
+                <>
+                  <p className="text-sm text-text-secondary mb-1">All suggestions reviewed!</p>
+                  <p className="text-xs text-text-dimmed">Run Link Lore again to find new relationships.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-text-secondary mb-1">No pending link suggestions</p>
+                  <p className="text-xs text-text-dimmed">
+                    Click "Link Lore" in the sidebar to analyse your world.
+                  </p>
+                </>
+              )}
             </div>
           )}
 
-          {state === "results" && suggestions.length > 0 && (
+          {!loading && suggestions.length > 0 && (
             <div className="space-y-3">
-              {/* Counter */}
-              <p className="text-[11px] text-text-dimmed mb-4">
-                {reviewedCount} of {totalCount} reviewed
-              </p>
-
-              {suggestions.map((s, i) => {
-                if (reviewed.has(i)) return null;
-                const isBusy = busyIndex === i;
-
+              {suggestions.map((s) => {
+                const isBusy = busyId === s.id;
                 return (
                   <div
-                    key={`${s.entity_a.id}-${s.entity_b.id}`}
-                    className="bg-fyrescribe-base border border-border rounded-lg p-4 animate-fade-in"
+                    key={s.id}
+                    className="bg-fyrescribe-base border border-border rounded-lg p-4"
                   >
                     {/* Entity A */}
                     <div className="flex items-center gap-2 mb-2">
@@ -220,25 +176,14 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
                       </span>
                     </div>
 
-                    {/* Relationship */}
+                    {/* Relationship + confidence */}
                     <div className="flex items-center gap-2 mb-2 pl-2">
                       <span className="text-text-dimmed text-xs">↳</span>
-                      <input
-                        value={editedRelationships[i] ?? s.relationship}
-                        onChange={(e) => handleRelationshipChange(i, e.target.value)}
-                        className="flex-1 bg-fyrescribe-hover border border-border rounded px-2 py-1 text-xs text-gold italic outline-none focus:border-gold/40 transition-colors"
-                      />
+                      <span className="flex-1 text-xs text-gold italic">{s.relationship}</span>
+                      <span className={`text-[10px] font-mono ${confidenceColor(s.confidence)}`}>
+                        {s.confidence}/10
+                      </span>
                     </div>
-
-                    {/* Source context */}
-                    {(s.source_scene || s.source_chapter) && (
-                      <p className="text-[11px] text-text-dimmed mb-3 pl-2">
-                        ·{" "}
-                        {s.source_chapter && s.source_scene
-                          ? `${s.source_chapter} › ${s.source_scene}`
-                          : s.source_scene ?? s.source_chapter}
-                      </p>
-                    )}
 
                     {/* Entity B */}
                     <div className="flex items-center gap-2 mb-3">
@@ -255,7 +200,7 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
                     {/* Actions */}
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleAccept(i)}
+                        onClick={() => handleAccept(s)}
                         disabled={isBusy}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md bg-gold/15 text-gold hover:bg-gold/25 disabled:opacity-40 transition-colors"
                       >
@@ -263,7 +208,7 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
                         Accept
                       </button>
                       <button
-                        onClick={() => handleDismiss(i)}
+                        onClick={() => handleDismiss(s)}
                         disabled={isBusy}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40 transition-colors"
                       >
@@ -274,13 +219,6 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
                   </div>
                 );
               })}
-
-              {/* All reviewed */}
-              {reviewedCount === totalCount && (
-                <div className="text-center py-6">
-                  <p className="text-sm text-text-secondary">All suggestions reviewed!</p>
-                </div>
-              )}
             </div>
           )}
         </div>
