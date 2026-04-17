@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import DOMPurify from "dompurify";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
@@ -172,9 +172,11 @@ const EditableSceneTitle = ({
 
 const ManuscriptPage = () => {
   const { projectId: urlProjectId } = useParams<{ projectId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { activeProject } = useActiveProject();
   const { theme } = useTheme();
   const projectId = activeProject?.id || urlProjectId;
+  const targetSceneId = searchParams.get("scene");
   const labelStyle = theme === "outrun" ? { color: "hsl(var(--neon-yellow))" } : undefined;
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -365,15 +367,23 @@ const ManuscriptPage = () => {
       setChapters(chapterData);
       setScenes(sceneData);
 
-      // Auto-select first chapter + scene
+      // Auto-select: prefer scene from URL ?scene=<id>, otherwise first scene
       if (chapterData.length > 0) {
-        const first = chapterData[0];
-        setActiveChapterId(first.id);
-        setExpandedChapters([first.id]);
-        const firstScene = sceneData.find((s) => s.chapter_id === first.id);
-        if (firstScene) {
-          setActiveSceneId(firstScene.id);
-          setWordCount(firstScene.word_count ?? 0);
+        const urlScene = targetSceneId ? sceneData.find((s) => s.id === targetSceneId) : null;
+        if (urlScene) {
+          setActiveSceneId(urlScene.id);
+          setActiveChapterId(urlScene.chapter_id);
+          setExpandedChapters([urlScene.chapter_id]);
+          setWordCount(urlScene.word_count ?? 0);
+        } else {
+          const first = chapterData[0];
+          setActiveChapterId(first.id);
+          setExpandedChapters([first.id]);
+          const firstScene = sceneData.find((s) => s.chapter_id === first.id);
+          if (firstScene) {
+            setActiveSceneId(firstScene.id);
+            setWordCount(firstScene.word_count ?? 0);
+          }
         }
       }
       setLoading(false);
@@ -381,7 +391,23 @@ const ManuscriptPage = () => {
     fetchData();
   }, [projectId]);
 
+  // If ?scene= changes after initial load, jump to that scene
+  useEffect(() => {
+    if (!targetSceneId || scenes.length === 0) return;
+    const target = scenes.find((s) => s.id === targetSceneId);
+    if (target && target.id !== activeSceneId) {
+      setActiveSceneId(target.id);
+      setActiveChapterId(target.chapter_id);
+      setExpandedChapters((prev) =>
+        prev.includes(target.chapter_id) ? prev : [...prev, target.chapter_id],
+      );
+      setWordCount(target.word_count ?? 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetSceneId, scenes]);
+
   // ─── Auto-save ──────────────────────────────────────────────────────
+
 
   const saveScene = useDebouncedCallback(
     async (sceneId: string, content: string) => {

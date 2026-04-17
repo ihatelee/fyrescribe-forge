@@ -7,6 +7,7 @@ import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil } from "lucide-react";
 import type { Json, Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
+import AppearanceLog from "@/components/AppearanceLog";
 
 type EntityCategory = Database["public"]["Enums"]["entity_category"];
 
@@ -1032,6 +1033,9 @@ const EntityDetailInner = () => {
                 )}
               </div>
             </div>
+
+            {/* ===== APPEARANCE LOG ===== */}
+            <AppearanceLog entityId={entity.id} entityName={entity.name} projectId={projectId} />
           </div>
 
           {/* ===== AT A GLANCE PANEL ===== */}
