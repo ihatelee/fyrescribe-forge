@@ -17,6 +17,8 @@ import {
   Trash2,
   Loader2,
   StickyNote,
+  PanelLeft,
+  X,
 } from "lucide-react";
 
 interface Note {
@@ -53,6 +55,7 @@ const NotesPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [notesPanelOpen, setNotesPanelOpen] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
