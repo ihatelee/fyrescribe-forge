@@ -400,7 +400,7 @@ const Sidebar = () => {
 
         {/* Lore Inbox */}
         <button
-          onClick={() => navigate("/lore-inbox")}
+          onClick={() => navigateAndClose("/lore-inbox")}
           className={`w-full flex items-center justify-between px-3 py-2 text-[13px] rounded-md transition-colors ${
             location.pathname === "/lore-inbox"
               ? "text-gold-bright bg-gold-glow"
