@@ -1237,9 +1237,58 @@ const ManuscriptPage = () => {
             />
           )}
           {/* Toolbar */}
-          <div className="relative z-10 flex items-center justify-between px-4 py-2 border-b border-border bg-fyrescribe-base">
-            <div className="flex items-center gap-1 flex-1">
-              {formattingControls}
+          <div className="relative z-10 flex items-center justify-between px-2 md:px-4 py-2 border-b border-border bg-fyrescribe-base">
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              {/* Desktop formatting controls */}
+              <div className="hidden md:flex items-center gap-1">
+                {formattingControls}
+              </div>
+
+              {/* Mobile: Format menu */}
+              <div className="md:hidden relative">
+                <button
+                  onClick={() => setFormatMenuOpen((v) => !v)}
+                  className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
+                >
+                  <Type size={14} />
+                  Format
+                </button>
+                {formatMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setFormatMenuOpen(false)}
+                    />
+                    <div className="absolute left-0 top-full mt-1 z-50 bg-card border border-border rounded-md shadow-lg p-3 flex flex-col gap-3 min-w-[260px]">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => applyFormat("bold")}
+                          className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                        >
+                          <Bold size={14} />
+                        </button>
+                        <button
+                          onClick={() => applyFormat("italic")}
+                          className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                        >
+                          <Italic size={14} />
+                        </button>
+                        <button
+                          onClick={() => { handleThesaurus(); setFormatMenuOpen(false); }}
+                          className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
+                        >
+                          <BookOpen size={14} />
+                          Thesaurus
+                        </button>
+                      </div>
+                      <TextSizeSelector />
+                      <LineHeightSelector />
+                      <ColumnWidthSelector />
+                    </div>
+                  </>
+                )}
+              </div>
+
               <div className="flex-1" />
               <POVSelector
                 projectId={projectId}
@@ -1247,13 +1296,21 @@ const ManuscriptPage = () => {
                 povCharacterId={activeScene?.pov_character_id ?? null}
                 onChange={handlePOVChange}
               />
-              <div className="w-px h-4 bg-border mx-1" />
+              <div className="w-px h-4 bg-border mx-1 hidden md:block" />
               <button
                 onClick={() => setFocusMode(true)}
                 className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
               >
                 <Maximize size={14} />
-                Focus
+                <span className="hidden md:inline">Focus</span>
+              </button>
+              {/* Mobile: chapter panel trigger */}
+              <button
+                onClick={() => setChapterPanelOpen(true)}
+                aria-label="Open chapters"
+                className="md:hidden p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+              >
+                <PanelRight size={16} />
               </button>
             </div>
           </div>
