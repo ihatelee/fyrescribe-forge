@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import MobileUnavailable from "@/components/MobileUnavailable";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import POVSelector from "@/components/POVSelector";
@@ -57,7 +58,8 @@ const POVTrackerPage = () => {
 
   return (
     <AppLayout>
-      <div className="p-6">
+      <MobileUnavailable feature="POV Tracker" />
+      <div className="hidden lg:block p-6">
         <h1 className="font-display text-xl text-foreground tracking-wide mb-6">
           POV Tracker
         </h1>
