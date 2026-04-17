@@ -159,6 +159,58 @@ export type Database = {
           },
         ]
       }
+      entity_mentions: {
+        Row: {
+          context: string | null
+          created_at: string
+          entity_id: string
+          id: string
+          position: number | null
+          project_id: string
+          scene_id: string
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          entity_id: string
+          id?: string
+          position?: number | null
+          project_id: string
+          scene_id: string
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          entity_id?: string
+          id?: string
+          position?: number | null
+          project_id?: string
+          scene_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_mentions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_mentions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_mentions_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entity_tags: {
         Row: {
           entity_id: string
