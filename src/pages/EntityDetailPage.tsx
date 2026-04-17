@@ -369,6 +369,8 @@ const EntityDetailInner = () => {
   const [isPovCharacter, setIsPovCharacter] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
+  const [generatingHistory, setGeneratingHistory] = useState(false);
+  const storyHistoryRef = useRef<HTMLDivElement>(null);
 
   const sectionsRef = useRef<EntitySections>({});
   const sectionList = CATEGORY_SECTIONS[entity?.category || "characters"] || [];
