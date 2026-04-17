@@ -17,6 +17,8 @@ import {
   Trash2,
   Loader2,
   StickyNote,
+  PanelLeft,
+  X,
 } from "lucide-react";
 
 interface Note {
@@ -53,6 +55,7 @@ const NotesPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [notesPanelOpen, setNotesPanelOpen] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -117,6 +120,7 @@ const NotesPage = () => {
 
   // ─── Selection ──────────────────────────────────────────────────────
   const selectNote = (note: Note) => {
+    setNotesPanelOpen(false);
     if (note.id === activeNoteId) return;
     setActiveNoteId(note.id);
   };
@@ -283,16 +287,47 @@ const NotesPage = () => {
 
   return (
     <AppLayout>
-      <div className="flex h-full">
+      <div className="flex h-full relative">
+        {/* Mobile/tablet-portrait notes-list toggle (shown when panel closed) */}
+        {!notesPanelOpen && (
+          <button
+            onClick={() => setNotesPanelOpen(true)}
+            title="Show notes"
+            className="lg:hidden fixed left-2 top-24 z-30 w-9 h-9 rounded-md bg-fyrescribe-raised border border-border text-text-secondary hover:text-foreground hover:border-gold/30 flex items-center justify-center shadow-lg"
+          >
+            <PanelLeft size={16} />
+          </button>
+        )}
+
+        {/* Mobile drawer overlay */}
+        {notesPanelOpen && (
+          <div
+            className="lg:hidden fixed inset-0 top-20 bg-background/70 backdrop-blur-sm z-40"
+            onClick={() => setNotesPanelOpen(false)}
+          />
+        )}
+
         {/* ─── Left panel: note list ─────────────────────────────── */}
-        <div className="w-[280px] bg-fyrescribe-base border-r border-border flex flex-col flex-shrink-0">
-          <div className="p-3 border-b border-border">
+        <div
+          className={`bg-fyrescribe-base border-r border-border flex flex-col flex-shrink-0
+            lg:relative lg:w-[280px] lg:translate-x-0
+            fixed left-0 top-20 bottom-0 w-[280px] z-50 transition-transform duration-200
+            ${notesPanelOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        >
+          <div className="p-3 border-b border-border flex items-center gap-2">
             <button
               onClick={handleNewNote}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[13px] rounded-sm bg-fyrescribe-raised text-foreground hover:bg-fyrescribe-hover border border-border transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[13px] rounded-sm bg-fyrescribe-raised text-foreground hover:bg-fyrescribe-hover border border-border transition-colors"
             >
               <Plus size={14} />
               New Note
+            </button>
+            <button
+              onClick={() => setNotesPanelOpen(false)}
+              title="Close"
+              className="lg:hidden w-9 h-9 rounded-sm border border-border text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover flex items-center justify-center flex-shrink-0"
+            >
+              <X size={14} />
             </button>
           </div>
 

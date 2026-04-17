@@ -375,9 +375,9 @@ const EntityGalleryPage = () => {
   return (
     <AppLayout>
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <h1 className="font-display text-xl text-foreground tracking-wide">{heading}</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* View toggle */}
             <div className="flex items-center border border-border rounded-lg overflow-hidden">
               <button
@@ -408,24 +408,27 @@ const EntityGalleryPage = () => {
               <>
                 <button
                   onClick={() => setShowLinkModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 border border-border text-sm text-text-secondary rounded-lg hover:text-foreground hover:border-text-dimmed transition-colors"
+                  title="Link Lore"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-1.5 border border-border text-sm text-text-secondary rounded-lg hover:text-foreground hover:border-text-dimmed transition-colors"
                 >
                   <Link2 size={14} />
-                  Link Lore
+                  <span className="hidden sm:inline">Link Lore</span>
                 </button>
                 <button
                   onClick={() => setShowUploadModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 border border-border text-sm text-text-secondary rounded-lg hover:text-foreground hover:border-text-dimmed transition-colors"
+                  title="Upload Entry"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-1.5 border border-border text-sm text-text-secondary rounded-lg hover:text-foreground hover:border-text-dimmed transition-colors"
                 >
                   <Upload size={14} />
-                  Upload Entry
+                  <span className="hidden sm:inline">Upload Entry</span>
                 </button>
                 <button
                   onClick={() => setShowNewModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
+                  title="New Entry"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
                 >
                   <Plus size={14} />
-                  New Entry
+                  <span className="hidden sm:inline">New Entry</span>
                 </button>
               </>
             )}

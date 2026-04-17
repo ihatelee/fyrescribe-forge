@@ -1127,10 +1127,10 @@ const EntityDetailInner = () => {
         </button>
 
         {/* ===== HEADER ===== */}
-        <div className="flex gap-6 mb-10">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-10">
           <div
             onClick={() => coverInputRef.current?.click()}
-            className="w-[200px] h-[260px] bg-fyrescribe-raised border border-border rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer hover:border-gold/30 transition-colors overflow-hidden relative group"
+            className="w-[140px] h-[180px] sm:w-[200px] sm:h-[260px] bg-fyrescribe-raised border border-border rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer hover:border-gold/30 transition-colors overflow-hidden relative group"
           >
             {coverImage ? (
               <>
@@ -1279,7 +1279,7 @@ const EntityDetailInner = () => {
         </div>
 
         {/* ===== BODY + AT A GLANCE ===== */}
-        <div className="flex gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Left: Article body */}
           <div className="flex-1 min-w-0">
             <div className="space-y-0">
@@ -1567,8 +1567,8 @@ const EntityDetailInner = () => {
           </div>
 
           {/* ===== AT A GLANCE PANEL ===== */}
-          <div className="w-[260px] flex-shrink-0">
-            <div className="sticky top-16">
+          <div className="w-full lg:w-[260px] flex-shrink-0">
+            <div className="lg:sticky lg:top-16">
               <div className="bg-fyrescribe-raised border border-border rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-border">
                   <h2 className="font-display text-base text-foreground leading-tight truncate" title={entity?.name}>
