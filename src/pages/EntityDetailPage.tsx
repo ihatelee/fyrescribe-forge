@@ -450,6 +450,38 @@ const EntityDetailInner = () => {
     saveSectionsToDb(updated);
   }, [saveSectionsToDb]);
 
+  // ─── Story History (character only, AI-generated) ──────────────────
+
+  const handleUpdateStoryHistory = useCallback(async () => {
+    if (!id || generatingHistory) return;
+    setGeneratingHistory(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "generate-story-history",
+        { body: { entityId: id } },
+      );
+      if (error) {
+        console.error("Story history generation failed:", error);
+        return;
+      }
+      const html = (data as { html?: string } | null)?.html ?? "";
+      if (!html) return;
+      const updated = { ...sectionsRef.current, "Story History": html };
+      sectionsRef.current = updated;
+      setSections(updated);
+      // Re-seed the contentEditable so the new HTML is rendered.
+      const el = storyHistoryRef.current;
+      if (el) {
+        el.innerHTML = DOMPurify.sanitize(html);
+        el.dataset.initialized = "true";
+      }
+    } catch (e) {
+      console.error("Story history error:", e);
+    } finally {
+      setGeneratingHistory(false);
+    }
+  }, [id, generatingHistory]);
+
   // ─── Save summary / fields ───────────────────────────────────────
 
   const saveSummary = useCallback(async () => {
