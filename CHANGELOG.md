@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Lore tile 3-dot button visibility + delete button spacing
+
+- `src/pages/EntityGalleryPage.tsx` — `EntityMenu` trigger: removed `opacity-0 group-hover:opacity-100`; button is now always visible with `bg-fyrescribe-base border border-border` styling matching other app buttons.
+- Grid tile card: added `pb-10` so the delete button has clear space below card content and never overlaps the summary or tags.
+
+---
+
 ## 2026-04-17 — Lore tile delete checkbox fixes
 
 - `src/pages/EntityGalleryPage.tsx` — grid tile: replaced `<label>` (which only called `stopPropagation`, never toggling state) with a `<button>` that calls `toggleSelectEntity`. Lifted the active background to the whole button — gold tint (`bg-gold/10 border-gold/30`) when selected, destructive hover when not — so the entire "delete" area responds as one unit.

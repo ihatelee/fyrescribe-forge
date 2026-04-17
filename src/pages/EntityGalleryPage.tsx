@@ -341,7 +341,7 @@ const EntityGalleryPage = () => {
       <DropdownMenuTrigger asChild>
         <button
           onClick={(e) => e.stopPropagation()}
-          className="w-7 h-7 rounded-md flex items-center justify-center text-text-dimmed hover:text-foreground hover:bg-fyrescribe-base transition-colors opacity-0 group-hover:opacity-100"
+          className="w-7 h-7 rounded-md flex items-center justify-center text-text-dimmed hover:text-foreground bg-fyrescribe-base border border-border hover:border-gold/20 transition-colors"
         >
           <MoreVertical size={14} />
         </button>
@@ -507,7 +507,7 @@ const EntityGalleryPage = () => {
                   <div
                     key={entity.id}
                     onClick={() => navigate(`/entity/${entity.id}`)}
-                    className="relative text-left bg-fyrescribe-raised border border-border rounded-xl p-4 hover:border-gold/20 transition-all group animate-fade-in cursor-pointer"
+                    className="relative text-left bg-fyrescribe-raised border border-border rounded-xl p-4 pb-10 hover:border-gold/20 transition-all group animate-fade-in cursor-pointer"
                   >
                     <div
                       className="absolute bottom-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
