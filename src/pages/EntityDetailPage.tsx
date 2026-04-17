@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil, Loader2, Sparkles } from "lucide-react";
 import type { Json, Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import AppearanceLog from "@/components/AppearanceLog";
@@ -369,6 +369,8 @@ const EntityDetailInner = () => {
   const [isPovCharacter, setIsPovCharacter] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
+  const [generatingHistory, setGeneratingHistory] = useState(false);
+  const storyHistoryRef = useRef<HTMLDivElement>(null);
 
   const sectionsRef = useRef<EntitySections>({});
   const sectionList = CATEGORY_SECTIONS[entity?.category || "characters"] || [];
@@ -447,6 +449,38 @@ const EntityDetailInner = () => {
     sectionsRef.current = updated;
     saveSectionsToDb(updated);
   }, [saveSectionsToDb]);
+
+  // ─── Story History (character only, AI-generated) ──────────────────
+
+  const handleUpdateStoryHistory = useCallback(async () => {
+    if (!id || generatingHistory) return;
+    setGeneratingHistory(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "generate-story-history",
+        { body: { entityId: id } },
+      );
+      if (error) {
+        console.error("Story history generation failed:", error);
+        return;
+      }
+      const html = (data as { html?: string } | null)?.html ?? "";
+      if (!html) return;
+      const updated = { ...sectionsRef.current, "Story History": html };
+      sectionsRef.current = updated;
+      setSections(updated);
+      // Re-seed the contentEditable so the new HTML is rendered.
+      const el = storyHistoryRef.current;
+      if (el) {
+        el.innerHTML = DOMPurify.sanitize(html);
+        el.dataset.initialized = "true";
+      }
+    } catch (e) {
+      console.error("Story history error:", e);
+    } finally {
+      setGeneratingHistory(false);
+    }
+  }, [id, generatingHistory]);
 
   // ─── Save summary / fields ───────────────────────────────────────
 
@@ -1033,6 +1067,53 @@ const EntityDetailInner = () => {
                 )}
               </div>
             </div>
+
+            {/* ===== CHARACTER: Story History (AI-generated) ===== */}
+            {entity.category === "characters" && (
+              <div className="border-t border-border pt-8 mb-8">
+                <div className="flex items-center justify-between mb-4 gap-4">
+                  <div className="flex items-baseline gap-3 min-w-0">
+                    <h2 className="font-display text-base text-foreground tracking-wide">Story History</h2>
+                    <span className="text-[10px] uppercase tracking-widest text-text-dimmed">(2 paragraph maximum)</span>
+                  </div>
+                  <button
+                    onClick={handleUpdateStoryHistory}
+                    disabled={generatingHistory}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    {generatingHistory ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={12} className="text-gold" />
+                    )}
+                    Update History
+                  </button>
+                </div>
+                {(() => {
+                  const hasHistory = ((sections["Story History"] ?? "").replace(/<[^>]*>/g, "").trim().length) > 0;
+                  return hasHistory ? (
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      className="font-prose text-lg leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
+                      data-placeholder="No history yet."
+                      onInput={(e) => handleSectionInput("Story History", (e.target as HTMLDivElement).innerHTML)}
+                      ref={(el) => {
+                        storyHistoryRef.current = el;
+                        if (el && !el.dataset.initialized) {
+                          el.innerHTML = DOMPurify.sanitize(sections["Story History"] || "");
+                          el.dataset.initialized = "true";
+                        }
+                      }}
+                    />
+                  ) : (
+                    <p className="font-prose text-base leading-relaxed text-text-dimmed italic">
+                      No history yet. Click Update History to summarise this character's story so far.
+                    </p>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* ===== APPEARANCE LOG ===== */}
             <AppearanceLog entityId={entity.id} entityName={entity.name} projectId={projectId} />
