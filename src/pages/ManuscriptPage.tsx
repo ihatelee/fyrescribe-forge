@@ -1218,8 +1218,18 @@ const ManuscriptPage = () => {
       <div className="flex h-[calc(100vh-80px)]">
         {/* Editor area */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Subtle white overlay to lift legibility on dark themes */}
+          {(theme === "midnight" ||
+            theme === "fireside" ||
+            theme === "lavender" ||
+            theme === "enchanted") && (
+            <div
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{ backgroundColor: "rgba(255,255,255,0.05)" }}
+            />
+          )}
           {/* Toolbar */}
-          <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-fyrescribe-base">
+          <div className="relative z-10 flex items-center justify-between px-4 py-2 border-b border-border bg-fyrescribe-base">
             <div className="flex items-center gap-1 flex-1">
               {formattingControls}
               <div className="flex-1" />
