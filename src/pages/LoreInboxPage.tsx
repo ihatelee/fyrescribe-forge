@@ -448,7 +448,7 @@ const LoreInboxPage = () => {
         mergedSections = hasNew ? { ...existingSections, ...sectionsToWrite } : existingSections;
       }
 
-      const updates: Record<string, unknown> = { sections: mergedSections };
+      const updates: { sections: Record<string, string>; summary?: string } = { sections: mergedSections };
       if (!existing.summary && description) updates.summary = description;
       await supabase.from("entities").update(updates).eq("id", existing.id);
       entityId = existing.id;
