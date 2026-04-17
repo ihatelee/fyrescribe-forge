@@ -513,19 +513,23 @@ const EntityGalleryPage = () => {
                       className="absolute bottom-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
                       style={selectedIds.has(entity.id) ? { opacity: 1 } : undefined}
                     >
-                      <label
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1.5 cursor-pointer text-text-dimmed hover:text-destructive transition-colors"
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleSelectEntity(entity.id); }}
+                        className={`flex items-center gap-1.5 cursor-pointer px-1.5 py-0.5 rounded border transition-colors ${
+                          selectedIds.has(entity.id)
+                            ? "bg-gold/10 border-gold/30 text-gold-bright"
+                            : "border-transparent text-text-dimmed hover:text-destructive hover:bg-destructive/5 hover:border-destructive/20"
+                        }`}
                       >
                         <span className="text-[10px]">delete</span>
                         <span
                           className={`w-3 h-3 rounded-sm border flex items-center justify-center transition-colors flex-shrink-0 ${
-                            selectedIds.has(entity.id) ? "bg-gold border-gold" : "border-text-dimmed"
+                            selectedIds.has(entity.id) ? "bg-gold border-gold" : "border-current"
                           }`}
                         >
                           {selectedIds.has(entity.id) && <Check size={10} className="text-fyrescribe-raised" strokeWidth={3} />}
                         </span>
-                      </label>
+                      </button>
                     </div>
                     <div className="absolute top-3 right-3">
                       <EntityMenu entity={entity} />

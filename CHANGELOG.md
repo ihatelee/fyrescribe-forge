@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Lore tile delete checkbox fixes
+
+- `src/pages/EntityGalleryPage.tsx` — grid tile: replaced `<label>` (which only called `stopPropagation`, never toggling state) with a `<button>` that calls `toggleSelectEntity`. Lifted the active background to the whole button — gold tint (`bg-gold/10 border-gold/30`) when selected, destructive hover when not — so the entire "delete" area responds as one unit.
+
+---
+
 ## 2026-04-17 — Lore tile delete checkbox styling
 
 - `src/pages/EntityGalleryPage.tsx` — replaced native `<input type="checkbox">` on both grid and list view tiles with a custom `<span>` matching the POV Character checkbox style exactly: 12×12 px, `rounded-sm`, `border-text-dimmed` unchecked, `bg-gold border-gold` with a white `Check` icon when checked.
