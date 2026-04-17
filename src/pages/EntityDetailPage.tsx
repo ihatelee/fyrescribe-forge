@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil, Loader2, Sparkles } from "lucide-react";
 import type { Json, Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import AppearanceLog from "@/components/AppearanceLog";
