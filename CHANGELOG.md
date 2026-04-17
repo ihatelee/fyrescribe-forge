@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Notes persistence (user_id + RLS)
+
+- `supabase/migrations/20260417000000_notes_user_id_rls.sql` — adds `user_id UUID` column to `notes` table, enables RLS, and creates policy scoping all operations to `auth.uid() = user_id`.
+- `src/pages/NotesPage.tsx` — imports `useAuth`; guards `handleNewNote` with `user` check; passes `user_id: user.id` on insert so new notes are owned and visible only to the creating user.
+
+---
+
 ## 2026-04-17 — Notes page (per-project notepad)
 
 - New `notes` table (project_id, title, content, timestamps) with RLS scoped to project owner; cascade-deletes with project. Migration adds standard `update_updated_at_column` trigger.

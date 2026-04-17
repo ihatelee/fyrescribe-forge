@@ -4,6 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
 import {
   Bold,
@@ -21,6 +22,7 @@ import {
 interface Note {
   id: string;
   project_id: string;
+  user_id: string;
   title: string;
   content: string;
   updated_at: string;
@@ -34,6 +36,7 @@ const snippetOf = (html: string): string => {
 const NotesPage = () => {
   const { activeProject } = useActiveProject();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const labelStyle = theme === "outrun" ? { color: "hsl(var(--neon-yellow))" } : undefined;
 
   const [notes, setNotes] = useState<Note[]>([]);
@@ -111,10 +114,10 @@ const NotesPage = () => {
 
   // ─── New note ───────────────────────────────────────────────────────
   const handleNewNote = async () => {
-    if (!activeProject) return;
+    if (!activeProject || !user) return;
     const { data, error } = await supabase
       .from("notes")
-      .insert({ project_id: activeProject.id, title: "Untitled", content: "" })
+      .insert({ project_id: activeProject.id, user_id: user.id, title: "Untitled", content: "" })
       .select("*")
       .single();
     if (error || !data) {
