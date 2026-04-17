@@ -233,11 +233,16 @@ const Sidebar = () => {
     return location.pathname.endsWith(`/${segment}`);
   };
 
+  const navigateAndClose = (path: string) => {
+    navigate(path);
+    window.dispatchEvent(new CustomEvent("mobile-nav-close"));
+  };
+
   const NavItem = ({ label, path, icon: Icon }: { label: string; path: string; icon: PhosphorIcon }) => {
     const active = isActive(path);
     return (
       <button
-        onClick={() => navigate(path)}
+        onClick={() => navigateAndClose(path)}
         className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] rounded-sm transition-colors relative ${
           active
             ? "text-gold-bright bg-gold-glow border border-gold"
