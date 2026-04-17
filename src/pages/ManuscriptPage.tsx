@@ -9,6 +9,8 @@ import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { stripRtf, parseManuscript } from "@/lib/manuscriptParser";
 import OutrunMusicPlayer from "@/components/OutrunMusicPlayer";
 import POVSelector from "@/components/POVSelector";
+import SaveVersionPopover from "@/components/SaveVersionPopover";
+import VersionHistoryPanel, { SceneVersion } from "@/components/VersionHistoryPanel";
 import {
   Bold,
   Italic,
@@ -19,6 +21,8 @@ import {
   X,
   Plus,
   Loader2,
+  History,
+  BookmarkPlus,
 } from "lucide-react";
 
 // ─── Utilities ────────────────────────────────────────────────────────
