@@ -1233,6 +1233,46 @@ const EntityDetailInner = () => {
                 </button>
               )}
             </div>
+
+            {/* Also Known As — alternate names that should resolve to this entity */}
+            <div className="mt-3">
+              <div className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1.5">
+                Also known as
+              </div>
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {aliases.map((alias) => (
+                  <span
+                    key={alias}
+                    className="flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full bg-fyrescribe-hover text-text-secondary border border-border"
+                  >
+                    {alias}
+                    <button
+                      onClick={() => handleRemoveAlias(alias)}
+                      className="hover:text-destructive"
+                      aria-label={`Remove alias ${alias}`}
+                    >
+                      <X size={10} className="text-text-dimmed hover:text-destructive" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  value={aliasDraft}
+                  onChange={(e) => setAliasDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      handleAddAlias();
+                    } else if (e.key === "Backspace" && !aliasDraft && aliases.length > 0) {
+                      e.preventDefault();
+                      handleRemoveAlias(aliases[aliases.length - 1]);
+                    }
+                  }}
+                  onBlur={handleAddAlias}
+                  placeholder={aliases.length === 0 ? "Add a nickname, first name, last name…" : "+ Add alias"}
+                  className="text-xs px-2.5 py-0.5 rounded-full border border-dashed border-border bg-transparent text-text-secondary placeholder:text-text-dimmed outline-none focus:border-gold/40 transition-colors min-w-[10rem]"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
