@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-16 — Entity name editable inline on entity detail page
+
+- `src/pages/EntityDetailPage.tsx` — replaced static `<h1>` name display with an inline edit pattern: clicking the name enters edit mode (input pre-filled with current name, gold underline); Enter/blur commits if non-empty; Escape reverts; blank input reverts without saving. Pencil icon fades in on hover as edit affordance. Save writes directly to `entities.name` via Supabase and patches local entity state.
+
+---
+
 ## 2026-04-16 — POV dropdown: clipping fix, alignment fix, POV-only filter
 
 - `src/components/POVSelector.tsx` — three fixes in one file:

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check } from "lucide-react";
+import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil } from "lucide-react";
 import type { Json, Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 
@@ -366,6 +366,8 @@ const EntityDetailInner = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [isPovCharacter, setIsPovCharacter] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
 
   const sectionsRef = useRef<EntitySections>({});
   const sectionList = CATEGORY_SECTIONS[entity?.category || "characters"] || [];
@@ -728,7 +730,35 @@ const EntityDetailInner = () => {
           </div>
 
           <div className="flex-1 min-w-0 pt-1">
-            <h1 className="font-display text-3xl text-foreground mb-2 leading-tight">{entity.name}</h1>
+            {editingName ? (
+              <input
+                autoFocus
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                onBlur={async () => {
+                  const trimmed = nameValue.trim();
+                  if (!trimmed) { setEditingName(false); return; }
+                  if (trimmed !== entity.name) {
+                    const { error } = await supabase.from("entities").update({ name: trimmed }).eq("id", entity.id);
+                    if (!error) setEntity((prev: typeof entity) => ({ ...prev, name: trimmed }));
+                  }
+                  setEditingName(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                  if (e.key === "Escape") { setEditingName(false); }
+                }}
+                className="font-display text-3xl text-foreground mb-2 leading-tight bg-transparent border-b border-gold/50 outline-none w-full"
+              />
+            ) : (
+              <button
+                onClick={() => { setNameValue(entity.name); setEditingName(true); }}
+                className="group flex items-center gap-2 font-display text-3xl text-foreground mb-2 leading-tight hover:text-foreground/80 transition-colors text-left"
+              >
+                <span className="border-b border-transparent group-hover:border-foreground/20 transition-colors">{entity.name}</span>
+                <Pencil size={16} className="text-text-dimmed opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+              </button>
+            )}
             <span className={`inline-block text-[11px] px-2.5 py-0.5 rounded-full mb-4 ${CATEGORY_COLORS[entity.category]}`}>
               {entity.category}
             </span>
