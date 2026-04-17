@@ -298,7 +298,13 @@ const ManuscriptPage = () => {
     large: "text-[48px]",
     xl: "text-[56px]",
   };
-  const [textSize, setTextSize] = useState<TextSize>("medium");
+  // Default to smallest text size on mobile/tablet-portrait, medium on desktop (>=lg)
+  const [textSize, setTextSize] = useState<TextSize>(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+      return "small";
+    }
+    return "medium";
+  });
 
   type LineHeight = "single" | "1.5" | "double";
   const LINE_HEIGHT_CLASSES: Record<LineHeight, string> = {
