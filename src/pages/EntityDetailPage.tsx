@@ -50,6 +50,27 @@ const CATEGORY_FIELDS: Record<string, string[]> = {
   history: ["Date/Era", "Location", "Key Factions", "Outcome"],
 };
 
+// Maps At a Glance field names → target entity category for entity-picker fields.
+// Any field listed here renders as an entity picker / clickable badge instead of free text.
+const ENTITY_FIELD_MAP: Record<string, EntityCategory> = {
+  // characters
+  "Place of Birth": "places",
+  "Currently Residing": "places",
+  "Allegiance": "factions",
+  // artifacts
+  "Current Owner": "characters",
+  "Origin": "places",
+  // factions
+  "Leader": "characters",
+  "Headquarters": "places",
+  // places
+  "Government": "factions",
+  // creatures
+  "Habitat": "places",
+  // events / history
+  "Location": "places",
+};
+
 const SECTION_PLACEHOLDER_TEXT: Record<string, string> = {
   Overview: "Write an overview of this entity here…",
   Background: "Describe the background and origin story…",
@@ -293,6 +314,284 @@ const LinkEntityModal = ({
         ))}
         {filtered.length === 0 && (
           <div className="text-xs text-text-dimmed px-3 py-2">No entities found</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
+// ─── Inline Add-Link Form (Linked Entities section) ───────────────────
+
+interface AddLinkInlineProps {
+  currentEntityId: string;
+  projectId: string;
+  excludeIds: string[];
+  onLinked: (entry: LinkedEntityEntry) => void;
+  onCancel: () => void;
+}
+
+const AddLinkInline = ({ currentEntityId, projectId, excludeIds, onLinked, onCancel }: AddLinkInlineProps) => {
+  const [query, setQuery] = useState("");
+  const [relationship, setRelationship] = useState("");
+  const [candidates, setCandidates] = useState<{ id: string; name: string; category: string }[]>([]);
+  const [selected, setSelected] = useState<{ id: string; name: string; category: string } | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    supabase
+      .from("entities")
+      .select("id, name, category")
+      .eq("project_id", projectId)
+      .neq("id", currentEntityId)
+      .is("archived_at", null)
+      .order("name")
+      .then(({ data }) => { if (data) setCandidates(data); });
+  }, [currentEntityId, projectId]);
+
+  const filtered = candidates.filter(
+    (c) => !excludeIds.includes(c.id) && c.name.toLowerCase().includes(query.toLowerCase()),
+  ).slice(0, 8);
+
+  const handleConfirm = async () => {
+    if (!selected) return;
+    const rel = relationship.trim() || null;
+    const { error } = await supabase.from("entity_links").insert({
+      entity_a_id: currentEntityId,
+      entity_b_id: selected.id,
+      relationship: rel,
+    });
+    if (error) { console.error("Failed to link:", error); return; }
+    onLinked({ ...selected, relationship: rel });
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="bg-fyrescribe-raised border border-border rounded-lg p-3 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center"
+    >
+      {/* Entity search */}
+      <div className="relative flex-1 min-w-0">
+        {selected ? (
+          <div className="flex items-center gap-2 h-9 px-2.5 rounded-md bg-fyrescribe-hover border border-border">
+            <span className="font-display text-sm text-foreground truncate">{selected.name}</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${CATEGORY_COLORS[selected.category] || ""}`}>
+              {selected.category}
+            </span>
+            <button
+              onClick={() => { setSelected(null); setQuery(""); setShowResults(true); }}
+              className="ml-auto text-text-dimmed hover:text-foreground"
+              title="Change entity"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center h-9 px-2.5 rounded-md bg-fyrescribe-hover border border-border focus-within:border-gold/40">
+              <Search size={12} className="text-text-dimmed mr-2 flex-shrink-0" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setShowResults(true); }}
+                onFocus={() => setShowResults(true)}
+                placeholder="Search entities…"
+                className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-text-dimmed min-w-0"
+              />
+            </div>
+            {showResults && filtered.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30 max-h-56 overflow-y-auto">
+                {filtered.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => { setSelected(c); setShowResults(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                  >
+                    <span className="font-display text-sm truncate">{c.name}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ml-auto flex-shrink-0 ${CATEGORY_COLORS[c.category] || ""}`}>
+                      {c.category}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {showResults && query && filtered.length === 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30 px-3 py-2 text-xs text-text-dimmed">
+                No entities found
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Relationship label */}
+      <input
+        value={relationship}
+        onChange={(e) => setRelationship(e.target.value)}
+        placeholder="Relationship (e.g. ally of)"
+        className="h-9 px-2.5 rounded-md bg-fyrescribe-hover border border-border focus:border-gold/40 outline-none text-sm text-foreground placeholder:text-text-dimmed sm:w-56"
+      />
+
+      {/* Confirm / Cancel */}
+      <div className="flex gap-1.5 flex-shrink-0">
+        <button
+          onClick={handleConfirm}
+          disabled={!selected}
+          className="h-9 px-3 rounded-md bg-gold/15 border border-gold/40 text-gold text-xs uppercase tracking-wider hover:bg-gold/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Confirm
+        </button>
+        <button
+          onClick={onCancel}
+          className="h-9 px-3 rounded-md border border-border text-text-secondary text-xs uppercase tracking-wider hover:text-foreground hover:border-text-dimmed transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Entity Field Picker (At a Glance) ────────────────────────────────
+
+interface EntityFieldPickerProps {
+  fieldKey: string;
+  targetCategory: EntityCategory;
+  currentEntityId: string;
+  projectId: string;
+  onSelect: (entity: { id: string; name: string; category: string }) => void;
+  onClose: () => void;
+}
+
+const EntityFieldPicker = ({ fieldKey, targetCategory, currentEntityId, projectId, onSelect, onClose }: EntityFieldPickerProps) => {
+  const [query, setQuery] = useState("");
+  const [candidates, setCandidates] = useState<{ id: string; name: string; category: string }[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    supabase
+      .from("entities")
+      .select("id, name, category")
+      .eq("project_id", projectId)
+      .eq("category", targetCategory)
+      .neq("id", currentEntityId)
+      .is("archived_at", null)
+      .order("name")
+      .then(({ data }) => { if (data) setCandidates(data); });
+
+    const onClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [projectId, targetCategory, currentEntityId, onClose]);
+
+  const filtered = candidates.filter((c) => c.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="flex items-center h-7 px-2 rounded-md bg-fyrescribe-hover border border-gold/40">
+        <Search size={11} className="text-text-dimmed mr-1.5 flex-shrink-0" />
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={`Pick a ${targetCategory.replace(/s$/, "")}…`}
+          className="flex-1 bg-transparent outline-none text-xs text-foreground placeholder:text-text-dimmed min-w-0"
+        />
+      </div>
+      <div className="absolute top-full left-0 right-0 mt-1 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30 max-h-48 overflow-y-auto">
+        {filtered.length === 0 ? (
+          <div className="px-2.5 py-1.5 text-[11px] text-text-dimmed">No {targetCategory} found</div>
+        ) : (
+          filtered.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onSelect(c)}
+              className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+            >
+              <span className="truncate">{c.name}</span>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[c.category] || ""}`}>
+                {c.category}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Linked Entity Row (table-style row in Linked Entities section) ──
+
+interface LinkedEntityRowProps {
+  sourceCategory: string;
+  sourceName: string;
+  target: LinkedEntityEntry;
+  onNavigate: (id: string) => void;
+  onRemove: () => void;
+}
+
+const LinkedEntityRow = ({ sourceCategory, sourceName, target, onNavigate, onRemove }: LinkedEntityRowProps) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5 odd:bg-transparent even:bg-fyrescribe-hover/40 hover:bg-fyrescribe-hover transition-colors">
+      {/* Source side (current entity) */}
+      <span
+        className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[sourceCategory] || ""}`}
+        title={sourceName}
+      >
+        {sourceCategory}
+      </span>
+
+      {/* Relationship label */}
+      <span className="text-xs text-text-dimmed italic flex-shrink-0">
+        {target.relationship?.trim() ? target.relationship : "linked to"}
+      </span>
+
+      {/* Target entity — clickable badge */}
+      <button
+        onClick={() => onNavigate(target.id)}
+        className="flex items-center gap-2 min-w-0 hover:text-gold-bright transition-colors group"
+      >
+        <span className="font-display text-sm text-foreground group-hover:text-gold-bright truncate">
+          {target.name}
+        </span>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[target.category] || ""}`}>
+          {target.category}
+        </span>
+      </button>
+
+      {/* 3-dot menu */}
+      <div ref={menuRef} className="relative ml-auto flex-shrink-0">
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          className="w-7 h-7 rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-raised flex items-center justify-center transition-colors"
+        >
+          <MoreVertical size={13} />
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 mt-1 w-36 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30">
+            <button
+              onClick={() => { setMenuOpen(false); onRemove(); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-destructive hover:bg-fyrescribe-hover transition-colors rounded-lg"
+            >
+              <Trash2 size={11} />
+              Remove link
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -579,6 +878,22 @@ const EntityDetailInner = () => {
     setLinkedEntities((prev) => [...prev, ent]);
   }, []);
 
+  const handleRemoveLink = useCallback(async (linkedId: string, relationship: string | null) => {
+    if (!id) return;
+    setLinkedEntities((prev) => {
+      const idx = prev.findIndex((e) => e.id === linkedId && e.relationship === relationship);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next.splice(idx, 1);
+      return next;
+    });
+    let q = supabase.from("entity_links").delete()
+      .or(`and(entity_a_id.eq.${id},entity_b_id.eq.${linkedId}),and(entity_a_id.eq.${linkedId},entity_b_id.eq.${id})`);
+    q = relationship === null ? q.is("relationship", null) : q.eq("relationship", relationship);
+    const { error } = await q;
+    if (error) console.error("Failed to remove link:", error);
+  }, [id]);
+
   // ─── Delete entity ───────────────────────────────────────────────
 
   const handleDeleteEntity = useCallback(async () => {
@@ -598,47 +913,63 @@ const EntityDetailInner = () => {
     ...Object.keys(fields).filter((k) => !stdFieldKeys.includes(k)),
   ];
 
-  const renderFieldValue = (key: string, value: string) => {
-    if (!value) {
-      return (
-        <button
-          onClick={() => { setEditingField(key); setEditingFieldValue(""); }}
-          className="text-sm text-text-dimmed hover:text-text-secondary transition-colors text-left w-full"
-        >
-          —
-        </button>
-      );
+  // Set / clear an entity-picker At a Glance field. Stores the link in entity_links
+  // (relationship = field key) and mirrors the entity name into the fields jsonb.
+  const handleSetEntityField = useCallback(async (key: string, target: { id: string; name: string; category: string }) => {
+    if (!id) return;
+    const existing = linkedEntities.find((e) => e.relationship === key);
+    if (existing) {
+      await supabase.from("entity_links").delete()
+        .or(`and(entity_a_id.eq.${id},entity_b_id.eq.${existing.id}),and(entity_a_id.eq.${existing.id},entity_b_id.eq.${id})`)
+        .eq("relationship", key);
     }
-    // Auto-convert: if value exactly matches a tag name, render as clickable pill
-    const matchedTag = projectTags.find((t) => t.name.toLowerCase() === value.toLowerCase());
-    if (matchedTag) {
-      return (
-        <button
-          onClick={() => handleTagClick(matchedTag)}
-          className="text-xs px-2 py-0.5 rounded-full bg-fyrescribe-hover text-gold border border-border hover:border-gold/30 transition-colors"
-        >
-          {value}
-        </button>
-      );
+    const { error } = await supabase.from("entity_links").insert({
+      entity_a_id: id,
+      entity_b_id: target.id,
+      relationship: key,
+    });
+    if (error) { console.error("Failed to create field link:", error); return; }
+    setLinkedEntities((prev) => {
+      const filtered = prev.filter((e) => e.relationship !== key);
+      return [...filtered, { ...target, relationship: key }];
+    });
+    const updated = { ...fields, [key]: target.name };
+    setFields(updated);
+    saveFields(updated);
+    setEditingField(null);
+  }, [id, linkedEntities, fields, saveFields]);
+
+  const handleClearEntityField = useCallback(async (key: string) => {
+    if (!id) return;
+    const existing = linkedEntities.find((e) => e.relationship === key);
+    if (existing) {
+      await supabase.from("entity_links").delete()
+        .or(`and(entity_a_id.eq.${id},entity_b_id.eq.${existing.id}),and(entity_a_id.eq.${existing.id},entity_b_id.eq.${id})`)
+        .eq("relationship", key);
+      setLinkedEntities((prev) => prev.filter((e) => e.relationship !== key));
     }
-    return (
-      <button
-        onClick={() => { setEditingField(key); setEditingFieldValue(value); }}
-        className="text-sm text-foreground hover:text-gold-bright transition-colors text-left w-full"
-      >
-        {value}
-      </button>
-    );
-  };
+    const updated = { ...fields, [key]: "" };
+    setFields(updated);
+    saveFields(updated);
+  }, [id, linkedEntities, fields, saveFields]);
 
   // ─── Derived linked sets ─────────────────────────────────────────
+
+  // Relationships consumed by structured At a Glance field-pickers — these render in the
+  // sidebar panel, not the main Linked Entities list.
+  const fieldRelationships = new Set(Object.keys(ENTITY_FIELD_MAP));
 
   const speciesCharacters = linkedEntities.filter(
     (e) => e.category === "characters" && e.relationship === "species"
   );
-  const relatedArtifacts = linkedEntities.filter((e) => e.category === "artifacts");
-  const relatedMagic = linkedEntities.filter((e) => e.category === "magic");
+  const relatedArtifacts = linkedEntities.filter(
+    (e) => e.category === "artifacts" && !fieldRelationships.has(e.relationship || ""),
+  );
+  const relatedMagic = linkedEntities.filter(
+    (e) => e.category === "magic" && !fieldRelationships.has(e.relationship || ""),
+  );
   const genericLinked = linkedEntities.filter((e) => {
+    if (fieldRelationships.has(e.relationship || "")) return false;
     if (entity?.category === "creatures" && e.category === "characters" && e.relationship === "species") return false;
     if (entity?.category === "characters" && (e.category === "artifacts" || e.category === "magic")) return false;
     return true;
@@ -1032,40 +1363,51 @@ const EntityDetailInner = () => {
               <input ref={galleryInputRef} type="file" accept="image/*" multiple onChange={handleGalleryUpload} className="hidden" />
             </div>
 
-            {/* ===== GENERIC LINKED ENTITIES ===== */}
+            {/* ===== LINKED ENTITIES ===== */}
             <div className="border-t border-border pt-8 mb-8">
-              <h2 className="font-display text-base text-foreground mb-4 tracking-wide">Linked Entities</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {genericLinked.map((linked) => (
-                  <button
-                    key={linked.id}
-                    onClick={() => navigate(`/entity/${linked.id}`)}
-                    className="flex items-center gap-3 px-4 py-3 bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/20 transition-colors text-left"
-                  >
-                    <span className="font-display text-sm text-foreground">{linked.name}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${CATEGORY_COLORS[linked.category] || ""}`}>
-                      {linked.category}
-                    </span>
-                  </button>
-                ))}
-                {isLinkingEntity ? (
-                  <LinkEntityModal
-                    currentEntityId={id!}
-                    projectId={projectId}
-                    linkedIds={linkedEntities.map((e) => e.id)}
-                    onLinked={handleEntityLinked}
-                    onClose={() => setIsLinkingEntity(false)}
-                  />
-                ) : (
+              <div className="flex items-center justify-between mb-4 gap-4">
+                <h2 className="font-display text-base text-foreground tracking-wide">Linked Entities</h2>
+                {!isLinkingEntity && (
                   <button
                     onClick={() => setIsLinkingEntity(true)}
-                    className="flex items-center justify-center gap-1.5 px-4 py-3 border border-dashed border-border rounded-lg text-text-dimmed hover:text-text-secondary text-xs transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors"
                   >
                     <Plus size={12} />
-                    Link entity
+                    Add Link
                   </button>
                 )}
               </div>
+
+              {isLinkingEntity && (
+                <div className="mb-4">
+                  <AddLinkInline
+                    currentEntityId={id!}
+                    projectId={projectId}
+                    excludeIds={[]}
+                    onLinked={(ent) => { handleEntityLinked(ent); setIsLinkingEntity(false); }}
+                    onCancel={() => setIsLinkingEntity(false)}
+                  />
+                </div>
+              )}
+
+              {genericLinked.length === 0 && !isLinkingEntity ? (
+                <p className="font-prose text-base leading-relaxed text-text-dimmed italic">
+                  No linked entities yet. Add a link to connect this entry to another.
+                </p>
+              ) : genericLinked.length > 0 ? (
+                <div className="divide-y divide-border border border-border rounded-lg overflow-hidden bg-fyrescribe-raised">
+                  {genericLinked.map((linked) => (
+                    <LinkedEntityRow
+                      key={`${linked.id}-${linked.relationship ?? ""}`}
+                      sourceCategory={entity.category}
+                      sourceName={entity.name}
+                      target={linked}
+                      onNavigate={(eid) => navigate(`/entity/${eid}`)}
+                      onRemove={() => handleRemoveLink(linked.id, linked.relationship)}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             {/* ===== CHARACTER: Story History (AI-generated) ===== */}
@@ -1134,10 +1476,58 @@ const EntityDetailInner = () => {
                 <div className="divide-y divide-border">
                   {allFieldKeys.map((key) => {
                     const value = fields[key] ?? "";
+                    const targetCategory = ENTITY_FIELD_MAP[key];
+                    const linkedForField = targetCategory
+                      ? linkedEntities.find((e) => e.relationship === key)
+                      : undefined;
+
                     return (
                       <div key={key} className="px-4 py-2.5">
                         <div className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1">{key}</div>
-                        {editingField === key ? (
+
+                        {/* ENTITY-PICKER FIELD */}
+                        {targetCategory ? (
+                          editingField === key ? (
+                            <EntityFieldPicker
+                              fieldKey={key}
+                              targetCategory={targetCategory}
+                              currentEntityId={id!}
+                              projectId={projectId}
+                              onSelect={(target) => handleSetEntityField(key, target)}
+                              onClose={() => setEditingField(null)}
+                            />
+                          ) : linkedForField ? (
+                            <div className="flex items-center gap-1.5 group">
+                              <button
+                                onClick={() => navigate(`/entity/${linkedForField.id}`)}
+                                className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border border-border hover:border-gold/40 transition-colors ${CATEGORY_COLORS[linkedForField.category] || "bg-fyrescribe-hover text-foreground"}`}
+                              >
+                                <span className="font-display truncate max-w-[150px]">{linkedForField.name}</span>
+                              </button>
+                              <button
+                                onClick={() => setEditingField(key)}
+                                className="text-text-dimmed hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Change"
+                              >
+                                <Pencil size={10} />
+                              </button>
+                              <button
+                                onClick={() => handleClearEntityField(key)}
+                                className="text-text-dimmed hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Clear"
+                              >
+                                <X size={11} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setEditingField(key)}
+                              className="text-sm text-text-dimmed hover:text-text-secondary transition-colors text-left w-full"
+                            >
+                              —
+                            </button>
+                          )
+                        ) : /* FREE-TEXT FIELD */ editingField === key ? (
                           <input
                             autoFocus
                             value={editingFieldValue}
@@ -1146,8 +1536,20 @@ const EntityDetailInner = () => {
                             onKeyDown={(e) => e.key === "Enter" && handleSaveFieldEdit(key)}
                             className="text-sm text-foreground bg-transparent border-b border-gold/40 outline-none w-full"
                           />
+                        ) : value ? (
+                          <button
+                            onClick={() => { setEditingField(key); setEditingFieldValue(value); }}
+                            className="text-sm text-foreground hover:text-gold-bright transition-colors text-left w-full"
+                          >
+                            {value}
+                          </button>
                         ) : (
-                          renderFieldValue(key, value)
+                          <button
+                            onClick={() => { setEditingField(key); setEditingFieldValue(""); }}
+                            className="text-sm text-text-dimmed hover:text-text-secondary transition-colors text-left w-full"
+                          >
+                            —
+                          </button>
                         )}
                       </div>
                     );
