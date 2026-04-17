@@ -67,6 +67,8 @@ const ENTITY_FIELD_MAP: Record<string, EntityCategory> = {
   "Government": "factions",
   // creatures
   "Habitat": "places",
+  // magic / doctrine
+  "Regional Origin": "places",
   // events / history
   "Location": "places",
 };

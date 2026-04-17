@@ -62,6 +62,8 @@ const Sidebar = () => {
   const [mentionsMessage, setMentionsMessage] = useState<string | null>(null);
   const [linkingLore, setLinkingLore] = useState(false);
   const [linkLoreMessage, setLinkLoreMessage] = useState<string | null>(null);
+  const [syncingTags, setSyncingTags] = useState(false);
+  const [tagsMessage, setTagsMessage] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [linkLoreModalOpen, setLinkLoreModalOpen] = useState(false);
   const [mentionsModalOpen, setMentionsModalOpen] = useState(false);
@@ -120,10 +122,11 @@ const Sidebar = () => {
       }
       await fetchPendingCount();
 
-      // Full sync also runs mentions then link-lore
+      // Full sync also runs mentions, link-lore, then sync-tags
       if (force) {
         await handleSyncMentionsInner();
         await handleLinkLoreInner();
+        await handleSyncTagsInner();
       }
     } catch {
       setSyncMessage("Sync failed");
@@ -172,6 +175,32 @@ const Sidebar = () => {
     });
     if (error) throw error;
     return data?.suggestions_created as number | undefined;
+  };
+
+  const handleSyncTagsInner = async () => {
+    if (!activeProject) return;
+    const { data, error } = await supabase.functions.invoke("sync-tags", {
+      body: { project_id: activeProject.id },
+    });
+    if (error) throw error;
+    return data?.field_links_created as number | undefined;
+  };
+
+  const handleSyncTags = async () => {
+    if (!activeProject || syncingTags) return;
+    setSyncingTags(true);
+    setTagsMessage(null);
+    try {
+      const created = await handleSyncTagsInner();
+      setTagsMessage(
+        created != null ? `Tagged ${created} field${created !== 1 ? "s" : ""}` : "Done",
+      );
+    } catch {
+      setTagsMessage("Sync failed");
+    } finally {
+      setSyncingTags(false);
+      setTimeout(() => setTagsMessage(null), 4000);
+    }
   };
 
   const handleLinkLore = async () => {
@@ -341,6 +370,19 @@ const Sidebar = () => {
         </button>
         {linkLoreMessage && (
           <p className="px-3 text-[10px] text-text-dimmed">{linkLoreMessage}</p>
+        )}
+
+        {/* Sync Tags */}
+        <button
+          onClick={handleSyncTags}
+          disabled={syncingTags || !activeProject}
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
+        >
+          <SyncIcon size={12} weight="duotone" className={syncingTags ? "animate-spin" : ""} />
+          {syncingTags ? "Tagging…" : "Sync Tags"}
+        </button>
+        {tagsMessage && (
+          <p className="px-3 text-[10px] text-text-dimmed">{tagsMessage}</p>
         )}
 
         {/* Lore Inbox */}

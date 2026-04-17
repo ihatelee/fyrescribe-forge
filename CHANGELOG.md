@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Sync Tags: AI-powered At a Glance field population
+
+- `supabase/functions/sync-tags/index.ts` — new standalone edge function. Fetches all non-archived entities and their `entity_mentions` contexts. Builds a prompt targeting structured entity-picker fields by category (characters: Place of Birth / Currently Residing / Allegiance; artifacts: Origin / Current Owner; factions: Leader / Headquarters; creatures: Habitat; magic: Regional Origin). AI returns `[{ entity_id, field_key, target_entity_id }]`. Validates: entity and target IDs must exist in the project, field must be valid for the entity's category, target must be the correct category, field must not already be set. Inserts into `entity_links` with `relationship = field_key`. Never overwrites existing values.
+- `supabase/functions/link-lore/index.ts` — added a second AI pass (`runFieldTaggingPass`) that runs inline after the freeform relationship pass. Same field-tagging logic; uses the already-fetched `entities` array so no extra DB query for entity data. Returns `field_links_created` count alongside `suggestions_created`.
+- `src/pages/EntityDetailPage.tsx` — added `"Regional Origin": "places"` to `ENTITY_FIELD_MAP` so magic entities render Regional Origin as an entity-picker badge (was previously a free-text field).
+- `src/components/Sidebar.tsx` — added `syncingTags` / `tagsMessage` state, `handleSyncTagsInner` (shared inner), `handleSyncTags` (standalone button handler). "Sync Tags" button added below Link Lore with identical style. Full Sync chain extended: sync-lore → sync-mentions → link-lore → sync-tags.
+
+---
+
 ## 2026-04-16 — Smart merge on duplicate entity accept
 
 - `supabase/functions/merge-entity-sections/index.ts` — new edge function. Accepts `{ existing_sections, new_sections }` (both `Record<string, string>`). Calls AI to merge them into a single coherent record preserving all facts from both. Strips code fences, falls back to shallow merge if parse fails.

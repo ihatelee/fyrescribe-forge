@@ -6,7 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Structured At a Glance fields that link to other entities.
+// Structured At a Glance fields that link to other entities (entity picker fields).
+// field → target entity category.
 const FIELD_TARGET_MAP: Record<string, Array<{ field: string; targetCategory: string }>> = {
   characters: [
     { field: "Place of Birth", targetCategory: "places" },
@@ -30,6 +31,9 @@ const FIELD_TARGET_MAP: Record<string, Array<{ field: string; targetCategory: st
 };
 
 const ALL_FIELD_KEYS = Object.values(FIELD_TARGET_MAP).flat().map((f) => f.field);
+
+const stripHtml = (html: string) =>
+  (html ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -88,155 +92,13 @@ serve(async (req) => {
 
     const admin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // ── Fetch entities ───────────────────────────────────────────────────
-    const { data: entities } = await admin
-      .from("entities")
-      .select("id, name, category, summary, sections")
-      .eq("project_id", project_id)
-      .is("archived_at", null);
+    const created = await runFieldTaggingPass(admin, project_id, anthropicKey);
 
-    if (!entities || entities.length < 2) {
-      return new Response(JSON.stringify({ suggestions_created: 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // ── Fetch existing links (to avoid re-suggestions) ───────────────────
-    const entityIds = entities.map((e: any) => e.id);
-    const { data: existingLinks } = await admin
-      .from("entity_links")
-      .select("entity_a_id, entity_b_id, relationship")
-      .or(`entity_a_id.in.(${entityIds.join(",")}),entity_b_id.in.(${entityIds.join(",")})`)
-
-    // Build a Set of sorted id pairs for dedup
-    const linkedPairs = new Set<string>(
-      (existingLinks ?? []).map((l: any) => {
-        const pair = [l.entity_a_id, l.entity_b_id].sort().join("|");
-        return pair;
-      }),
-    );
-
-    // ── Build AI context ─────────────────────────────────────────────────
-    const stripHtml = (html: string) =>
-      (html ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-
-    const entityLines = entities.map((e: any) => {
-      const sections = (e.sections ?? {}) as Record<string, string>;
-      const context =
-        stripHtml(sections["Overview"] ?? "") ||
-        stripHtml(sections["Description"] ?? "") ||
-        stripHtml(e.summary ?? "") ||
-        "(no description)";
-      return `ID: ${e.id}\nName: ${e.name}\nCategory: ${e.category}\nContext: ${context.slice(0, 400)}`;
-    }).join("\n\n");
-
-    const existingLinkLines = (existingLinks ?? [])
-      .map((l: any) => {
-        const a = entities.find((e: any) => e.id === l.entity_a_id);
-        const b = entities.find((e: any) => e.id === l.entity_b_id);
-        if (!a || !b) return null;
-        return `${a.name} <-> ${b.name}: ${l.relationship ?? "linked"}`;
-      })
-      .filter(Boolean)
-      .join("\n");
-
-    const prompt = `You are analyzing a fantasy world's cast of characters, locations, factions, artifacts, and creatures.
-Given the following entities, suggest meaningful relationships between pairs.
-Only suggest relationships that are strongly implied by the entity descriptions.
-Do not suggest relationships that already exist.
-Return ONLY a valid JSON array. Each element must be:
-{ "entity_a_id": string, "entity_b_id": string, "relationship": string, "confidence": number }
-Where confidence is a number 1-10. Only return suggestions with confidence 7 or above.
-Return an empty array [] if no strong relationships are found.
-
-Existing entity data:
-"""
-${entityLines}
-"""
-
-Already linked pairs (do not re-suggest):
-"""
-${existingLinkLines || "(none)"}
-"""`;
-
-    // ── AI call ──────────────────────────────────────────────────────────
-    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    return new Response(JSON.stringify({ field_links_created: created }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
-    if (!aiRes.ok) {
-      console.error("AI error:", aiRes.status, await aiRes.text());
-      return new Response(JSON.stringify({ error: "AI call failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const aiJson = await aiRes.json();
-    const rawContent: string = aiJson?.content?.[0]?.text?.trim() ?? "";
-
-    // ── Parse AI response ────────────────────────────────────────────────
-    let aiSuggestions: { entity_a_id: string; entity_b_id: string; relationship: string; confidence: number }[] = [];
-    try {
-      // Strip markdown code fences if present
-      const cleaned = rawContent.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/, "").trim();
-      aiSuggestions = JSON.parse(cleaned);
-      if (!Array.isArray(aiSuggestions)) aiSuggestions = [];
-    } catch {
-      console.error("Failed to parse AI JSON:", rawContent.slice(0, 200));
-      aiSuggestions = [];
-    }
-
-    // ── Filter + deduplicate ─────────────────────────────────────────────
-    const validEntityIds = new Set(entityIds);
-    const filtered = aiSuggestions.filter((s) => {
-      if (!s.entity_a_id || !s.entity_b_id || s.entity_a_id === s.entity_b_id) return false;
-      if (!validEntityIds.has(s.entity_a_id) || !validEntityIds.has(s.entity_b_id)) return false;
-      const confidence = Math.round(s.confidence ?? 0);
-      if (confidence < 7) return false;
-      const pair = [s.entity_a_id, s.entity_b_id].sort().join("|");
-      if (linkedPairs.has(pair)) return false;
-      return true;
-    });
-
-    // ── Full refresh: delete pending, bulk insert ────────────────────────
-    await admin
-      .from("lore_link_suggestions")
-      .delete()
-      .eq("project_id", project_id)
-      .eq("status", "pending");
-
-    if (filtered.length > 0) {
-      const rows = filtered.map((s) => ({
-        project_id,
-        entity_a_id: s.entity_a_id,
-        entity_b_id: s.entity_b_id,
-        relationship: (s.relationship ?? "related to").trim(),
-        confidence: Math.min(10, Math.max(1, Math.round(s.confidence))),
-      }));
-      const { error: insertError } = await admin.from("lore_link_suggestions").insert(rows);
-      if (insertError) console.error("Insert error:", insertError);
-    }
-
-    // ── Second pass: field-tagging ───────────────────────────────────────
-    const fieldLinksCreated = await runFieldTaggingPass(admin, project_id, anthropicKey, entities);
-
-    return new Response(
-      JSON.stringify({ suggestions_created: filtered.length, field_links_created: fieldLinksCreated }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
   } catch (err) {
-    console.error("link-lore error:", err);
+    console.error("sync-tags error:", err);
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Unexpected error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -248,14 +110,23 @@ async function runFieldTaggingPass(
   admin: ReturnType<typeof createClient>,
   project_id: string,
   anthropicKey: string,
-  entities: any[],
 ): Promise<number> {
-  const targetableEntities = entities.filter((e) => !!FIELD_TARGET_MAP[e.category as string]);
-  if (targetableEntities.length === 0 || entities.length < 2) return 0;
+  // Fetch entities
+  const { data: entities } = await admin
+    .from("entities")
+    .select("id, name, category, summary, sections")
+    .eq("project_id", project_id)
+    .is("archived_at", null);
 
-  const entityIds = entities.map((e) => e.id);
+  const targetableEntities = (entities ?? []).filter(
+    (e: any) => !!FIELD_TARGET_MAP[e.category as string],
+  );
 
-  // Fetch mention contexts
+  if (targetableEntities.length === 0 || (entities ?? []).length < 2) return 0;
+
+  const entityIds = (entities ?? []).map((e: any) => e.id);
+
+  // Fetch mention contexts (up to 5 per entity, most recent first)
   const { data: mentions } = await admin
     .from("entity_mentions")
     .select("entity_id, context")
@@ -268,7 +139,7 @@ async function runFieldTaggingPass(
     if (arr.length < 5) arr.push(m.context ?? "");
   });
 
-  // Fetch existing field links to skip
+  // Fetch existing field links to avoid re-suggesting
   const { data: existingFieldLinks } = await admin
     .from("entity_links")
     .select("entity_a_id, relationship")
@@ -279,6 +150,7 @@ async function runFieldTaggingPass(
     (existingFieldLinks ?? []).map((l: any) => `${l.entity_a_id}:${l.relationship}`),
   );
 
+  // Build entity context string (only targetable entities)
   const entityContextLines = targetableEntities.map((e: any) => {
     const sections = (e.sections ?? {}) as Record<string, string>;
     const desc =
@@ -298,20 +170,23 @@ async function runFieldTaggingPass(
     ].join("\n");
   }).join("\n\n");
 
-  const entityRefLines = entities
-    .map((e: any) => `ID: ${e.id} | Name: ${e.name} | Category: ${e.category}`)
-    .join("\n");
+  // Include ALL entities in a compact reference list so the AI can identify targets by ID
+  const entityRefLines = (entities ?? []).map((e: any) =>
+    `ID: ${e.id} | Name: ${e.name} | Category: ${e.category}`
+  ).join("\n");
 
+  // Field map description
   const fieldMapLines = Object.entries(FIELD_TARGET_MAP)
     .map(([cat, fields]) =>
       `${cat}: ${fields.map((f) => `${f.field} (links to ${f.targetCategory})`).join(", ")}`
     )
     .join("\n");
 
+  // Already-filled summary
   const alreadyFilledLines = [...alreadyFilled]
     .map((key) => {
       const [entityId, fieldKey] = key.split(":");
-      const entity = entities.find((e) => e.id === entityId);
+      const entity = (entities ?? []).find((e: any) => e.id === entityId);
       return entity ? `${entity.name} (${entity.category}): ${fieldKey}` : null;
     })
     .filter(Boolean)
@@ -362,7 +237,7 @@ ${alreadyFilledLines || "(none)"}
   });
 
   if (!aiRes.ok) {
-    console.error("Field-tagging AI error:", aiRes.status, await aiRes.text().catch(() => ""));
+    console.error("sync-tags AI error:", aiRes.status, await aiRes.text().catch(() => ""));
     return 0;
   }
 
@@ -371,18 +246,24 @@ ${alreadyFilledLines || "(none)"}
 
   let aiSuggestions: { entity_id: string; field_key: string; target_entity_id: string }[] = [];
   try {
-    const cleaned = rawContent.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/, "").trim();
+    const cleaned = rawContent
+      .replace(/^```(?:json)?\n?/i, "")
+      .replace(/\n?```$/, "")
+      .trim();
     aiSuggestions = JSON.parse(cleaned);
     if (!Array.isArray(aiSuggestions)) aiSuggestions = [];
   } catch {
-    console.error("Field-tagging: failed to parse AI JSON:", rawContent.slice(0, 200));
+    console.error("sync-tags: failed to parse AI JSON:", rawContent.slice(0, 200));
     aiSuggestions = [];
   }
 
+  // Validate
   const validEntityIds = new Set(entityIds);
-  const entityCategoryMap = new Map(entities.map((e) => [e.id, e.category as string]));
-  const seen = new Set<string>();
+  const entityCategoryMap = new Map(
+    (entities ?? []).map((e: any) => [e.id, e.category as string]),
+  );
 
+  const seen = new Set<string>();
   const toInsert = aiSuggestions.filter((s) => {
     if (!s.entity_id || !s.field_key || !s.target_entity_id) return false;
     if (!validEntityIds.has(s.entity_id) || !validEntityIds.has(s.target_entity_id)) return false;
@@ -397,6 +278,7 @@ ${alreadyFilledLines || "(none)"}
 
     if (alreadyFilled.has(`${s.entity_id}:${s.field_key}`)) return false;
 
+    // One suggestion per entity:field_key — first occurrence wins
     const dedupeKey = `${s.entity_id}:${s.field_key}`;
     if (seen.has(dedupeKey)) return false;
     seen.add(dedupeKey);
@@ -411,7 +293,7 @@ ${alreadyFilledLines || "(none)"}
       relationship: s.field_key,
     }));
     const { error } = await admin.from("entity_links").insert(rows);
-    if (error) console.error("Field-tagging insert error:", error);
+    if (error) console.error("sync-tags insert error:", error);
   }
 
   return toInsert.length;
