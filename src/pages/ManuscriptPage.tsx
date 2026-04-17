@@ -256,6 +256,9 @@ const ManuscriptPage = () => {
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [saveVersionOpen, setSaveVersionOpen] = useState(false);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [versionToast, setVersionToast] = useState<string | null>(null);
 
   const [focusMode, setFocusMode] = useState(false);
   const [thesaurusOpen, setThesaurusOpen] = useState(false);
