@@ -1161,6 +1161,15 @@ const ManuscriptPage = () => {
                 </div>
               ) : (
                 <>
+                  {activeChapter &&
+                    activeScene &&
+                    scenes
+                      .filter((s) => s.chapter_id === activeChapter.id)
+                      .sort((a, b) => a.order - b.order)[0]?.id === activeScene.id && (
+                      <h1 className={`font-display ${CHAPTER_TITLE_CLASSES[textSize]} text-text-dimmed mb-2 tracking-wide`}>
+                        {activeChapter.title}
+                      </h1>
+                    )}
                   <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} sizeClass={SCENE_TITLE_CLASSES[textSize]} />
                   <div
                     key={activeSceneId}
