@@ -123,3 +123,13 @@ html.high-contrast *:focus-visible {
   outline-width: 3px;
 }
 
+.entity-link {
+  border-bottom: 1px solid hsl(var(--gold) / 0.35);
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+}
+.entity-link:hover {
+  border-bottom-color: hsl(var(--gold) / 0.65);
+  color: hsl(var(--gold));
+}
+

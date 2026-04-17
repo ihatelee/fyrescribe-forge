@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import DOMPurify from "dompurify";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
@@ -29,6 +29,69 @@ const countWords = (html: string): number => {
   if (!text) return 0;
   return text.split(/\s+/).filter(Boolean).length;
 };
+
+function _highlightTextNode(textNode: Text, entities: { id: string; name: string }[]) {
+  const text = textNode.textContent ?? "";
+  if (!text.trim()) return;
+
+  const matches: { start: number; end: number; entityId: string; matched: string }[] = [];
+  for (const entity of entities) {
+    const escaped = entity.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(text)) !== null) {
+      if (!matches.some((ex) => m!.index < ex.end && m!.index + m![0].length > ex.start)) {
+        matches.push({ start: m.index, end: m.index + m[0].length, entityId: entity.id, matched: m[0] });
+      }
+    }
+  }
+
+  if (!matches.length) return;
+  matches.sort((a, b) => a.start - b.start);
+
+  const frag = document.createDocumentFragment();
+  let cursor = 0;
+  for (const match of matches) {
+    if (match.start > cursor) frag.appendChild(document.createTextNode(text.slice(cursor, match.start)));
+    const span = document.createElement("span");
+    span.dataset.entityId = match.entityId;
+    span.className = "entity-link";
+    span.textContent = match.matched;
+    frag.appendChild(span);
+    cursor = match.end;
+  }
+  if (cursor < text.length) frag.appendChild(document.createTextNode(text.slice(cursor)));
+  textNode.parentNode!.replaceChild(frag, textNode);
+}
+
+function applyEntityHighlights(el: HTMLDivElement, entities: { id: string; name: string }[]) {
+  // Remove existing spans (normalises DOM before re-scan)
+  el.querySelectorAll("span[data-entity-id]").forEach((span) => {
+    const parent = span.parentNode;
+    if (parent) {
+      while (span.firstChild) parent.insertBefore(span.firstChild, span);
+      parent.removeChild(span);
+    }
+  });
+
+  if (!entities.length) return;
+
+  // Longest names first so "Aragorn" beats "Ara" when both match
+  const sorted = [...entities].sort((a, b) => b.name.length - a.name.length);
+
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  let node = walker.nextNode();
+  while (node) {
+    textNodes.push(node as Text);
+    node = walker.nextNode();
+  }
+
+  for (const textNode of textNodes) {
+    if ((textNode.parentElement as Element)?.closest("[data-entity-id]")) continue;
+    _highlightTextNode(textNode, sorted);
+  }
+}
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -175,6 +238,7 @@ const ManuscriptPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { activeProject } = useActiveProject();
   const { theme } = useTheme();
+  const navigate = useNavigate();
   const projectId = activeProject?.id || urlProjectId;
   const targetSceneId = searchParams.get("scene");
   const labelStyle = theme === "outrun" ? { color: "hsl(var(--neon-yellow))" } : undefined;
@@ -241,9 +305,12 @@ const ManuscriptPage = () => {
 
   const editorRef = useRef<HTMLDivElement>(null);
   const focusEditorRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   // Set to true when we auto-create the first chapter+scene so the editor
   // gets focused automatically once it mounts.
   const pendingAutoFocus = useRef(false);
+  const entityNamesRef = useRef<{ id: string; name: string }[]>([]);
+  const pendingScrollRef = useRef<number | null>(null);
 
   // Stores the latest in-editor content per scene ID so switching scenes
   // before the debounce fires doesn't lose edits, and switching back shows
@@ -259,12 +326,14 @@ const ManuscriptPage = () => {
     if (!projectId) return;
     const fetchData = async () => {
       setLoading(true);
-      const [chaptersRes, scenesRes] = await Promise.all([
+      const [chaptersRes, scenesRes, entitiesRes] = await Promise.all([
         supabase.from("chapters").select("*").eq("project_id", projectId).order("order"),
         supabase.from("scenes").select("*").eq("project_id", projectId).order("order"),
+        supabase.from("entities").select("id, name").eq("project_id", projectId).is("archived_at", null),
       ]);
       if (chaptersRes.error) console.error("Failed to fetch chapters:", chaptersRes.error);
       if (scenesRes.error) console.error("Failed to fetch scenes:", scenesRes.error);
+      entityNamesRef.current = (entitiesRes.data ?? []) as { id: string; name: string }[];
 
       let chapterData: Chapter[] = chaptersRes.data || [];
       let sceneData: Scene[] = scenesRes.data || [];
@@ -406,6 +475,52 @@ const ManuscriptPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetSceneId, scenes]);
 
+  // ─── Entity highlights ──────────────────────────────────────────────
+
+  useEffect(() => {
+    if (loading || focusMode || !activeSceneId) return;
+    const id = requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      if (editor) {
+        applyEntityHighlights(editor, entityNamesRef.current);
+        if (pendingScrollRef.current !== null && scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = pendingScrollRef.current;
+          pendingScrollRef.current = null;
+        }
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [activeSceneId, loading, focusMode]);
+
+  // ─── sessionStorage scroll/scene restore ────────────────────────────
+
+  useEffect(() => {
+    if (loading) return;
+    const raw = sessionStorage.getItem("manuscriptReturn");
+    if (!raw) return;
+    sessionStorage.removeItem("manuscriptReturn");
+    try {
+      const { sceneId, scrollTop } = JSON.parse(raw) as { sceneId: string; scrollTop: number };
+      if (sceneId && sceneId !== activeSceneId) {
+        const target = scenes.find((s) => s.id === sceneId);
+        if (target) {
+          setActiveSceneId(target.id);
+          setActiveChapterId(target.chapter_id);
+          setExpandedChapters((prev) =>
+            prev.includes(target.chapter_id) ? prev : [...prev, target.chapter_id],
+          );
+          setWordCount(target.word_count ?? 0);
+          pendingScrollRef.current = scrollTop ?? 0;
+        }
+      } else if (scrollTop != null && scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollTop;
+      }
+    } catch {
+      // ignore corrupt sessionStorage
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+
   // ─── Auto-save ──────────────────────────────────────────────────────
 
 
@@ -432,7 +547,9 @@ const ManuscriptPage = () => {
   const handleEditorInput = useCallback(
     (e: React.FormEvent<HTMLDivElement>) => {
       if (!activeSceneId) return;
-      const content = (e.target as HTMLDivElement).innerHTML;
+      const raw = (e.target as HTMLDivElement).innerHTML;
+      // Strip display-only entity spans before persisting — they must never reach the DB
+      const content = raw.replace(/<span\b[^>]*\bdata-entity-id="[^"]*"[^>]*>([\s\S]*?)<\/span>/g, "$1");
       contentCache.current.set(activeSceneId, content);
       setWordCount(countWords(content));
       saveScene(activeSceneId, content);
@@ -629,6 +746,23 @@ const ManuscriptPage = () => {
       setThesaurusOpen(false);
     },
     [focusMode, activeSceneId, saveScene]
+  );
+
+  const handleEditorClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement;
+      const entityId =
+        target.dataset?.entityId ??
+        (target.closest("[data-entity-id]") as HTMLElement | null)?.dataset?.entityId;
+      if (!entityId) return;
+      e.preventDefault();
+      sessionStorage.setItem(
+        "manuscriptReturn",
+        JSON.stringify({ sceneId: activeSceneId, scrollTop: scrollContainerRef.current?.scrollTop ?? 0 }),
+      );
+      navigate(`/entity/${entityId}`);
+    },
+    [activeSceneId, navigate],
   );
 
   // ─── Shared editor ref callback ─────────────────────────────────────
@@ -1007,7 +1141,7 @@ const ManuscriptPage = () => {
           </div>
 
           {/* Editor content */}
-          <div className="flex-1 overflow-y-auto flex justify-center py-10">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto flex justify-center py-10">
             <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -1035,7 +1169,8 @@ const ManuscriptPage = () => {
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
-                        />
+                    onClick={handleEditorClick}
+                  />
                 </>
               )}
             </div>
