@@ -1279,7 +1279,7 @@ const EntityDetailInner = () => {
         </div>
 
         {/* ===== BODY + AT A GLANCE ===== */}
-        <div className="flex gap-8">
+        <div className="flex flex-col-reverse lg:flex-row gap-8">
           {/* Left: Article body */}
           <div className="flex-1 min-w-0">
             <div className="space-y-0">
@@ -1567,8 +1567,8 @@ const EntityDetailInner = () => {
           </div>
 
           {/* ===== AT A GLANCE PANEL ===== */}
-          <div className="w-[260px] flex-shrink-0">
-            <div className="sticky top-16">
+          <div className="w-full lg:w-[260px] flex-shrink-0">
+            <div className="lg:sticky lg:top-16">
               <div className="bg-fyrescribe-raised border border-border rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-border">
                   <h2 className="font-display text-base text-foreground leading-tight truncate" title={entity?.name}>
