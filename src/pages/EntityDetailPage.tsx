@@ -320,6 +320,209 @@ const LinkEntityModal = ({
   );
 };
 
+
+// ─── Inline Add-Link Form (Linked Entities section) ───────────────────
+
+interface AddLinkInlineProps {
+  currentEntityId: string;
+  projectId: string;
+  excludeIds: string[];
+  onLinked: (entry: LinkedEntityEntry) => void;
+  onCancel: () => void;
+}
+
+const AddLinkInline = ({ currentEntityId, projectId, excludeIds, onLinked, onCancel }: AddLinkInlineProps) => {
+  const [query, setQuery] = useState("");
+  const [relationship, setRelationship] = useState("");
+  const [candidates, setCandidates] = useState<{ id: string; name: string; category: string }[]>([]);
+  const [selected, setSelected] = useState<{ id: string; name: string; category: string } | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    supabase
+      .from("entities")
+      .select("id, name, category")
+      .eq("project_id", projectId)
+      .neq("id", currentEntityId)
+      .is("archived_at", null)
+      .order("name")
+      .then(({ data }) => { if (data) setCandidates(data); });
+  }, [currentEntityId, projectId]);
+
+  const filtered = candidates.filter(
+    (c) => !excludeIds.includes(c.id) && c.name.toLowerCase().includes(query.toLowerCase()),
+  ).slice(0, 8);
+
+  const handleConfirm = async () => {
+    if (!selected) return;
+    const rel = relationship.trim() || null;
+    const { error } = await supabase.from("entity_links").insert({
+      entity_a_id: currentEntityId,
+      entity_b_id: selected.id,
+      relationship: rel,
+    });
+    if (error) { console.error("Failed to link:", error); return; }
+    onLinked({ ...selected, relationship: rel });
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="bg-fyrescribe-raised border border-border rounded-lg p-3 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center"
+    >
+      {/* Entity search */}
+      <div className="relative flex-1 min-w-0">
+        {selected ? (
+          <div className="flex items-center gap-2 h-9 px-2.5 rounded-md bg-fyrescribe-hover border border-border">
+            <span className="font-display text-sm text-foreground truncate">{selected.name}</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${CATEGORY_COLORS[selected.category] || ""}`}>
+              {selected.category}
+            </span>
+            <button
+              onClick={() => { setSelected(null); setQuery(""); setShowResults(true); }}
+              className="ml-auto text-text-dimmed hover:text-foreground"
+              title="Change entity"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center h-9 px-2.5 rounded-md bg-fyrescribe-hover border border-border focus-within:border-gold/40">
+              <Search size={12} className="text-text-dimmed mr-2 flex-shrink-0" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setShowResults(true); }}
+                onFocus={() => setShowResults(true)}
+                placeholder="Search entities…"
+                className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-text-dimmed min-w-0"
+              />
+            </div>
+            {showResults && filtered.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30 max-h-56 overflow-y-auto">
+                {filtered.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => { setSelected(c); setShowResults(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                  >
+                    <span className="font-display text-sm truncate">{c.name}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ml-auto flex-shrink-0 ${CATEGORY_COLORS[c.category] || ""}`}>
+                      {c.category}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {showResults && query && filtered.length === 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30 px-3 py-2 text-xs text-text-dimmed">
+                No entities found
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Relationship label */}
+      <input
+        value={relationship}
+        onChange={(e) => setRelationship(e.target.value)}
+        placeholder="Relationship (e.g. ally of)"
+        className="h-9 px-2.5 rounded-md bg-fyrescribe-hover border border-border focus:border-gold/40 outline-none text-sm text-foreground placeholder:text-text-dimmed sm:w-56"
+      />
+
+      {/* Confirm / Cancel */}
+      <div className="flex gap-1.5 flex-shrink-0">
+        <button
+          onClick={handleConfirm}
+          disabled={!selected}
+          className="h-9 px-3 rounded-md bg-gold/15 border border-gold/40 text-gold text-xs uppercase tracking-wider hover:bg-gold/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Confirm
+        </button>
+        <button
+          onClick={onCancel}
+          className="h-9 px-3 rounded-md border border-border text-text-secondary text-xs uppercase tracking-wider hover:text-foreground hover:border-text-dimmed transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Entity Field Picker (At a Glance) ────────────────────────────────
+
+interface EntityFieldPickerProps {
+  fieldKey: string;
+  targetCategory: EntityCategory;
+  currentEntityId: string;
+  projectId: string;
+  onSelect: (entity: { id: string; name: string; category: string }) => void;
+  onClose: () => void;
+}
+
+const EntityFieldPicker = ({ fieldKey, targetCategory, currentEntityId, projectId, onSelect, onClose }: EntityFieldPickerProps) => {
+  const [query, setQuery] = useState("");
+  const [candidates, setCandidates] = useState<{ id: string; name: string; category: string }[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    supabase
+      .from("entities")
+      .select("id, name, category")
+      .eq("project_id", projectId)
+      .eq("category", targetCategory)
+      .neq("id", currentEntityId)
+      .is("archived_at", null)
+      .order("name")
+      .then(({ data }) => { if (data) setCandidates(data); });
+
+    const onClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [projectId, targetCategory, currentEntityId, onClose]);
+
+  const filtered = candidates.filter((c) => c.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="flex items-center h-7 px-2 rounded-md bg-fyrescribe-hover border border-gold/40">
+        <Search size={11} className="text-text-dimmed mr-1.5 flex-shrink-0" />
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={`Pick a ${targetCategory.replace(/s$/, "")}…`}
+          className="flex-1 bg-transparent outline-none text-xs text-foreground placeholder:text-text-dimmed min-w-0"
+        />
+      </div>
+      <div className="absolute top-full left-0 right-0 mt-1 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30 max-h-48 overflow-y-auto">
+        {filtered.length === 0 ? (
+          <div className="px-2.5 py-1.5 text-[11px] text-text-dimmed">No {targetCategory} found</div>
+        ) : (
+          filtered.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onSelect(c)}
+              className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+            >
+              <span className="truncate">{c.name}</span>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[c.category] || ""}`}>
+                {c.category}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── Delete Confirmation Modal ────────────────────────────────────────
 
 interface DeleteModalProps {
