@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, StickyNote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -168,6 +168,23 @@ const Sidebar = () => {
                 icon={icons[key]}
               />
             ))}
+            {/* Notes uses a lucide icon (not in themed icon sets) */}
+            <button
+              onClick={() => navigate("/notes")}
+              className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] rounded-sm transition-colors relative ${
+                isActive("/notes")
+                  ? "text-gold-bright bg-gold-glow border border-gold"
+                  : "text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover border border-transparent"
+              }`}
+              style={
+                isActive("/notes") && theme === "outrun"
+                  ? { borderColor: "hsl(var(--neon-yellow))", color: "hsl(var(--neon-yellow))" }
+                  : undefined
+              }
+            >
+              <StickyNote size={14} />
+              Notes
+            </button>
           </div>
         </div>
 

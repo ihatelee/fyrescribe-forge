@@ -18,6 +18,7 @@ import EntityDetailPage from "./pages/EntityDetailPage";
 import TimelinePage from "./pages/TimelinePage";
 import POVTrackerPage from "./pages/POVTrackerPage";
 import LoreInboxPage from "./pages/LoreInboxPage";
+import NotesPage from "./pages/NotesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/timeline" element={<ProtectedRoute><TimelinePage /></ProtectedRoute>} />
               <Route path="/pov-tracker" element={<ProtectedRoute><POVTrackerPage /></ProtectedRoute>} />
               <Route path="/lore-inbox" element={<ProtectedRoute><LoreInboxPage /></ProtectedRoute>} />
+              <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
