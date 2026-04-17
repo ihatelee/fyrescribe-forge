@@ -390,6 +390,9 @@ const Sidebar = () => {
           <p className="px-3 text-[10px] text-text-dimmed">{tagsMessage}</p>
         )}
 
+        {/* Visual divider between sync controls and Lore Inbox */}
+        <div className="h-px bg-border my-2" />
+
         {/* Lore Inbox */}
         <button
           onClick={() => navigate("/lore-inbox")}

@@ -38,6 +38,7 @@ const SyncTagsModal = ({ suggestions, onClose }: SyncTagsModalProps) => {
 
   const [items, setItems] = useState<TagSuggestion[]>(suggestions);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const keyOf = (s: TagSuggestion) => `${s.entity_id}:${s.field_key}`;
 
@@ -68,6 +69,26 @@ const SyncTagsModal = ({ suggestions, onClose }: SyncTagsModalProps) => {
     remove(s);
   };
 
+  const handleAcceptAll = async () => {
+    if (items.length === 0 || bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      const rows = items.map((s) => ({
+        entity_a_id: s.entity_id,
+        entity_b_id: s.target_entity_id,
+        relationship: s.field_key,
+      }));
+      const { error } = await supabase.from("entity_links").insert(rows);
+      if (error) {
+        console.error("Failed to bulk-accept tag suggestions:", error);
+      } else {
+        setItems([]);
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   // Group by source entity
   const grouped = items.reduce<Record<string, TagSuggestion[]>>((acc, s) => {
     (acc[s.entity_name] ??= []).push(s);
@@ -93,12 +114,28 @@ const SyncTagsModal = ({ suggestions, onClose }: SyncTagsModalProps) => {
           <span className="text-[10px] uppercase tracking-widest text-text-dimmed">
             {items.length} suggested
           </span>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
-          >
-            <X size={14} />
-          </button>
+          <div className="flex items-center gap-1">
+            {items.length > 1 && (
+              <button
+                onClick={handleAcceptAll}
+                disabled={bulkBusy}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md bg-gold/15 text-gold hover:bg-gold/25 disabled:opacity-40 transition-colors"
+              >
+                {bulkBusy ? (
+                  <Loader2 size={11} className="animate-spin" />
+                ) : (
+                  <Check size={11} />
+                )}
+                Accept all
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
