@@ -454,6 +454,11 @@ const LoreInboxPage = () => {
       entityId = existing.id;
     } else {
       // ── Create path: insert new entity (original behaviour) ─────────────
+      const firstToken = name.split(/\s+/)[0];
+      const seedAliases =
+        payload.category === "characters" && firstToken && firstToken.toLowerCase() !== name.toLowerCase()
+          ? [firstToken]
+          : [];
       const { data: entity, error: entityError } = await supabase
         .from("entities")
         .insert({
@@ -463,7 +468,8 @@ const LoreInboxPage = () => {
           summary: description || null,
           fields: fieldsToWrite,
           sections: sectionsToWrite,
-        })
+          aliases: seedAliases,
+        } as never)
         .select("id")
         .single();
 
