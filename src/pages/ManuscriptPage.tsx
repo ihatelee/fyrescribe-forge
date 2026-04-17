@@ -23,6 +23,9 @@ import {
   Loader2,
   History,
   BookmarkPlus,
+  PanelRight,
+  Type,
+  MoreHorizontal,
 } from "lucide-react";
 
 // ─── Utilities ────────────────────────────────────────────────────────
@@ -659,6 +662,8 @@ const ManuscriptPage = () => {
     setActiveSceneId(scene.id);
     setActiveChapterId(scene.chapter_id);
     setWordCount(scene.word_count ?? 0);
+    // Auto-close mobile chapter drawer after selecting a scene
+    setChapterPanelOpen(false);
   };
 
   const handleSceneTitleSave = async (sceneId: string, newTitle: string) => {
