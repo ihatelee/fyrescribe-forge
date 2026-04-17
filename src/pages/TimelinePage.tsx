@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
+import MobileUnavailable from "@/components/MobileUnavailable";
 import ModalSelect from "@/components/ModalSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
@@ -396,7 +397,8 @@ const TimelinePage = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 max-w-2xl mx-auto">
+      <MobileUnavailable feature="Timeline" />
+      <div className="hidden lg:block p-6 max-w-2xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <h1 className="font-display text-xl text-foreground tracking-wide">
             Timeline
