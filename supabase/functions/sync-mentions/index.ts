@@ -33,6 +33,32 @@ function extractContext(text: string, matchIndex: number, matchLength: number): 
   return [beforeWords, matchText, afterWords].filter(Boolean).join(" ");
 }
 
+/**
+ * Find sentence boundaries (start, endExclusive) so we can dedupe mentions
+ * that fall in the same sentence. Splits on . ! ? followed by whitespace,
+ * and on line breaks. Returns segments covering the whole text.
+ */
+function findSentenceRanges(text: string): { start: number; end: number }[] {
+  const ranges: { start: number; end: number }[] = [];
+  const re = /[.!?]+(?=\s|$)|\n+/g;
+  let lastEnd = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const end = match.index + match[0].length;
+    ranges.push({ start: lastEnd, end });
+    lastEnd = end;
+  }
+  if (lastEnd < text.length) ranges.push({ start: lastEnd, end: text.length });
+  return ranges;
+}
+
+function sentenceIndexFor(ranges: { start: number; end: number }[], pos: number): number {
+  for (let i = 0; i < ranges.length; i++) {
+    if (pos >= ranges[i].start && pos < ranges[i].end) return i;
+  }
+  return ranges.length - 1;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -91,11 +117,11 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // ── Fetch entities and scenes ───────────────────────────────────────
+    // ── Fetch entities (with aliases) and scenes ────────────────────────
     const [entitiesRes, scenesRes] = await Promise.all([
       supabase
         .from("entities")
-        .select("id, name")
+        .select("id, name, aliases")
         .eq("project_id", project_id)
         .is("archived_at", null),
       supabase
@@ -105,30 +131,54 @@ serve(async (req) => {
         .not("content", "is", null),
     ]);
 
-    const entities: { id: string; name: string }[] = entitiesRes.data ?? [];
+    const entities: { id: string; name: string; aliases: string[] | null }[] =
+      entitiesRes.data ?? [];
     const scenes: { id: string; content: string }[] = scenesRes.data ?? [];
 
     if (entities.length === 0 || scenes.length === 0) {
-      // Nothing to scan — clear existing and return early.
       await supabase.from("entity_mentions").delete().eq("project_id", project_id);
       return new Response(JSON.stringify({ mentions_found: 0, new_mentions: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ── Snapshot existing mentions BEFORE refresh, so we can diff ───────
-    // Key by (entity_id, scene_id, context) — NOT position, because editing
-    // a scene shifts every position downstream of the edit.
-    const { data: previousRows } = await supabase
-      .from("entity_mentions")
-      .select("entity_id, scene_id, context")
-      .eq("project_id", project_id);
+    // ── Snapshot existing mentions and rejections BEFORE refresh ────────
+    const [{ data: previousRows }, { data: rejectedRows }] = await Promise.all([
+      supabase
+        .from("entity_mentions")
+        .select("entity_id, scene_id, context")
+        .eq("project_id", project_id),
+      supabase
+        .from("rejected_mentions")
+        .select("entity_id, scene_id, context")
+        .eq("project_id", project_id),
+    ]);
 
     const previousKeys = new Set(
       (previousRows ?? []).map((r) => `${r.entity_id}:${r.scene_id}:${r.context}`),
     );
+    const rejectedKeys = new Set(
+      (rejectedRows ?? []).map((r) => `${r.entity_id}:${r.scene_id}:${r.context}`),
+    );
 
-    // ── Scan scenes for entity name matches ─────────────────────────────
+    // ── Build search terms per entity (name + aliases) ──────────────────
+    type EntityTerm = { entityId: string; entityName: string; term: string };
+    const allTerms: EntityTerm[] = [];
+    for (const e of entities) {
+      const seen = new Set<string>();
+      const push = (t: string) => {
+        const trimmed = t.trim();
+        if (!trimmed) return;
+        const key = trimmed.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        allTerms.push({ entityId: e.id, entityName: e.name, term: trimmed });
+      };
+      push(e.name);
+      for (const a of e.aliases ?? []) push(a);
+    }
+
+    // ── Scan scenes for entity name + alias matches, dedupe by sentence ─
     const rows: {
       entity_id: string;
       scene_id: string;
@@ -139,33 +189,39 @@ serve(async (req) => {
 
     for (const scene of scenes) {
       const plainText = stripHtml(scene.content);
+      const textLower = plainText.toLowerCase();
+      const sentenceRanges = findSentenceRanges(plainText);
+      // Track which (entity, sentenceIndex) pairs have been recorded for this scene
+      const sceneSentenceSeen = new Set<string>();
 
-      for (const entity of entities) {
-        const nameLower = entity.name.toLowerCase();
-        const textLower = plainText.toLowerCase();
-
+      for (const { entityId, term } of allTerms) {
+        const termLower = term.toLowerCase();
         let searchFrom = 0;
         while (searchFrom < textLower.length) {
-          const idx = textLower.indexOf(nameLower, searchFrom);
+          const idx = textLower.indexOf(termLower, searchFrom);
           if (idx === -1) break;
 
-          // Word-boundary check: ensure the match isn't mid-word
           const before = idx === 0 ? "" : textLower[idx - 1];
-          const after = textLower[idx + nameLower.length] ?? "";
+          const after = textLower[idx + termLower.length] ?? "";
           const boundaryBefore = !before || /\W/.test(before);
           const boundaryAfter = !after || /\W/.test(after);
 
           if (boundaryBefore && boundaryAfter) {
-            rows.push({
-              entity_id: entity.id,
-              scene_id: scene.id,
-              project_id,
-              context: extractContext(plainText, idx, entity.name.length),
-              position: idx,
-            });
+            const sIdx = sentenceIndexFor(sentenceRanges, idx);
+            const dedupeKey = `${entityId}:${sIdx}`;
+            if (!sceneSentenceSeen.has(dedupeKey)) {
+              sceneSentenceSeen.add(dedupeKey);
+              rows.push({
+                entity_id: entityId,
+                scene_id: scene.id,
+                project_id,
+                context: extractContext(plainText, idx, term.length),
+                position: idx,
+              });
+            }
           }
 
-          searchFrom = idx + nameLower.length;
+          searchFrom = idx + termLower.length;
         }
       }
     }
@@ -174,7 +230,6 @@ serve(async (req) => {
     await supabase.from("entity_mentions").delete().eq("project_id", project_id);
 
     if (rows.length > 0) {
-      // Insert in chunks of 500 to stay within payload limits
       const CHUNK = 500;
       for (let i = 0; i < rows.length; i += CHUNK) {
         const { error: insertError } = await supabase
@@ -186,7 +241,7 @@ serve(async (req) => {
       }
     }
 
-    // ── Compute new mentions (not present in previous snapshot) ─────────
+    // ── Compute new mentions (not previously known, not rejected) ───────
     const entityNameById = new Map(entities.map((e) => [e.id, e.name]));
     const sceneTitleById = new Map<string, string>();
     const { data: sceneTitleRows } = await supabase
@@ -196,7 +251,10 @@ serve(async (req) => {
     for (const s of sceneTitleRows ?? []) sceneTitleById.set(s.id, s.title);
 
     const newMentions = rows
-      .filter((r) => !previousKeys.has(`${r.entity_id}:${r.scene_id}:${r.context}`))
+      .filter((r) => {
+        const k = `${r.entity_id}:${r.scene_id}:${r.context}`;
+        return !previousKeys.has(k) && !rejectedKeys.has(k);
+      })
       .map((r) => ({
         entity_id: r.entity_id,
         entity_name: entityNameById.get(r.entity_id) ?? "Unknown",
