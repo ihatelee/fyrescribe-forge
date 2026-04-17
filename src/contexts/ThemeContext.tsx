@@ -6,6 +6,8 @@ import { IconSetName, ICON_SETS, THEME_DEFAULT_ICON_SET, type IconSet } from "@/
 export type ThemeName = "midnight" | "fireside" | "outrun" | "lavender" | "daylight" | "enchanted";
 export const isDaylightTheme = (t: ThemeName) => t === "daylight";
 
+export type InterfaceScale = 75 | 100 | 125 | 150;
+
 interface ThemeContextType {
   theme: ThemeName;
   setTheme: (t: ThemeName) => void;
@@ -14,6 +16,12 @@ interface ThemeContextType {
   iconSetName: IconSetName;
   setIconSet: (v: IconSetName) => void;
   icons: IconSet;
+  interfaceScale: InterfaceScale;
+  setInterfaceScale: (v: InterfaceScale) => void;
+  highContrast: boolean;
+  setHighContrast: (v: boolean) => void;
+  dyslexiaFont: boolean;
+  setDyslexiaFont: (v: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -24,6 +32,12 @@ const ThemeContext = createContext<ThemeContextType>({
   iconSetName: "fantasy",
   setIconSet: () => {},
   icons: ICON_SETS.fantasy,
+  interfaceScale: 100,
+  setInterfaceScale: () => {},
+  highContrast: false,
+  setHighContrast: () => {},
+  dyslexiaFont: false,
+  setDyslexiaFont: () => {},
 });
 
 export const useTheme = () => useContext(ThemeContext);
@@ -311,19 +325,30 @@ function applyTheme(theme: ThemeName) {
   }
 }
 
+function applyAccessibility(scale: InterfaceScale, highContrast: boolean, dyslexiaFont: boolean) {
+  const root = document.documentElement;
+  // Scale via root font-size (rem-driven UI). 16px = 100%.
+  root.style.fontSize = `${(scale / 100) * 16}px`;
+  root.classList.toggle("high-contrast", highContrast);
+  root.classList.toggle("dyslexia-font", dyslexiaFont);
+}
+
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [theme, setThemeState] = useState<ThemeName>("midnight");
   const [sparkle, setSparkleState] = useState(false);
   const [iconSetName, setIconSetState] = useState<IconSetName>("fantasy");
-  const [loaded, setLoaded] = useState(false);
+  const [interfaceScale, setInterfaceScaleState] = useState<InterfaceScale>(100);
+  const [highContrast, setHighContrastState] = useState(false);
+  const [dyslexiaFont, setDyslexiaFontState] = useState(false);
+  const [, setLoaded] = useState(false);
 
   // Load preferences from DB
   useEffect(() => {
     if (!user) return;
     supabase
       .from("user_preferences")
-      .select("theme, sparkle_enabled, icon_set")
+      .select("theme, sparkle_enabled, icon_set, interface_scale, high_contrast, dyslexia_font")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -335,7 +360,14 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
           } else {
             setIconSetState(THEME_DEFAULT_ICON_SET[data.theme] || "fantasy");
           }
+          const scale = ([75, 100, 125, 150].includes(data.interface_scale)
+            ? data.interface_scale
+            : 100) as InterfaceScale;
+          setInterfaceScaleState(scale);
+          setHighContrastState(!!data.high_contrast);
+          setDyslexiaFontState(!!data.dyslexia_font);
           applyTheme(data.theme as ThemeName);
+          applyAccessibility(scale, !!data.high_contrast, !!data.dyslexia_font);
         }
         setLoaded(true);
       });
@@ -345,34 +377,85 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     applyTheme(theme);
   }, [theme]);
 
-  const persistPrefs = async (t: ThemeName, s: boolean, i: IconSetName) => {
+  useEffect(() => {
+    applyAccessibility(interfaceScale, highContrast, dyslexiaFont);
+  }, [interfaceScale, highContrast, dyslexiaFont]);
+
+  const persistPrefs = async (
+    t: ThemeName,
+    s: boolean,
+    i: IconSetName,
+    scale: InterfaceScale,
+    hc: boolean,
+    df: boolean,
+  ) => {
     if (!user) return;
     await supabase.from("user_preferences").upsert(
-      { user_id: user.id, theme: t, sparkle_enabled: s, icon_set: i, updated_at: new Date().toISOString() },
+      {
+        user_id: user.id,
+        theme: t,
+        sparkle_enabled: s,
+        icon_set: i,
+        interface_scale: scale,
+        high_contrast: hc,
+        dyslexia_font: df,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: "user_id" }
     );
   };
 
   const setTheme = (t: ThemeName) => {
     setThemeState(t);
-    persistPrefs(t, sparkle, iconSetName);
+    persistPrefs(t, sparkle, iconSetName, interfaceScale, highContrast, dyslexiaFont);
   };
 
   const setSparkle = (v: boolean) => {
     setSparkleState(v);
-    persistPrefs(theme, v, iconSetName);
+    persistPrefs(theme, v, iconSetName, interfaceScale, highContrast, dyslexiaFont);
   };
 
   const setIconSet = (v: IconSetName) => {
     setIconSetState(v);
-    persistPrefs(theme, sparkle, v);
+    persistPrefs(theme, sparkle, v, interfaceScale, highContrast, dyslexiaFont);
+  };
+
+  const setInterfaceScale = (v: InterfaceScale) => {
+    setInterfaceScaleState(v);
+    persistPrefs(theme, sparkle, iconSetName, v, highContrast, dyslexiaFont);
+  };
+
+  const setHighContrast = (v: boolean) => {
+    setHighContrastState(v);
+    persistPrefs(theme, sparkle, iconSetName, interfaceScale, v, dyslexiaFont);
+  };
+
+  const setDyslexiaFont = (v: boolean) => {
+    setDyslexiaFontState(v);
+    persistPrefs(theme, sparkle, iconSetName, interfaceScale, highContrast, v);
   };
 
   // Outrun theme always uses the sci-fi icon set regardless of saved preference
   const icons = ICON_SETS[theme === "outrun" ? "scifi" : iconSetName];
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, sparkle, setSparkle, iconSetName, setIconSet, icons }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        setTheme,
+        sparkle,
+        setSparkle,
+        iconSetName,
+        setIconSet,
+        icons,
+        interfaceScale,
+        setInterfaceScale,
+        highContrast,
+        setHighContrast,
+        dyslexiaFont,
+        setDyslexiaFont,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
