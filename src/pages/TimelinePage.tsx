@@ -208,7 +208,7 @@ const TimelinePage = () => {
   const { activeProject } = useActiveProject();
   const [filter, setFilter] = useState<"all" | TimelineEventType>("all");
   const [majorOnly, setMajorOnly] = useState(true);
-  const MAJOR_THRESHOLD = 9;
+  const MAJOR_THRESHOLD = 7;
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -494,7 +494,7 @@ const TimelinePage = () => {
             <p className="text-text-secondary text-sm mb-1">No timeline events yet</p>
             <p className="text-text-dimmed text-xs mb-6">
               {majorOnly && events.length > 0
-                ? `No major events (score 9+). Toggle "All events" to see everything.`
+                ? `No major events (score 7+). Toggle "All events" to see everything.`
                 : `Add events manually or click "Generate from Lore" to build the timeline from your world-building entities and manuscript scenes.`}
             </p>
           </div>
