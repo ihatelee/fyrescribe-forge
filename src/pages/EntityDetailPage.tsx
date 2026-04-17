@@ -523,6 +523,81 @@ const EntityFieldPicker = ({ fieldKey, targetCategory, currentEntityId, projectI
   );
 };
 
+// ─── Linked Entity Row (table-style row in Linked Entities section) ──
+
+interface LinkedEntityRowProps {
+  sourceCategory: string;
+  sourceName: string;
+  target: LinkedEntityEntry;
+  onNavigate: (id: string) => void;
+  onRemove: () => void;
+}
+
+const LinkedEntityRow = ({ sourceCategory, sourceName, target, onNavigate, onRemove }: LinkedEntityRowProps) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5 odd:bg-transparent even:bg-fyrescribe-hover/40 hover:bg-fyrescribe-hover transition-colors">
+      {/* Source side (current entity) */}
+      <span
+        className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[sourceCategory] || ""}`}
+        title={sourceName}
+      >
+        {sourceCategory}
+      </span>
+
+      {/* Relationship label */}
+      <span className="text-xs text-text-dimmed italic flex-shrink-0">
+        {target.relationship?.trim() ? target.relationship : "linked to"}
+      </span>
+
+      {/* Target entity — clickable badge */}
+      <button
+        onClick={() => onNavigate(target.id)}
+        className="flex items-center gap-2 min-w-0 hover:text-gold-bright transition-colors group"
+      >
+        <span className="font-display text-sm text-foreground group-hover:text-gold-bright truncate">
+          {target.name}
+        </span>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[target.category] || ""}`}>
+          {target.category}
+        </span>
+      </button>
+
+      {/* 3-dot menu */}
+      <div ref={menuRef} className="relative ml-auto flex-shrink-0">
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          className="w-7 h-7 rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-raised flex items-center justify-center transition-colors"
+        >
+          <MoreVertical size={13} />
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 mt-1 w-36 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30">
+            <button
+              onClick={() => { setMenuOpen(false); onRemove(); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-destructive hover:bg-fyrescribe-hover transition-colors rounded-lg"
+            >
+              <Trash2 size={11} />
+              Remove link
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── Delete Confirmation Modal ────────────────────────────────────────
 
 interface DeleteModalProps {
