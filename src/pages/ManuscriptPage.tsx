@@ -1243,15 +1243,15 @@ const ManuscriptPage = () => {
             />
           )}
           {/* Toolbar */}
-          <div className="relative z-10 flex items-center justify-between px-2 md:px-4 py-2 border-b border-border bg-fyrescribe-base">
+          <div className="relative z-10 flex items-center justify-between px-2 lg:px-4 py-2 border-b border-border bg-fyrescribe-base">
             <div className="flex items-center gap-1 flex-1 min-w-0">
               {/* Desktop formatting controls */}
-              <div className="hidden md:flex items-center gap-1">
+              <div className="hidden lg:flex items-center gap-1">
                 {formattingControls}
               </div>
 
-              {/* Mobile: Format menu */}
-              <div className="md:hidden relative">
+              {/* Mobile / tablet-portrait: Format menu */}
+              <div className="lg:hidden relative">
                 <button
                   onClick={() => setFormatMenuOpen((v) => !v)}
                   className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
@@ -1265,17 +1265,19 @@ const ManuscriptPage = () => {
                       className="fixed inset-0 z-40"
                       onClick={() => setFormatMenuOpen(false)}
                     />
-                    <div className="absolute left-0 top-full mt-1 z-50 bg-card border border-border rounded-md shadow-lg p-3 flex flex-col gap-3 min-w-[260px]">
+                    <div className="absolute left-0 top-full mt-1 z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl p-3 flex flex-col gap-3 min-w-[260px]">
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => applyFormat("bold")}
+                          onClick={() => { applyFormat("bold"); setFormatMenuOpen(false); }}
                           className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                          aria-label="Bold"
                         >
                           <Bold size={14} />
                         </button>
                         <button
-                          onClick={() => applyFormat("italic")}
+                          onClick={() => { applyFormat("italic"); setFormatMenuOpen(false); }}
                           className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                          aria-label="Italic"
                         >
                           <Italic size={14} />
                         </button>
@@ -1302,21 +1304,21 @@ const ManuscriptPage = () => {
                 povCharacterId={activeScene?.pov_character_id ?? null}
                 onChange={handlePOVChange}
               />
-              <div className="w-px h-4 bg-border mx-1 hidden md:block" />
+              <div className="w-px h-4 bg-border mx-1 hidden lg:block" />
               <button
                 onClick={() => setFocusMode(true)}
                 className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
               >
                 <Maximize size={14} />
-                <span className="hidden md:inline">Focus</span>
+                <span className="hidden lg:inline">Focus</span>
               </button>
-              {/* Mobile: chapter panel trigger */}
+              {/* Mobile / tablet-portrait: chapter panel trigger or close button (same slot) */}
               <button
-                onClick={() => setChapterPanelOpen(true)}
-                aria-label="Open chapters"
-                className="md:hidden p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                onClick={() => setChapterPanelOpen((v) => !v)}
+                aria-label={chapterPanelOpen ? "Close chapters" : "Open chapters"}
+                className="lg:hidden p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
               >
-                <PanelRight size={16} />
+                {chapterPanelOpen ? <X size={16} /> : <PanelRight size={16} />}
               </button>
             </div>
           </div>
