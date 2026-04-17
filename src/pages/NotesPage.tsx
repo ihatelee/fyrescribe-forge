@@ -120,6 +120,7 @@ const NotesPage = () => {
 
   // ─── Selection ──────────────────────────────────────────────────────
   const selectNote = (note: Note) => {
+    setNotesPanelOpen(false);
     if (note.id === activeNoteId) return;
     setActiveNoteId(note.id);
   };
