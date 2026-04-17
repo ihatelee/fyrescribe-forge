@@ -80,7 +80,7 @@ const AccessibilityPanel = () => {
           onSelect={(e) => e.preventDefault()}
           className="cursor-pointer flex items-center gap-2"
         >
-          <span className="flex-1 text-sm">Dyslexia-Friendly Font</span>
+          <span className="flex-1 text-sm">Sans-Serif Font</span>
           <Switch
             checked={dyslexiaFont}
             onCheckedChange={setDyslexiaFont}

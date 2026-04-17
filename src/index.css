@@ -1,11 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Fira+Code:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap');
-@font-face {
-  font-family: 'OpenDyslexic';
-  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -114,12 +108,12 @@
   pointer-events: none;
 }
 
-/* Accessibility: dyslexia-friendly font */
+/* Accessibility: sans-serif font override */
 html.dyslexia-font,
 html.dyslexia-font body,
 html.dyslexia-font .font-prose,
 html.dyslexia-font .font-display {
-  font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
 }
 
 /* html.high-contrast — variable overrides are applied via JS inline styles in ThemeContext

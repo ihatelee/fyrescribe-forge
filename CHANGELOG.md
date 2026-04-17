@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Rename dyslexia font toggle to Sans-Serif + swap to Inter
+
+- `src/components/AccessibilityPanel.tsx` — toggle label changed from "Dyslexia-Friendly Font" to "Sans-Serif Font".
+- `src/index.css` — replaced OpenDyslexic `@font-face` with Inter Google Fonts import (`wght@400;500;600`). CSS rule updated to `font-family: 'Inter', sans-serif`.
+
+---
+
 ## 2026-04-17 — High contrast fix + Settings icon position
 
 - `src/contexts/ThemeContext.tsx` — root cause: `applyTheme` sets CSS custom properties as inline styles; stylesheet `html.high-contrast { }` rules can never win against them. Fix: moved HC overrides into JS — `applyAccessibility` now calls `root.style.setProperty` for each HC var (dark or light variants for daylight theme), and restores theme values when HC is disabled. Merged the two separate `useEffect` calls (theme + accessibility) into one so theme changes can never wipe HC overrides mid-render.
