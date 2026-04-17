@@ -111,10 +111,20 @@ serve(async (req) => {
     if (entities.length === 0 || scenes.length === 0) {
       // Nothing to scan — clear existing and return early.
       await supabase.from("entity_mentions").delete().eq("project_id", project_id);
-      return new Response(JSON.stringify({ mentions_found: 0 }), {
+      return new Response(JSON.stringify({ mentions_found: 0, new_mentions: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // ── Snapshot existing mentions BEFORE refresh, so we can diff ───────
+    const { data: previousRows } = await supabase
+      .from("entity_mentions")
+      .select("entity_id, scene_id, position")
+      .eq("project_id", project_id);
+
+    const previousKeys = new Set(
+      (previousRows ?? []).map((r) => `${r.entity_id}:${r.scene_id}:${r.position}`),
+    );
 
     // ── Scan scenes for entity name matches ─────────────────────────────
     const rows: {
@@ -174,9 +184,30 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ mentions_found: rows.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // ── Compute new mentions (not present in previous snapshot) ─────────
+    const entityNameById = new Map(entities.map((e) => [e.id, e.name]));
+    const sceneTitleById = new Map<string, string>();
+    const { data: sceneTitleRows } = await supabase
+      .from("scenes")
+      .select("id, title")
+      .eq("project_id", project_id);
+    for (const s of sceneTitleRows ?? []) sceneTitleById.set(s.id, s.title);
+
+    const newMentions = rows
+      .filter((r) => !previousKeys.has(`${r.entity_id}:${r.scene_id}:${r.position}`))
+      .map((r) => ({
+        entity_id: r.entity_id,
+        entity_name: entityNameById.get(r.entity_id) ?? "Unknown",
+        scene_id: r.scene_id,
+        scene_title: sceneTitleById.get(r.scene_id) ?? "Untitled scene",
+        context: r.context,
+        position: r.position,
+      }));
+
+    return new Response(
+      JSON.stringify({ mentions_found: rows.length, new_mentions: newMentions }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (err) {
     console.error("Unexpected error:", err);
     return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
