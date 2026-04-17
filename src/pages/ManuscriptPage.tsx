@@ -1297,9 +1297,51 @@ const ManuscriptPage = () => {
 
           {/* Status bar */}
           <div className="flex items-center justify-between px-4 py-1.5 border-t border-border bg-fyrescribe-base text-text-dimmed text-[11px]">
-            <span>{saving ? "Saving…" : "Auto-saved"}</span>
+            <div className="flex items-center gap-3">
+              <span>
+                {versionToast
+                  ? versionToast
+                  : saving
+                  ? "Saving…"
+                  : "Auto-saved"}
+              </span>
+              <div className="w-px h-3 bg-border" />
+              <div className="relative">
+                <button
+                  onClick={() => setSaveVersionOpen((v) => !v)}
+                  disabled={!activeSceneId}
+                  className="flex items-center gap-1 hover:text-text-secondary transition-colors disabled:opacity-40"
+                >
+                  <BookmarkPlus size={11} />
+                  Save Version
+                </button>
+                {saveVersionOpen && (
+                  <SaveVersionPopover
+                    onSave={handleSaveVersion}
+                    onClose={() => setSaveVersionOpen(false)}
+                  />
+                )}
+              </div>
+              <button
+                onClick={() => setVersionHistoryOpen(true)}
+                disabled={!activeSceneId}
+                className="flex items-center gap-1 hover:text-text-secondary transition-colors disabled:opacity-40"
+              >
+                <History size={11} />
+                Version History
+              </button>
+            </div>
             <span>{wordCount.toLocaleString()} words</span>
           </div>
+
+          {versionHistoryOpen && activeSceneId && activeScene && (
+            <VersionHistoryPanel
+              sceneId={activeSceneId}
+              sceneTitle={activeScene.title}
+              onClose={() => setVersionHistoryOpen(false)}
+              onRestore={handleRestoreVersion}
+            />
+          )}
         </div>
 
         {/* Chapter/scene sidebar — RIGHT */}
