@@ -783,6 +783,22 @@ const EntityDetailInner = () => {
     }
   }, [id, generatingHistory]);
 
+  const handleDeleteStoryHistory = useCallback(async () => {
+    if (!id) return;
+    const updated = { ...sectionsRef.current };
+    delete updated["Story History"];
+    sectionsRef.current = updated;
+    setSections(updated);
+    const el = storyHistoryRef.current;
+    if (el) {
+      el.innerHTML = "";
+      el.dataset.initialized = "true";
+    }
+    const { error } = await supabase
+      .from("entities").update({ sections: updated as Json }).eq("id", id);
+    if (error) console.error("Failed to delete story history:", error);
+  }, [id]);
+
   // ─── Save summary / fields ───────────────────────────────────────
 
   const saveSummary = useCallback(async () => {
@@ -1263,8 +1279,52 @@ const EntityDetailInner = () => {
               </div>
             )}
 
-            {/* ===== APPEARANCE LOG ===== */}
-            <AppearanceLog entityId={entity.id} entityName={entity.name} projectId={projectId} />
+            {/* ===== LINKED ENTITIES ===== */}
+            <div className="border-t border-border pt-8 mb-8">
+              <div className="flex items-center justify-between mb-4 gap-4">
+                <h2 className="font-display text-base text-foreground tracking-wide">Linked Entities</h2>
+                {!isLinkingEntity && (
+                  <button
+                    onClick={() => setIsLinkingEntity(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors"
+                  >
+                    <Plus size={12} />
+                    Add Link
+                  </button>
+                )}
+              </div>
+
+              {isLinkingEntity && (
+                <div className="mb-4">
+                  <AddLinkInline
+                    currentEntityId={id!}
+                    projectId={projectId}
+                    excludeIds={[]}
+                    onLinked={(ent) => { handleEntityLinked(ent); setIsLinkingEntity(false); }}
+                    onCancel={() => setIsLinkingEntity(false)}
+                  />
+                </div>
+              )}
+
+              {genericLinked.length === 0 && !isLinkingEntity ? (
+                <p className="font-prose text-base leading-relaxed text-text-dimmed italic">
+                  No linked entities yet. Add a link to connect this entry to another.
+                </p>
+              ) : genericLinked.length > 0 ? (
+                <div className="divide-y divide-border border border-border rounded-lg bg-fyrescribe-raised">
+                  {genericLinked.map((linked) => (
+                    <LinkedEntityRow
+                      key={`${linked.id}-${linked.relationship ?? ""}`}
+                      sourceCategory={entity.category}
+                      sourceName={entity.name}
+                      target={linked}
+                      onNavigate={(eid) => navigate(`/entity/${eid}`)}
+                      onRemove={() => handleRemoveLink(linked.id, linked.relationship)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
 
             {/* ===== CHARACTER: Related Artifacts ===== */}
             {entity.category === "characters" && (
@@ -1341,80 +1401,6 @@ const EntityDetailInner = () => {
               </div>
             )}
 
-            {/* ===== GALLERY ===== */}
-            <div className="border-t border-border pt-8 mt-4 mb-8">
-              <h2 className="font-display text-base text-foreground mb-4 tracking-wide">Gallery</h2>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                {galleryImages.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setLightboxImage(img)}
-                    className="aspect-square bg-fyrescribe-raised border border-border rounded-lg overflow-hidden relative group hover:border-gold/20 transition-colors"
-                  >
-                    <img src={img} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <ZoomIn size={18} className="text-foreground" />
-                    </div>
-                  </button>
-                ))}
-                <button
-                  onClick={() => galleryInputRef.current?.click()}
-                  className="aspect-square bg-fyrescribe-raised border border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1.5 text-text-dimmed hover:text-text-secondary hover:border-text-dimmed transition-colors"
-                >
-                  <Plus size={18} />
-                  <span className="text-[10px] uppercase tracking-widest">Add image</span>
-                </button>
-              </div>
-              <input ref={galleryInputRef} type="file" accept="image/*" multiple onChange={handleGalleryUpload} className="hidden" />
-            </div>
-
-            {/* ===== LINKED ENTITIES ===== */}
-            <div className="border-t border-border pt-8 mb-8">
-              <div className="flex items-center justify-between mb-4 gap-4">
-                <h2 className="font-display text-base text-foreground tracking-wide">Linked Entities</h2>
-                {!isLinkingEntity && (
-                  <button
-                    onClick={() => setIsLinkingEntity(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors"
-                  >
-                    <Plus size={12} />
-                    Add Link
-                  </button>
-                )}
-              </div>
-
-              {isLinkingEntity && (
-                <div className="mb-4">
-                  <AddLinkInline
-                    currentEntityId={id!}
-                    projectId={projectId}
-                    excludeIds={[]}
-                    onLinked={(ent) => { handleEntityLinked(ent); setIsLinkingEntity(false); }}
-                    onCancel={() => setIsLinkingEntity(false)}
-                  />
-                </div>
-              )}
-
-              {genericLinked.length === 0 && !isLinkingEntity ? (
-                <p className="font-prose text-base leading-relaxed text-text-dimmed italic">
-                  No linked entities yet. Add a link to connect this entry to another.
-                </p>
-              ) : genericLinked.length > 0 ? (
-                <div className="divide-y divide-border border border-border rounded-lg overflow-hidden bg-fyrescribe-raised">
-                  {genericLinked.map((linked) => (
-                    <LinkedEntityRow
-                      key={`${linked.id}-${linked.relationship ?? ""}`}
-                      sourceCategory={entity.category}
-                      sourceName={entity.name}
-                      target={linked}
-                      onNavigate={(eid) => navigate(`/entity/${eid}`)}
-                      onRemove={() => handleRemoveLink(linked.id, linked.relationship)}
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
             {/* ===== CHARACTER: Story History (AI-generated) ===== */}
             {entity.category === "characters" && (
               <div className="border-t border-border pt-8 mb-8">
@@ -1423,18 +1409,29 @@ const EntityDetailInner = () => {
                     <h2 className="font-display text-base text-foreground tracking-wide">Story History</h2>
                     <span className="text-[10px] uppercase tracking-widest text-text-dimmed">(2 paragraph maximum)</span>
                   </div>
-                  <button
-                    onClick={handleUpdateStoryHistory}
-                    disabled={generatingHistory}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
-                  >
-                    {generatingHistory ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Sparkles size={12} className="text-gold" />
-                    )}
-                    Update History
-                  </button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={handleDeleteStoryHistory}
+                      disabled={generatingHistory || !((sections["Story History"] ?? "").replace(/<[^>]*>/g, "").trim().length)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-destructive bg-fyrescribe-raised border border-border rounded-lg hover:border-destructive/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Delete history"
+                    >
+                      <Trash2 size={12} />
+                      Delete History
+                    </button>
+                    <button
+                      onClick={handleUpdateStoryHistory}
+                      disabled={generatingHistory}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {generatingHistory ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Sparkles size={12} className="text-gold" />
+                      )}
+                      Update History
+                    </button>
+                  </div>
                 </div>
                 {(() => {
                   const hasHistory = ((sections["Story History"] ?? "").replace(/<[^>]*>/g, "").trim().length) > 0;
@@ -1461,6 +1458,36 @@ const EntityDetailInner = () => {
                 })()}
               </div>
             )}
+
+            {/* ===== GALLERY ===== */}
+            <div className="border-t border-border pt-8 mb-8">
+              <h2 className="font-display text-base text-foreground mb-4 tracking-wide">Gallery</h2>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {galleryImages.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setLightboxImage(img)}
+                    className="aspect-square bg-fyrescribe-raised border border-border rounded-lg overflow-hidden relative group hover:border-gold/20 transition-colors"
+                  >
+                    <img src={img} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <ZoomIn size={18} className="text-foreground" />
+                    </div>
+                  </button>
+                ))}
+                <button
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="aspect-square bg-fyrescribe-raised border border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1.5 text-text-dimmed hover:text-text-secondary hover:border-text-dimmed transition-colors"
+                >
+                  <Plus size={18} />
+                  <span className="text-[10px] uppercase tracking-widest">Add image</span>
+                </button>
+              </div>
+              <input ref={galleryInputRef} type="file" accept="image/*" multiple onChange={handleGalleryUpload} className="hidden" />
+            </div>
+
+            {/* ===== APPEARANCE LOG (always last) ===== */}
+            <AppearanceLog entityId={entity.id} entityName={entity.name} projectId={projectId} />
 
           </div>
 
