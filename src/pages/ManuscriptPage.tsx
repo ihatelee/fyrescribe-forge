@@ -1372,25 +1372,87 @@ const ManuscriptPage = () => {
           )}
 
           {/* Status bar */}
-          <div className="flex items-center justify-between px-4 py-1.5 border-t border-border bg-fyrescribe-base text-text-dimmed text-[11px]">
-            <div className="flex items-center gap-3">
-              <span>
+          <div className="flex items-center justify-between px-3 md:px-4 py-1.5 border-t border-border bg-fyrescribe-base text-text-dimmed text-[11px]">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="truncate">
                 {versionToast
                   ? versionToast
                   : saving
                   ? "Saving…"
                   : "Auto-saved"}
               </span>
-              <div className="w-px h-3 bg-border" />
-              <div className="relative">
+              <div className="w-px h-3 bg-border hidden md:block" />
+
+              {/* Desktop: inline version controls */}
+              <div className="hidden md:flex items-center gap-3">
+                <div className="relative">
+                  <button
+                    onClick={() => setSaveVersionOpen((v) => !v)}
+                    disabled={!activeSceneId}
+                    className="flex items-center gap-1 hover:text-text-secondary transition-colors disabled:opacity-40"
+                  >
+                    <BookmarkPlus size={11} />
+                    Save Version
+                  </button>
+                  {saveVersionOpen && (
+                    <SaveVersionPopover
+                      onSave={handleSaveVersion}
+                      onClose={() => setSaveVersionOpen(false)}
+                    />
+                  )}
+                </div>
                 <button
-                  onClick={() => setSaveVersionOpen((v) => !v)}
+                  onClick={() => setVersionHistoryOpen(true)}
                   disabled={!activeSceneId}
                   className="flex items-center gap-1 hover:text-text-secondary transition-colors disabled:opacity-40"
                 >
-                  <BookmarkPlus size={11} />
-                  Save Version
+                  <History size={11} />
+                  Version History
                 </button>
+              </div>
+
+              {/* Mobile: overflow menu */}
+              <div className="md:hidden relative">
+                <div className="w-px h-3 bg-border inline-block mr-3 align-middle" />
+                <button
+                  onClick={() => setVersionMenuOpen((v) => !v)}
+                  disabled={!activeSceneId}
+                  aria-label="Version actions"
+                  className="hover:text-text-secondary transition-colors disabled:opacity-40 align-middle"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+                {versionMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setVersionMenuOpen(false)}
+                    />
+                    <div className="absolute left-0 bottom-full mb-1 z-50 bg-card border border-border rounded-md shadow-lg py-1 min-w-[180px]">
+                      <button
+                        onClick={() => {
+                          setVersionMenuOpen(false);
+                          setSaveVersionOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                      >
+                        <BookmarkPlus size={12} />
+                        Save Version
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVersionMenuOpen(false);
+                          setVersionHistoryOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                      >
+                        <History size={12} />
+                        Version History
+                      </button>
+                    </div>
+                    {/* Mobile SaveVersionPopover renders relative to its trigger; mount it here too */}
+                  </>
+                )}
                 {saveVersionOpen && (
                   <SaveVersionPopover
                     onSave={handleSaveVersion}
@@ -1398,16 +1460,8 @@ const ManuscriptPage = () => {
                   />
                 )}
               </div>
-              <button
-                onClick={() => setVersionHistoryOpen(true)}
-                disabled={!activeSceneId}
-                className="flex items-center gap-1 hover:text-text-secondary transition-colors disabled:opacity-40"
-              >
-                <History size={11} />
-                Version History
-              </button>
             </div>
-            <span>{wordCount.toLocaleString()} words</span>
+            <span className="flex-shrink-0">{wordCount.toLocaleString()} words</span>
           </div>
 
           {versionHistoryOpen && activeSceneId && activeScene && (
