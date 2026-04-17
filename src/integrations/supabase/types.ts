@@ -517,8 +517,11 @@ export type Database = {
       user_preferences: {
         Row: {
           created_at: string
+          dyslexia_font: boolean
+          high_contrast: boolean
           icon_set: string
           id: string
+          interface_scale: number
           sparkle_enabled: boolean
           theme: string
           updated_at: string
@@ -526,8 +529,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dyslexia_font?: boolean
+          high_contrast?: boolean
           icon_set?: string
           id?: string
+          interface_scale?: number
           sparkle_enabled?: boolean
           theme?: string
           updated_at?: string
@@ -535,8 +541,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dyslexia_font?: boolean
+          high_contrast?: boolean
           icon_set?: string
           id?: string
+          interface_scale?: number
           sparkle_enabled?: boolean
           theme?: string
           updated_at?: string
