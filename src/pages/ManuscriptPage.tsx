@@ -264,6 +264,9 @@ const ManuscriptPage = () => {
   const [versionToast, setVersionToast] = useState<string | null>(null);
 
   const [focusMode, setFocusMode] = useState(false);
+  const [chapterPanelOpen, setChapterPanelOpen] = useState(false);
+  const [formatMenuOpen, setFormatMenuOpen] = useState(false);
+  const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const [thesaurusOpen, setThesaurusOpen] = useState(false);
   const [thesaurusWord, setThesaurusWord] = useState("");
   const [thesaurusSynonyms, setThesaurusSynonyms] = useState<string[]>([]);
