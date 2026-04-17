@@ -142,12 +142,28 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
               {reviewedCount} of {totalCount} reviewed
             </span>
           )}
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
-          >
-            <X size={14} />
-          </button>
+          <div className="flex items-center gap-1">
+            {!loading && suggestions.length > 1 && (
+              <button
+                onClick={handleAcceptAll}
+                disabled={bulkBusy}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md bg-gold/15 text-gold hover:bg-gold/25 disabled:opacity-40 transition-colors"
+              >
+                {bulkBusy ? (
+                  <Loader2 size={11} className="animate-spin" />
+                ) : (
+                  <Check size={11} />
+                )}
+                Accept all
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
