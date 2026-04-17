@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Notes editor font size control
+
+- `src/pages/NotesPage.tsx` — added `TextSizeSelector` (Small / Medium / Large / XL) to the notes toolbar, matching the manuscript editor control exactly. Editor body font size now responds to selection; defaults to Small (16 px) to match prior notes styling.
+
+---
+
 ## 2026-04-17 — Notes persistence (user_id + RLS)
 
 - `supabase/migrations/20260417000000_notes_user_id_rls.sql` — adds `user_id UUID` column to `notes` table, enables RLS, and creates policy scoping all operations to `auth.uid() = user_id`.

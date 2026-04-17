@@ -39,6 +39,15 @@ const NotesPage = () => {
   const { user } = useAuth();
   const labelStyle = theme === "outrun" ? { color: "hsl(var(--neon-yellow))" } : undefined;
 
+  type TextSize = "small" | "medium" | "large" | "xl";
+  const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
+    small: "text-[16px]",
+    medium: "text-[20px]",
+    large: "text-[24px]",
+    xl: "text-[28px]",
+  };
+  const [textSize, setTextSize] = useState<TextSize>("small");
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -229,6 +238,30 @@ const NotesPage = () => {
   };
 
   // ─── Render ─────────────────────────────────────────────────────────
+  const TextSizeSelector = () => (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] text-text-dimmed uppercase tracking-wider">Size</span>
+      <div className="flex items-center gap-0.5">
+        {(["small", "medium", "large", "xl"] as TextSize[]).map((s) => (
+          <button
+            key={s}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setTextSize(s)}
+            title={s === "xl" ? "Extra Large" : s.charAt(0).toUpperCase() + s.slice(1)}
+            className={`px-1.5 py-0.5 rounded transition-colors font-serif ${
+              textSize === s
+                ? "text-foreground bg-fyrescribe-raised"
+                : "text-text-dimmed hover:text-text-secondary"
+            }`}
+            style={{ fontSize: s === "small" ? 10 : s === "medium" ? 12 : s === "large" ? 14 : 16 }}
+          >
+            Aa
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   const ToolbarButton = ({
     onClick,
     title,
@@ -382,6 +415,8 @@ const NotesPage = () => {
                   <ToolbarButton onClick={insertCheckbox} title="Insert checkbox">
                     <CheckSquare size={14} />
                   </ToolbarButton>
+                  <div className="w-px h-4 bg-border mx-1" />
+                  <TextSizeSelector />
                 </div>
 
                 <div className="text-[10px] text-text-dimmed">
@@ -408,7 +443,7 @@ const NotesPage = () => {
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
                     onClick={handleEditorClick}
-                    className="notes-editor font-prose text-[15px] leading-[1.7] text-foreground/85 outline-none min-h-[60vh] whitespace-pre-wrap"
+                    className={`notes-editor font-prose ${TEXT_SIZE_CLASSES[textSize]} leading-[1.7] text-foreground/85 outline-none min-h-[60vh] whitespace-pre-wrap`}
                   />
                 </div>
               </div>
