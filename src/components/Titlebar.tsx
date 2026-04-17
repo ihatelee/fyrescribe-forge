@@ -92,7 +92,7 @@ const Titlebar = () => {
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <AccessibilityPanel />
-          <span className="text-[10px] text-text-dimmed">Access</span>
+          <span className="text-[10px] text-text-dimmed">Settings</span>
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <DropdownMenu>
