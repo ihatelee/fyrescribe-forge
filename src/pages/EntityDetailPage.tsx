@@ -671,6 +671,8 @@ const EntityDetailInner = () => {
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
   const [generatingHistory, setGeneratingHistory] = useState(false);
+  const [aliases, setAliases] = useState<string[]>([]);
+  const [aliasDraft, setAliasDraft] = useState("");
   const storyHistoryRef = useRef<HTMLDivElement>(null);
 
   const sectionsRef = useRef<EntitySections>({});
@@ -706,6 +708,7 @@ const EntityDetailInner = () => {
         sectionsRef.current = initialSections;
         setCoverImage(dbEntity.cover_image_url || null);
         setGalleryImages(dbEntity.gallery_image_urls || []);
+        setAliases(((dbEntity as unknown as { aliases?: string[] }).aliases) || []);
 
         // Tags for this entity
         const { data: entityTags } = await supabase
