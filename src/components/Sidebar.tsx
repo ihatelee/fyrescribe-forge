@@ -7,6 +7,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import LoreSearchModal from "@/components/LoreSearchModal";
 import LinkLoreModal from "@/components/LinkLoreModal";
+import SyncMentionsModal, { type NewMention } from "@/components/SyncMentionsModal";
 
 const WRITE_KEYS = ["manuscript", "timeline", "pov"] as const;
 const WRITE_LABELS: Record<string, string> = {
@@ -63,6 +64,8 @@ const Sidebar = () => {
   const [linkLoreMessage, setLinkLoreMessage] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [linkLoreModalOpen, setLinkLoreModalOpen] = useState(false);
+  const [mentionsModalOpen, setMentionsModalOpen] = useState(false);
+  const [newMentions, setNewMentions] = useState<NewMention[]>([]);
 
   const fetchPendingCount = useCallback(async () => {
     if (!activeProject) {
@@ -132,12 +135,15 @@ const Sidebar = () => {
   };
 
   const handleSyncMentionsInner = async () => {
-    if (!activeProject) return;
+    if (!activeProject) return { found: undefined, fresh: [] as NewMention[] };
     const { data, error } = await supabase.functions.invoke("sync-mentions", {
       body: { project_id: activeProject.id },
     });
     if (error) throw error;
-    return data?.mentions_found as number | undefined;
+    return {
+      found: data?.mentions_found as number | undefined,
+      fresh: (data?.new_mentions as NewMention[]) ?? [],
+    };
   };
 
   const handleSyncMentions = async () => {
@@ -145,10 +151,12 @@ const Sidebar = () => {
     setSyncingMentions(true);
     setMentionsMessage(null);
     try {
-      const found = await handleSyncMentionsInner();
+      const { found, fresh } = await handleSyncMentionsInner();
       setMentionsMessage(
         found != null ? `Found ${found} mention${found !== 1 ? "s" : ""}` : "Done",
       );
+      setNewMentions(fresh);
+      setMentionsModalOpen(true);
     } catch {
       setMentionsMessage("Sync failed");
     } finally {
