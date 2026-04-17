@@ -373,6 +373,12 @@ const Sidebar = () => {
         onClose={() => setLinkLoreModalOpen(false)}
       />
     )}
+    {mentionsModalOpen && (
+      <SyncMentionsModal
+        mentions={newMentions}
+        onClose={() => setMentionsModalOpen(false)}
+      />
+    )}
     </>
   );
 };
