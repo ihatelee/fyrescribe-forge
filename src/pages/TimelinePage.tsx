@@ -59,7 +59,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
         type,
         project_id: projectId,
         significance_score: 10,
-      })
+      } as never)
       .select("*")
       .single();
 
