@@ -927,11 +927,15 @@ const ManuscriptPage = () => {
         </div>
         <div className="flex-1 flex justify-center overflow-y-auto pb-24 relative">
           <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
-            {activeChapter && (
-              <h1 className={`font-display ${CHAPTER_TITLE_CLASSES[textSize]} text-text-dimmed mb-2 tracking-wide`}>
-                {activeChapter.title}
-              </h1>
-            )}
+            {activeChapter &&
+              activeScene &&
+              scenes
+                .filter((s) => s.chapter_id === activeChapter.id)
+                .sort((a, b) => a.order - b.order)[0]?.id === activeScene.id && (
+                <h1 className={`font-display ${CHAPTER_TITLE_CLASSES[textSize]} text-text-dimmed mb-2 tracking-wide`}>
+                  {activeChapter.title}
+                </h1>
+              )}
             <EditableSceneTitle scene={activeScene} onSave={handleSceneTitleSave} sizeClass={SCENE_TITLE_CLASSES[textSize]} />
             <div
               key={activeSceneId ?? "empty"}
