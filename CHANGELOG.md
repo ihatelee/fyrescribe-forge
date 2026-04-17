@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Timeline event cap, raised threshold, delete button styling
+
+- `supabase/functions/generate-timeline/index.ts` — prompt now instructs AI to return at most 4 events per scene (0–1 if nothing notable happens).
+- `src/pages/TimelinePage.tsx` — default "Major only" threshold raised from 7+ to 9+; label and empty-state hint updated accordingly. Delete checkbox replaced with the same custom gold-fill style used on lore tiles and POV Character control (button with `bg-gold border-gold` + `Check` icon when selected; `onClick` properly wired to `toggleSelectEvent`).
+
+---
+
 ## 2026-04-17 — Timeline significance threshold
 
 - `supabase/migrations/20260417100000_add_significance_score_to_timeline_events.sql` — adds `significance_score INTEGER DEFAULT 5` to `timeline_events`.

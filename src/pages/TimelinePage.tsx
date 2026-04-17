@@ -3,7 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import ModalSelect from "@/components/ModalSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
-import { Plus, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Plus, Loader2, Sparkles, Trash2, Check } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type TimelineEventType = Database["public"]["Enums"]["timeline_event_type"];
@@ -208,6 +208,7 @@ const TimelinePage = () => {
   const { activeProject } = useActiveProject();
   const [filter, setFilter] = useState<"all" | TimelineEventType>("all");
   const [majorOnly, setMajorOnly] = useState(true);
+  const MAJOR_THRESHOLD = 9;
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -258,7 +259,7 @@ const TimelinePage = () => {
 
   const filtered = events
     .filter((e) => filter === "all" || e.type === filter)
-    .filter((e) => !majorOnly || (e.significance_score ?? 5) >= 7);
+    .filter((e) => !majorOnly || (e.significance_score ?? 5) >= MAJOR_THRESHOLD);
 
   const handleGenerate = async () => {
     if (!activeProject) return;
@@ -478,7 +479,7 @@ const TimelinePage = () => {
                 : "border-border text-text-secondary hover:text-foreground"
             }`}
           >
-            {majorOnly ? "Major only (7+)" : "All events"}
+            {majorOnly ? "Major only (9+)" : "All events"}
           </button>
         </div>
 
@@ -493,7 +494,7 @@ const TimelinePage = () => {
             <p className="text-text-secondary text-sm mb-1">No timeline events yet</p>
             <p className="text-text-dimmed text-xs mb-6">
               {majorOnly && events.length > 0
-                ? `No major events (score 7+). Toggle "All events" to see everything.`
+                ? `No major events (score 9+). Toggle "All events" to see everything.`
                 : `Add events manually or click "Generate from Lore" to build the timeline from your world-building entities and manuscript scenes.`}
             </p>
           </div>
@@ -582,15 +583,23 @@ const TimelinePage = () => {
                       className="flex items-center justify-end gap-1.5 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
                       style={selectedIds.has(event.id) ? { opacity: 1 } : undefined}
                     >
-                      <label className="flex items-center gap-1.5 cursor-pointer text-text-dimmed hover:text-destructive transition-colors">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleSelectEvent(event.id); }}
+                        className={`flex items-center gap-1.5 cursor-pointer px-1.5 py-0.5 rounded border transition-colors ${
+                          selectedIds.has(event.id)
+                            ? "bg-gold/10 border-gold/30 text-gold-bright"
+                            : "border-transparent text-text-dimmed hover:text-destructive hover:bg-destructive/5 hover:border-destructive/20"
+                        }`}
+                      >
                         <span className="text-[10px]">delete</span>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(event.id)}
-                          onChange={() => toggleSelectEvent(event.id)}
-                          className="w-3.5 h-3.5 rounded border-border accent-gold cursor-pointer"
-                        />
-                      </label>
+                        <span
+                          className={`w-3 h-3 rounded-sm border flex items-center justify-center transition-colors flex-shrink-0 ${
+                            selectedIds.has(event.id) ? "bg-gold border-gold" : "border-current"
+                          }`}
+                        >
+                          {selectedIds.has(event.id) && <Check size={10} className="text-fyrescribe-raised" strokeWidth={3} />}
+                        </span>
+                      </button>
                     </div>
                   </div>
 

@@ -111,7 +111,7 @@ Return a JSON array only — no prose, no code fences. Each item must have:
 - "type": "world_history" | "story_event"
 - "significance_score": integer 1–10 (8–10: world-changing events — battles, deaths, major discoveries, regime changes; 5–7: notable plot points and meaningful character moments; 1–4: minor scene events or background colour)
 
-Include world history events and story-level events separately. Aim for 6–14 events total. Output only the JSON array.`;
+Include world history events and story-level events separately. Extract at most 4 events per scene — only the most significant ones. If a scene contains nothing notable, return 0 or 1 events for it. Aim for 6–14 events total across all scenes. Output only the JSON array.`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
