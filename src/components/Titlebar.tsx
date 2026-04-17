@@ -53,13 +53,13 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 h-20 bg-fyrescribe-base border-b border-border flex items-center justify-between px-3 md:px-4 z-50">
-      <div className="flex items-center gap-2 md:gap-3 min-w-0">
+    <div className="fixed top-0 left-0 right-0 h-20 bg-fyrescribe-base border-b border-border flex items-center justify-between px-3 lg:px-4 z-50">
+      <div className="flex items-center gap-2 lg:gap-3 min-w-0">
         {showSidebarToggle && (
           <button
             onClick={toggleMobileNav}
             aria-label="Open navigation"
-            className="md:hidden p-2 -ml-1 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+            className="lg:hidden p-2 -ml-1 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
           >
             <Menu size={18} />
           </button>
@@ -68,20 +68,14 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
           <img
             src={theme === "outrun" ? logoBitSrc : logoSrc}
             alt="Fyrescribe"
-            className="h-[36px] md:h-[44px] w-auto transition-[filter] duration-300 group-hover/logo:drop-shadow-[0_0_12px_hsl(var(--gold))]"
+            className="h-[36px] lg:h-[44px] w-auto transition-[filter] duration-300 group-hover/logo:drop-shadow-[0_0_12px_hsl(var(--gold))]"
             style={isDaylightTheme(theme) ? { filter: "brightness(0)" } : undefined}
           />
         </button>
-        {/* Mobile-only project title */}
-        {activeProject && (
-          <span className="md:hidden text-text-secondary text-xs truncate min-w-0">
-            {activeProject.title}
-          </span>
-        )}
       </div>
 
       {activeProject && (
-        <div className="hidden sm:flex items-center gap-1.5 group">
+        <div className="hidden lg:flex items-center gap-1.5 group">
           {editing ? (
             <input
               autoFocus
@@ -108,14 +102,14 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
         </div>
       )}
 
-      <div className="flex items-center gap-2 md:gap-4">
+      <div className="flex items-center gap-2 lg:gap-4">
         <div className="flex flex-col items-center gap-0.5">
           <AccessibilityPanel />
-          <span className="hidden md:inline text-[10px] text-text-dimmed">Settings</span>
+          <span className="hidden lg:inline text-[10px] text-text-dimmed">Settings</span>
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <ThemeSwitcher />
-          <span className="hidden md:inline text-[10px] text-text-dimmed">Ambiance</span>
+          <span className="hidden lg:inline text-[10px] text-text-dimmed">Ambiance</span>
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <DropdownMenu>
@@ -136,7 +130,7 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <span className="hidden md:inline text-[10px] text-text-dimmed">Profile</span>
+          <span className="hidden lg:inline text-[10px] text-text-dimmed">Profile</span>
         </div>
       </div>
     </div>
