@@ -671,6 +671,8 @@ const EntityDetailInner = () => {
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
   const [generatingHistory, setGeneratingHistory] = useState(false);
+  const [aliases, setAliases] = useState<string[]>([]);
+  const [aliasDraft, setAliasDraft] = useState("");
   const storyHistoryRef = useRef<HTMLDivElement>(null);
 
   const sectionsRef = useRef<EntitySections>({});
@@ -706,6 +708,7 @@ const EntityDetailInner = () => {
         sectionsRef.current = initialSections;
         setCoverImage(dbEntity.cover_image_url || null);
         setGalleryImages(dbEntity.gallery_image_urls || []);
+        setAliases(((dbEntity as unknown as { aliases?: string[] }).aliases) || []);
 
         // Tags for this entity
         const { data: entityTags } = await supabase
@@ -874,6 +877,36 @@ const EntityDetailInner = () => {
     setTags((prev) => [...prev, tag]);
     setProjectTags((prev) => prev.some((t) => t.id === tag.id) ? prev : [...prev, tag]);
   }, []);
+
+  // ─── Aliases (Also Known As) ─────────────────────────────────────
+
+  const persistAliases = useCallback(async (next: string[]) => {
+    if (!id) return;
+    const { error } = await supabase
+      .from("entities")
+      .update({ aliases: next } as never)
+      .eq("id", id);
+    if (error) console.error("Failed to save aliases:", error);
+  }, [id]);
+
+  const handleAddAlias = useCallback(() => {
+    const value = aliasDraft.trim();
+    if (!value) return;
+    if (aliases.some((a) => a.toLowerCase() === value.toLowerCase())) {
+      setAliasDraft("");
+      return;
+    }
+    const next = [...aliases, value];
+    setAliases(next);
+    setAliasDraft("");
+    persistAliases(next);
+  }, [aliasDraft, aliases, persistAliases]);
+
+  const handleRemoveAlias = useCallback((value: string) => {
+    const next = aliases.filter((a) => a !== value);
+    setAliases(next);
+    persistAliases(next);
+  }, [aliases, persistAliases]);
 
   // ─── Smart tag click ─────────────────────────────────────────────
 
@@ -1199,6 +1232,46 @@ const EntityDetailInner = () => {
                   + Add tag
                 </button>
               )}
+            </div>
+
+            {/* Also Known As — alternate names that should resolve to this entity */}
+            <div className="mt-3">
+              <div className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1.5">
+                Also known as
+              </div>
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {aliases.map((alias) => (
+                  <span
+                    key={alias}
+                    className="flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full bg-fyrescribe-hover text-text-secondary border border-border"
+                  >
+                    {alias}
+                    <button
+                      onClick={() => handleRemoveAlias(alias)}
+                      className="hover:text-destructive"
+                      aria-label={`Remove alias ${alias}`}
+                    >
+                      <X size={10} className="text-text-dimmed hover:text-destructive" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  value={aliasDraft}
+                  onChange={(e) => setAliasDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      handleAddAlias();
+                    } else if (e.key === "Backspace" && !aliasDraft && aliases.length > 0) {
+                      e.preventDefault();
+                      handleRemoveAlias(aliases[aliases.length - 1]);
+                    }
+                  }}
+                  onBlur={handleAddAlias}
+                  placeholder={aliases.length === 0 ? "Add a nickname, first name, last name…" : "+ Add alias"}
+                  className="text-xs px-2.5 py-0.5 rounded-full border border-dashed border-border bg-transparent text-text-secondary placeholder:text-text-dimmed outline-none focus:border-gold/40 transition-colors min-w-[10rem]"
+                />
+              </div>
             </div>
           </div>
         </div>

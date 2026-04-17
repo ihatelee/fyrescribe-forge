@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { X } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface NewMention {
   entity_id: string;
@@ -11,16 +13,62 @@ export interface NewMention {
 }
 
 interface SyncMentionsModalProps {
+  projectId: string;
   mentions: NewMention[];
   onClose: () => void;
 }
 
-const SyncMentionsModal = ({ mentions, onClose }: SyncMentionsModalProps) => {
+const SyncMentionsModal = ({ projectId, mentions, onClose }: SyncMentionsModalProps) => {
   const { icons } = useTheme();
   const SyncIcon = icons.sync;
 
+  // Local state so rejecting a mention immediately removes it from the list.
+  const [items, setItems] = useState<NewMention[]>(mentions);
+  const [rejecting, setRejecting] = useState<string | null>(null);
+
+  const handleReject = async (m: NewMention) => {
+    const key = `${m.entity_id}:${m.scene_id}:${m.context}`;
+    setRejecting(key);
+    try {
+      // Remove the live mention so it doesn't keep counting toward this entity
+      // and persist a rejection so future syncs don't surface it again.
+      const [{ error: rejectErr }, { error: deleteErr }] = await Promise.all([
+        supabase.from("rejected_mentions").upsert(
+          {
+            project_id: projectId,
+            entity_id: m.entity_id,
+            scene_id: m.scene_id,
+            context: m.context,
+          },
+          { onConflict: "project_id,entity_id,scene_id,context" },
+        ),
+        supabase
+          .from("entity_mentions")
+          .delete()
+          .eq("project_id", projectId)
+          .eq("entity_id", m.entity_id)
+          .eq("scene_id", m.scene_id)
+          .eq("context", m.context),
+      ]);
+      if (rejectErr) console.error("Failed to reject mention:", rejectErr);
+      if (deleteErr) console.error("Failed to delete mention:", deleteErr);
+      setItems((prev) =>
+        prev.filter(
+          (x) =>
+            !(
+              x.entity_id === m.entity_id &&
+              x.scene_id === m.scene_id &&
+              x.context === m.context
+            ),
+        ),
+      );
+    } finally {
+      setRejecting(null);
+    }
+  };
+
   // Group by entity name
-  const grouped = mentions.reduce<Record<string, NewMention[]>>((acc, m) => {
+  const grouped = items.reduce<Record<string, NewMention[]>>((acc, m) => {
     (acc[m.entity_name] ??= []).push(m);
     return acc;
   }, {});
@@ -43,7 +91,7 @@ const SyncMentionsModal = ({ mentions, onClose }: SyncMentionsModalProps) => {
             <h2 className="font-display text-base text-foreground">New Mentions</h2>
           </div>
           <span className="text-[10px] uppercase tracking-widest text-text-dimmed">
-            {mentions.length} new
+            {items.length} new
           </span>
           <button
             onClick={onClose}
@@ -55,7 +103,7 @@ const SyncMentionsModal = ({ mentions, onClose }: SyncMentionsModalProps) => {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
-          {mentions.length === 0 ? (
+          {items.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-text-dimmed text-3xl mb-4 leading-none">✦</div>
               <p className="text-sm text-text-secondary mb-1">No new mentions found</p>
@@ -74,19 +122,31 @@ const SyncMentionsModal = ({ mentions, onClose }: SyncMentionsModalProps) => {
                     </span>
                   </div>
                   <div className="space-y-2">
-                    {grouped[name].map((m, i) => (
-                      <div
-                        key={`${m.scene_id}-${m.position}-${i}`}
-                        className="bg-fyrescribe-base border border-border rounded-lg p-3"
-                      >
-                        <div className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1">
-                          {m.scene_title}
+                    {grouped[name].map((m, i) => {
+                      const key = `${m.entity_id}:${m.scene_id}:${m.context}`;
+                      const isRejecting = rejecting === key;
+                      return (
+                        <div
+                          key={`${m.scene_id}-${m.position}-${i}`}
+                          className="bg-fyrescribe-base border border-border rounded-lg p-3 group relative"
+                        >
+                          <button
+                            onClick={() => handleReject(m)}
+                            disabled={isRejecting}
+                            title="Reject this mention"
+                            className="absolute top-2 right-2 p-1 rounded-md text-text-dimmed opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-fyrescribe-hover transition-all disabled:opacity-40"
+                          >
+                            <X size={12} />
+                          </button>
+                          <div className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1 pr-6">
+                            {m.scene_title}
+                          </div>
+                          <p className="text-xs text-text-secondary italic leading-relaxed pr-6">
+                            …{m.context}…
+                          </p>
                         </div>
-                        <p className="text-xs text-text-secondary italic leading-relaxed">
-                          …{m.context}…
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}

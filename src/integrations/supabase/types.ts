@@ -66,6 +66,7 @@ export type Database = {
       }
       entities: {
         Row: {
+          aliases: string[]
           archived_at: string | null
           category: Database["public"]["Enums"]["entity_category"]
           cover_image_url: string | null
@@ -82,6 +83,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aliases?: string[]
           archived_at?: string | null
           category: Database["public"]["Enums"]["entity_category"]
           cover_image_url?: string | null
@@ -98,6 +100,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aliases?: string[]
           archived_at?: string | null
           category?: Database["public"]["Enums"]["entity_category"]
           cover_image_url?: string | null
@@ -415,6 +418,33 @@ export type Database = {
           manuscript_path?: string | null
           title?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      rejected_mentions: {
+        Row: {
+          context: string
+          created_at: string
+          entity_id: string
+          id: string
+          project_id: string
+          scene_id: string
+        }
+        Insert: {
+          context: string
+          created_at?: string
+          entity_id: string
+          id?: string
+          project_id: string
+          scene_id: string
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          entity_id?: string
+          id?: string
+          project_id?: string
+          scene_id?: string
         }
         Relationships: []
       }
