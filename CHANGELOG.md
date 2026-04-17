@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-18 — Sync Mentions
+
+- `supabase/migrations/20260418000000_create_entity_mentions.sql` — creates `entity_mentions` table (entity_id, scene_id, project_id, context TEXT, position INTEGER) with RLS scoped to project owner.
+- `supabase/functions/sync-mentions/index.ts` — new edge function. Fetches all non-archived entities and all scenes for the project. Strips HTML from scene content, then scans for each entity name (case-insensitive, word-boundary checked). Extracts context (6 words before + match + 6 words after) and records character offset as `position`. Full refresh: deletes existing rows for the project, then bulk-inserts in chunks of 500.
+- `src/components/Sidebar.tsx` — added `syncingMentions` / `mentionsMessage` state, `handleSyncMentionsInner` (shared inner logic), and `handleSyncMentions` (standalone button handler). Sync Mentions button appears directly below Sync Lore with matching style and loading/status message. Full Sync now chains `handleSyncMentionsInner` after `sync-lore` completes.
+
+---
+
 ## 2026-04-17 — Rename dyslexia font toggle to Sans-Serif + swap to Inter
 
 - `src/components/AccessibilityPanel.tsx` — toggle label changed from "Dyslexia-Friendly Font" to "Sans-Serif Font".

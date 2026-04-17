@@ -56,6 +56,8 @@ const Sidebar = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [fullSyncNote, setFullSyncNote] = useState(false);
+  const [syncingMentions, setSyncingMentions] = useState(false);
+  const [mentionsMessage, setMentionsMessage] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
 
   const fetchPendingCount = useCallback(async () => {
@@ -110,12 +112,41 @@ const Sidebar = () => {
         setSyncMessage(`${scenesProcessed} scene${scenesProcessed !== 1 ? "s" : ""} processed, 0 suggestions`);
       }
       await fetchPendingCount();
+
+      // Full sync also runs mentions
+      if (force) await handleSyncMentionsInner();
     } catch {
       setSyncMessage("Sync failed");
     } finally {
       setSyncing(false);
       setFullSyncNote(false);
       setTimeout(() => setSyncMessage(null), 4000);
+    }
+  };
+
+  const handleSyncMentionsInner = async () => {
+    if (!activeProject) return;
+    const { data, error } = await supabase.functions.invoke("sync-mentions", {
+      body: { project_id: activeProject.id },
+    });
+    if (error) throw error;
+    return data?.mentions_found as number | undefined;
+  };
+
+  const handleSyncMentions = async () => {
+    if (!activeProject || syncingMentions) return;
+    setSyncingMentions(true);
+    setMentionsMessage(null);
+    try {
+      const found = await handleSyncMentionsInner();
+      setMentionsMessage(
+        found != null ? `Found ${found} mention${found !== 1 ? "s" : ""}` : "Done",
+      );
+    } catch {
+      setMentionsMessage("Sync failed");
+    } finally {
+      setSyncingMentions(false);
+      setTimeout(() => setMentionsMessage(null), 4000);
     }
   };
 
@@ -242,6 +273,19 @@ const Sidebar = () => {
         </div>
         {syncMessage && (
           <p className="px-3 text-[10px] text-text-dimmed">{syncMessage}</p>
+        )}
+
+        {/* Sync Mentions */}
+        <button
+          onClick={handleSyncMentions}
+          disabled={syncingMentions || !activeProject}
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
+        >
+          <SyncIcon size={12} weight="duotone" className={syncingMentions ? "animate-spin" : ""} />
+          {syncingMentions ? "Scanning…" : "Sync Mentions"}
+        </button>
+        {mentionsMessage && (
+          <p className="px-3 text-[10px] text-text-dimmed">{mentionsMessage}</p>
         )}
 
         {/* Lore Inbox */}
