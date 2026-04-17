@@ -397,30 +397,32 @@ const TimelinePage = () => {
   return (
     <AppLayout>
       <div className="p-6 max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <h1 className="font-display text-xl text-foreground tracking-wide">
             Timeline
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleGenerate}
               disabled={generating || !activeProject}
-              className="flex items-center gap-2 px-3 py-1.5 bg-fyrescribe-raised border border-border text-sm text-text-secondary hover:text-foreground hover:border-gold/30 rounded-lg transition-colors disabled:opacity-50"
+              title="Generate from Lore"
+              className="flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-fyrescribe-raised border border-border text-sm text-text-secondary hover:text-foreground hover:border-gold/30 rounded-lg transition-colors disabled:opacity-50"
             >
               {generating ? (
                 <Loader2 size={14} className="animate-spin" />
               ) : (
                 <Sparkles size={14} />
               )}
-              {generating ? "Generating…" : "Generate from Lore"}
+              <span className="hidden sm:inline">{generating ? "Generating…" : "Generate from Lore"}</span>
             </button>
             <button
               onClick={() => setShowAddModal(true)}
               disabled={!activeProject}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors disabled:opacity-50"
+              title="Add Event"
+              className="flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors disabled:opacity-50"
             >
               <Plus size={14} />
-              Add Event
+              <span className="hidden sm:inline">Add Event</span>
             </button>
           </div>
         </div>
