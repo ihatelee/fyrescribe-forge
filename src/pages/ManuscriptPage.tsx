@@ -391,7 +391,23 @@ const ManuscriptPage = () => {
     fetchData();
   }, [projectId]);
 
+  // If ?scene= changes after initial load, jump to that scene
+  useEffect(() => {
+    if (!targetSceneId || scenes.length === 0) return;
+    const target = scenes.find((s) => s.id === targetSceneId);
+    if (target && target.id !== activeSceneId) {
+      setActiveSceneId(target.id);
+      setActiveChapterId(target.chapter_id);
+      setExpandedChapters((prev) =>
+        prev.includes(target.chapter_id) ? prev : [...prev, target.chapter_id],
+      );
+      setWordCount(target.word_count ?? 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetSceneId, scenes]);
+
   // ─── Auto-save ──────────────────────────────────────────────────────
+
 
   const saveScene = useDebouncedCallback(
     async (sceneId: string, content: string) => {
