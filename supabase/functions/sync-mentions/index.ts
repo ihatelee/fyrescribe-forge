@@ -117,13 +117,15 @@ serve(async (req) => {
     }
 
     // ── Snapshot existing mentions BEFORE refresh, so we can diff ───────
+    // Key by (entity_id, scene_id, context) — NOT position, because editing
+    // a scene shifts every position downstream of the edit.
     const { data: previousRows } = await supabase
       .from("entity_mentions")
-      .select("entity_id, scene_id, position")
+      .select("entity_id, scene_id, context")
       .eq("project_id", project_id);
 
     const previousKeys = new Set(
-      (previousRows ?? []).map((r) => `${r.entity_id}:${r.scene_id}:${r.position}`),
+      (previousRows ?? []).map((r) => `${r.entity_id}:${r.scene_id}:${r.context}`),
     );
 
     // ── Scan scenes for entity name matches ─────────────────────────────
@@ -194,7 +196,7 @@ serve(async (req) => {
     for (const s of sceneTitleRows ?? []) sceneTitleById.set(s.id, s.title);
 
     const newMentions = rows
-      .filter((r) => !previousKeys.has(`${r.entity_id}:${r.scene_id}:${r.position}`))
+      .filter((r) => !previousKeys.has(`${r.entity_id}:${r.scene_id}:${r.context}`))
       .map((r) => ({
         entity_id: r.entity_id,
         entity_name: entityNameById.get(r.entity_id) ?? "Unknown",
