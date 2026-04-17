@@ -878,6 +878,36 @@ const EntityDetailInner = () => {
     setProjectTags((prev) => prev.some((t) => t.id === tag.id) ? prev : [...prev, tag]);
   }, []);
 
+  // ─── Aliases (Also Known As) ─────────────────────────────────────
+
+  const persistAliases = useCallback(async (next: string[]) => {
+    if (!id) return;
+    const { error } = await supabase
+      .from("entities")
+      .update({ aliases: next } as never)
+      .eq("id", id);
+    if (error) console.error("Failed to save aliases:", error);
+  }, [id]);
+
+  const handleAddAlias = useCallback(() => {
+    const value = aliasDraft.trim();
+    if (!value) return;
+    if (aliases.some((a) => a.toLowerCase() === value.toLowerCase())) {
+      setAliasDraft("");
+      return;
+    }
+    const next = [...aliases, value];
+    setAliases(next);
+    setAliasDraft("");
+    persistAliases(next);
+  }, [aliasDraft, aliases, persistAliases]);
+
+  const handleRemoveAlias = useCallback((value: string) => {
+    const next = aliases.filter((a) => a !== value);
+    setAliases(next);
+    persistAliases(next);
+  }, [aliases, persistAliases]);
+
   // ─── Smart tag click ─────────────────────────────────────────────
 
   const handleTagClick = useCallback(async (tag: { id: string; name: string; color: string | null }) => {
