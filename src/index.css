@@ -122,25 +122,10 @@ html.dyslexia-font .font-display {
   font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif !important;
 }
 
-/* Accessibility: high contrast — dark themes */
-html.high-contrast {
-  --text-secondary: var(--text-primary);
-  --text-dimmed: var(--text-primary);
-  --muted-foreground: var(--text-primary);
-  --sidebar-foreground: var(--text-primary);
-  --border: 0 0% 100% / 0.55;
-  --border-subtle: 0 0% 100% / 0.45;
-  --input: 0 0% 100% / 0.55;
-  --bg-raised: 0 0% 100% / 0.06;
-  --bg-hover: 0 0% 100% / 0.10;
-}
-
-/* Daylight theme: use dark borders so they aren't invisible on a light background */
-html[data-theme="daylight"].high-contrast {
-  --border: 0 0% 0% / 0.45;
-  --border-subtle: 0 0% 0% / 0.35;
-  --input: 0 0% 0% / 0.45;
-  --bg-raised: 0 0% 0% / 0.04;
-  --bg-hover: 0 0% 0% / 0.08;
+/* html.high-contrast — variable overrides are applied via JS inline styles in ThemeContext
+   (CSS rules can't override inline styles set by applyTheme, so JS handles all HC vars).
+   The class is still toggled here for any future CSS-only additions (e.g. outline overrides). */
+html.high-contrast *:focus-visible {
+  outline-width: 3px;
 }
 

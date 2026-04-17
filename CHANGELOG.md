@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — High contrast fix + Settings icon position
+
+- `src/contexts/ThemeContext.tsx` — root cause: `applyTheme` sets CSS custom properties as inline styles; stylesheet `html.high-contrast { }` rules can never win against them. Fix: moved HC overrides into JS — `applyAccessibility` now calls `root.style.setProperty` for each HC var (dark or light variants for daylight theme), and restores theme values when HC is disabled. Merged the two separate `useEffect` calls (theme + accessibility) into one so theme changes can never wipe HC overrides mid-render.
+- `src/index.css` — removed the (non-functional) CSS custom-property overrides from `.high-contrast`; replaced with a `focus-visible` outline boost that CSS can control.
+- `src/components/Titlebar.tsx` — moved Settings (AccessibilityPanel) to the left of Ambiance (ThemeSwitcher).
+
+---
+
 ## 2026-04-17 — Accessibility panel persistence + high contrast + dyslexia font
 
 - `supabase/migrations/20260417200000_add_accessibility_prefs_to_user_preferences.sql` — idempotent migration adding `interface_scale INTEGER DEFAULT 100`, `high_contrast BOOLEAN DEFAULT false`, `dyslexia_font BOOLEAN DEFAULT false` to `user_preferences`.

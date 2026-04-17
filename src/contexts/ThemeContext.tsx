@@ -326,12 +326,58 @@ function applyTheme(theme: ThemeName) {
   root.dataset.theme = theme;
 }
 
-function applyAccessibility(scale: InterfaceScale, highContrast: boolean, dyslexiaFont: boolean) {
+// High-contrast variable overrides — applied as inline styles so they beat applyTheme's inline vars.
+const HC_VARS_DARK: Record<string, string> = {
+  "--text-secondary": "var(--text-primary)",
+  "--text-dimmed": "var(--text-primary)",
+  "--muted-foreground": "var(--text-primary)",
+  "--sidebar-foreground": "var(--text-primary)",
+  "--border": "0 0% 100% / 0.55",
+  "--border-subtle": "0 0% 100% / 0.45",
+  "--input": "0 0% 100% / 0.55",
+  "--bg-raised": "0 0% 100% / 0.08",
+  "--bg-hover": "0 0% 100% / 0.13",
+};
+const HC_VARS_LIGHT: Record<string, string> = {
+  "--text-secondary": "var(--text-primary)",
+  "--text-dimmed": "var(--text-primary)",
+  "--muted-foreground": "var(--text-primary)",
+  "--sidebar-foreground": "var(--text-primary)",
+  "--border": "0 0% 0% / 0.45",
+  "--border-subtle": "0 0% 0% / 0.35",
+  "--input": "0 0% 0% / 0.45",
+  "--bg-raised": "0 0% 0% / 0.05",
+  "--bg-hover": "0 0% 0% / 0.09",
+};
+
+function applyAccessibility(
+  scale: InterfaceScale,
+  highContrast: boolean,
+  dyslexiaFont: boolean,
+  theme: ThemeName = "midnight",
+) {
   const root = document.documentElement;
-  // Scale via root font-size (rem-driven UI). 16px = 100%.
   root.style.fontSize = `${(scale / 100) * 16}px`;
   root.classList.toggle("high-contrast", highContrast);
   root.classList.toggle("dyslexia-font", dyslexiaFont);
+
+  const hcVars = theme === "daylight" ? HC_VARS_LIGHT : HC_VARS_DARK;
+  if (highContrast) {
+    // Set overrides as inline styles — beats the theme's inline vars from applyTheme.
+    for (const [key, val] of Object.entries(hcVars)) {
+      root.style.setProperty(key, val);
+    }
+  } else {
+    // Restore theme values for every key we may have overridden.
+    const themeVars = THEME_VARS[theme];
+    for (const key of Object.keys(hcVars)) {
+      if (themeVars[key]) {
+        root.style.setProperty(key, themeVars[key]);
+      } else {
+        root.style.removeProperty(key);
+      }
+    }
+  }
 }
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
@@ -368,19 +414,18 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
           setHighContrastState(!!data.high_contrast);
           setDyslexiaFontState(!!data.dyslexia_font);
           applyTheme(data.theme as ThemeName);
-          applyAccessibility(scale, !!data.high_contrast, !!data.dyslexia_font);
+          applyAccessibility(scale, !!data.high_contrast, !!data.dyslexia_font, data.theme as ThemeName);
         }
         setLoaded(true);
       });
   }, [user]);
 
+  // Single combined effect: always apply theme first, then accessibility on top.
+  // Keeps HC inline-style overrides from being wiped when the theme changes.
   useEffect(() => {
     applyTheme(theme);
-  }, [theme]);
-
-  useEffect(() => {
-    applyAccessibility(interfaceScale, highContrast, dyslexiaFont);
-  }, [interfaceScale, highContrast, dyslexiaFont]);
+    applyAccessibility(interfaceScale, highContrast, dyslexiaFont, theme);
+  }, [theme, interfaceScale, highContrast, dyslexiaFont]);
 
   const persistPrefs = async (
     t: ThemeName,
