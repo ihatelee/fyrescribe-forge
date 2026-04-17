@@ -1,20 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, StickyNote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import LoreSearchModal from "@/components/LoreSearchModal";
 
-const WRITE_KEYS = ["manuscript", "timeline", "pov"] as const;
+const WRITE_KEYS = ["manuscript", "notes", "timeline", "pov"] as const;
 const WRITE_LABELS: Record<string, string> = {
   manuscript: "Manuscript",
+  notes: "Notes",
   timeline: "Timeline",
   pov: "POV Tracker",
 };
 const WRITE_PATHS: Record<string, string> = {
   manuscript: "/manuscript",
+  notes: "/notes",
   timeline: "/timeline",
   pov: "/pov-tracker",
 };
