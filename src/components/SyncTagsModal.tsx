@@ -38,6 +38,7 @@ const SyncTagsModal = ({ suggestions, onClose }: SyncTagsModalProps) => {
 
   const [items, setItems] = useState<TagSuggestion[]>(suggestions);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const keyOf = (s: TagSuggestion) => `${s.entity_id}:${s.field_key}`;
 
@@ -66,6 +67,26 @@ const SyncTagsModal = ({ suggestions, onClose }: SyncTagsModalProps) => {
     // Tag suggestions are stateless — rejecting just removes locally.
     // If the user runs Sync Tags again the AI may resurface it.
     remove(s);
+  };
+
+  const handleAcceptAll = async () => {
+    if (items.length === 0 || bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      const rows = items.map((s) => ({
+        entity_a_id: s.entity_id,
+        entity_b_id: s.target_entity_id,
+        relationship: s.field_key,
+      }));
+      const { error } = await supabase.from("entity_links").insert(rows);
+      if (error) {
+        console.error("Failed to bulk-accept tag suggestions:", error);
+      } else {
+        setItems([]);
+      }
+    } finally {
+      setBulkBusy(false);
+    }
   };
 
   // Group by source entity
