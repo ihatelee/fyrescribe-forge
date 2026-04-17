@@ -1068,6 +1068,54 @@ const EntityDetailInner = () => {
               </div>
             </div>
 
+            {/* ===== CHARACTER: Story History (AI-generated) ===== */}
+            {entity.category === "characters" && (
+              <div className="border-t border-border pt-8 mb-8">
+                <div className="flex items-center justify-between mb-4 gap-4">
+                  <div className="flex items-baseline gap-3 min-w-0">
+                    <h2 className="font-display text-base text-foreground tracking-wide">Story History</h2>
+                    <span className="text-[10px] uppercase tracking-widest text-text-dimmed">(2 paragraph maximum)</span>
+                  </div>
+                  <button
+                    onClick={handleUpdateStoryHistory}
+                    disabled={generatingHistory}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    {generatingHistory ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={12} className="text-gold" />
+                    )}
+                    Update History
+                  </button>
+                </div>
+                {(() => {
+                  const hasHistory = ((sections["Story History"] ?? "").replace(/<[^>]*>/g, "").trim().length) > 0;
+                  return hasHistory ? (
+                    <div
+                      ref={storyHistoryRef}
+                      contentEditable
+                      suppressContentEditableWarning
+                      className="font-prose text-lg leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
+                      data-placeholder="No history yet."
+                      onInput={(e) => handleSectionInput("Story History", (e.target as HTMLDivElement).innerHTML)}
+                      ref={(el) => {
+                        storyHistoryRef.current = el;
+                        if (el && !el.dataset.initialized) {
+                          el.innerHTML = DOMPurify.sanitize(sections["Story History"] || "");
+                          el.dataset.initialized = "true";
+                        }
+                      }}
+                    />
+                  ) : (
+                    <p className="font-prose text-base leading-relaxed text-text-dimmed italic">
+                      No history yet. Click Update History to summarise this character's story so far.
+                    </p>
+                  );
+                })()}
+              </div>
+            )}
+
             {/* ===== APPEARANCE LOG ===== */}
             <AppearanceLog entityId={entity.id} entityName={entity.name} projectId={projectId} />
           </div>
