@@ -241,6 +241,61 @@ export type Database = {
           },
         ]
       }
+      lore_link_suggestions: {
+        Row: {
+          confidence: number
+          created_at: string
+          entity_a_id: string
+          entity_b_id: string
+          id: string
+          project_id: string
+          relationship: string
+          status: string
+        }
+        Insert: {
+          confidence: number
+          created_at?: string
+          entity_a_id: string
+          entity_b_id: string
+          id?: string
+          project_id: string
+          relationship: string
+          status?: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          entity_a_id?: string
+          entity_b_id?: string
+          id?: string
+          project_id?: string
+          relationship?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lore_link_suggestions_entity_a_id_fkey"
+            columns: ["entity_a_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lore_link_suggestions_entity_b_id_fkey"
+            columns: ["entity_b_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lore_link_suggestions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lore_suggestions: {
         Row: {
           created_at: string
