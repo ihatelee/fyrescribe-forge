@@ -1380,7 +1380,7 @@ const ManuscriptPage = () => {
           )}
 
           {/* Status bar */}
-          <div className="flex items-center justify-between px-3 md:px-4 py-1.5 border-t border-border bg-fyrescribe-base text-text-dimmed text-[11px]">
+          <div className="flex items-center justify-between px-3 lg:px-4 py-1.5 border-t border-border bg-fyrescribe-base text-text-dimmed text-[11px]">
             <div className="flex items-center gap-3 min-w-0">
               <span className="truncate">
                 {versionToast
@@ -1389,10 +1389,10 @@ const ManuscriptPage = () => {
                   ? "Saving…"
                   : "Auto-saved"}
               </span>
-              <div className="w-px h-3 bg-border hidden md:block" />
+              <div className="w-px h-3 bg-border hidden lg:block" />
 
               {/* Desktop: inline version controls */}
-              <div className="hidden md:flex items-center gap-3">
+              <div className="hidden lg:flex items-center gap-3">
                 <div className="relative">
                   <button
                     onClick={() => setSaveVersionOpen((v) => !v)}
@@ -1419,8 +1419,8 @@ const ManuscriptPage = () => {
                 </button>
               </div>
 
-              {/* Mobile: overflow menu */}
-              <div className="md:hidden relative">
+              {/* Mobile / tablet-portrait: overflow menu */}
+              <div className="lg:hidden relative">
                 <div className="w-px h-3 bg-border inline-block mr-3 align-middle" />
                 <button
                   onClick={() => setVersionMenuOpen((v) => !v)}
@@ -1436,7 +1436,7 @@ const ManuscriptPage = () => {
                       className="fixed inset-0 z-40"
                       onClick={() => setVersionMenuOpen(false)}
                     />
-                    <div className="absolute left-0 bottom-full mb-1 z-50 bg-card border border-border rounded-md shadow-lg py-1 min-w-[180px]">
+                    <div className="absolute left-0 bottom-full mb-1 z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl py-1 min-w-[180px]">
                       <button
                         onClick={() => {
                           setVersionMenuOpen(false);
@@ -1458,7 +1458,6 @@ const ManuscriptPage = () => {
                         Version History
                       </button>
                     </div>
-                    {/* Mobile SaveVersionPopover renders relative to its trigger; mount it here too */}
                   </>
                 )}
                 {saveVersionOpen && (
@@ -1482,24 +1481,19 @@ const ManuscriptPage = () => {
           )}
         </div>
 
-        {/* Chapter/scene sidebar — RIGHT (desktop only) */}
-        <div className="hidden md:flex">{chapterSidebar}</div>
+        {/* Chapter/scene sidebar — RIGHT (desktop only, >= lg) */}
+        <div className="hidden lg:flex">{chapterSidebar}</div>
 
-        {/* Mobile chapter slide-over */}
+        {/* Mobile / tablet-portrait chapter slide-over.
+            Close button is positioned to mirror the open trigger
+            (top-right of the toolbar area). */}
         {chapterPanelOpen && (
           <>
             <div
-              className="md:hidden fixed inset-0 top-20 bg-background/70 backdrop-blur-sm z-40"
+              className="lg:hidden fixed inset-0 top-20 bg-background/70 backdrop-blur-sm z-40"
               onClick={() => setChapterPanelOpen(false)}
             />
-            <div className="md:hidden fixed right-0 top-20 bottom-0 z-50 animate-in slide-in-from-right duration-200 flex">
-              <button
-                onClick={() => setChapterPanelOpen(false)}
-                aria-label="Close chapters"
-                className="self-start mt-2 ml-2 mr-1 p-1.5 rounded text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors bg-fyrescribe-base border border-border"
-              >
-                <X size={14} />
-              </button>
+            <div className="lg:hidden fixed right-0 top-20 bottom-0 z-50 animate-in slide-in-from-right duration-200">
               {chapterSidebar}
             </div>
           </>
