@@ -1043,7 +1043,10 @@ const EntityDetailInner = () => {
             <div className="sticky top-16">
               <div className="bg-fyrescribe-raised border border-border rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-border">
-                  <h3 className="text-[10px] font-medium uppercase tracking-widest text-text-dimmed">
+                  <h2 className="font-display text-base text-foreground leading-tight truncate" title={entity?.name}>
+                    {entity?.name}
+                  </h2>
+                  <h3 className="text-[10px] font-medium uppercase tracking-widest text-text-dimmed mt-1">
                     At a Glance
                   </h3>
                 </div>
