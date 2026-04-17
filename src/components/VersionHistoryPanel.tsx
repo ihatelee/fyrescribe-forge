@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, RotateCcw, AlertTriangle, Loader2 } from "lucide-react";
+import { X, RotateCcw, AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface SceneVersion {
@@ -41,7 +41,9 @@ const VersionHistoryPanel = ({
   const [versions, setVersions] = useState<SceneVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,12 +73,13 @@ const VersionHistoryPanel = ({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (confirmId) setConfirmId(null);
+        else if (confirmDeleteId) setConfirmDeleteId(null);
         else onClose();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [confirmId, onClose]);
+  }, [confirmId, confirmDeleteId, onClose]);
 
   const handleRestore = async (v: SceneVersion) => {
     setRestoring(v.id);
@@ -85,6 +88,24 @@ const VersionHistoryPanel = ({
     } finally {
       setRestoring(null);
       setConfirmId(null);
+    }
+  };
+
+  const handleDelete = async (v: SceneVersion) => {
+    setDeleting(v.id);
+    try {
+      const { error } = await supabase
+        .from("scene_versions")
+        .delete()
+        .eq("id", v.id);
+      if (error) {
+        console.error("Failed to delete version:", error);
+      } else {
+        setVersions((prev) => prev.filter((x) => x.id !== v.id));
+      }
+    } finally {
+      setDeleting(null);
+      setConfirmDeleteId(null);
     }
   };
 
@@ -145,7 +166,9 @@ const VersionHistoryPanel = ({
                     ? v.name
                     : `Version ${versions.length - idx}`;
                 const isConfirming = confirmId === v.id;
+                const isConfirmingDelete = confirmDeleteId === v.id;
                 const isRestoring = restoring === v.id;
+                const isDeleting = deleting === v.id;
                 const deltaSign = v.word_delta > 0 ? "+" : "";
                 const deltaColor =
                   v.word_delta > 0
@@ -210,14 +233,47 @@ const VersionHistoryPanel = ({
                             Confirm restore
                           </button>
                         </>
+                      ) : isConfirmingDelete ? (
+                        <>
+                          <span className="text-[10px] text-text-dimmed mr-auto">
+                            Delete this version?
+                          </span>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="px-2 py-1 text-[10px] rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleDelete(v)}
+                            disabled={isDeleting}
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] rounded-md bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors disabled:opacity-50"
+                          >
+                            {isDeleting ? (
+                              <Loader2 size={10} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={10} />
+                            )}
+                            Confirm delete
+                          </button>
+                        </>
                       ) : (
-                        <button
-                          onClick={() => setConfirmId(v.id)}
-                          className="flex items-center gap-1 px-2 py-1 text-[10px] rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
-                        >
-                          <RotateCcw size={10} />
-                          Restore
-                        </button>
+                        <>
+                          <button
+                            onClick={() => setConfirmDeleteId(v.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] rounded-md text-text-dimmed hover:text-destructive hover:bg-fyrescribe-hover transition-colors"
+                          >
+                            <Trash2 size={10} />
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => setConfirmId(v.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                          >
+                            <RotateCcw size={10} />
+                            Restore
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
