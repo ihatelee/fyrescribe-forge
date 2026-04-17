@@ -1474,8 +1474,28 @@ const ManuscriptPage = () => {
           )}
         </div>
 
-        {/* Chapter/scene sidebar — RIGHT */}
-        {chapterSidebar}
+        {/* Chapter/scene sidebar — RIGHT (desktop only) */}
+        <div className="hidden md:flex">{chapterSidebar}</div>
+
+        {/* Mobile chapter slide-over */}
+        {chapterPanelOpen && (
+          <>
+            <div
+              className="md:hidden fixed inset-0 top-20 bg-background/70 backdrop-blur-sm z-40"
+              onClick={() => setChapterPanelOpen(false)}
+            />
+            <div className="md:hidden fixed right-0 top-20 bottom-0 z-50 animate-in slide-in-from-right duration-200 flex">
+              <button
+                onClick={() => setChapterPanelOpen(false)}
+                aria-label="Close chapters"
+                className="self-start mt-2 ml-2 mr-1 p-1.5 rounded text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors bg-fyrescribe-base border border-border"
+              >
+                <X size={14} />
+              </button>
+              {chapterSidebar}
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );
