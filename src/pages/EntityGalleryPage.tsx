@@ -534,18 +534,18 @@ const EntityGalleryPage = () => {
                     <div className="absolute top-3 right-3">
                       <EntityMenu entity={entity} />
                     </div>
-                    <div className="flex items-start justify-between mb-2 pr-8">
+                    <div className="mb-2 pr-8">
                       <h3 className="font-display text-sm text-foreground group-hover:text-gold-bright transition-colors">
                         {entity.name}
                       </h3>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
-                          CATEGORY_COLORS[entity.category] || ""
-                        }`}
-                      >
-                        {entity.category}
-                      </span>
                     </div>
+                    <span
+                      className={`absolute bottom-3 left-3 text-[10px] px-2 py-0.5 rounded-full ${
+                        CATEGORY_COLORS[entity.category] || ""
+                      }`}
+                    >
+                      {entity.category}
+                    </span>
                     {entity.summary && (
                       <p className="text-text-secondary text-xs mb-3 line-clamp-2">
                         {entity.summary}

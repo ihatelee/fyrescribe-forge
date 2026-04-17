@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Move category tag to bottom left of lore tile
+
+- `src/pages/EntityGalleryPage.tsx` — grid tile: removed category tag from the header row and repositioned it as `absolute bottom-3 left-3`, mirroring the delete button on the opposite corner. List view category position unchanged (already left-aligned in the row).
+
+---
+
 ## 2026-04-17 — Lore tile 3-dot button visibility + delete button spacing
 
 - `src/pages/EntityGalleryPage.tsx` — `EntityMenu` trigger: removed `opacity-0 group-hover:opacity-100`; button is now always visible with `bg-fyrescribe-base border border-border` styling matching other app buttons.
