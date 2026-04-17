@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import DOMPurify from "dompurify";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
@@ -172,9 +172,11 @@ const EditableSceneTitle = ({
 
 const ManuscriptPage = () => {
   const { projectId: urlProjectId } = useParams<{ projectId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { activeProject } = useActiveProject();
   const { theme } = useTheme();
   const projectId = activeProject?.id || urlProjectId;
+  const targetSceneId = searchParams.get("scene");
   const labelStyle = theme === "outrun" ? { color: "hsl(var(--neon-yellow))" } : undefined;
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
