@@ -101,9 +101,16 @@ const NewEntityModal = ({ projectId, defaultCategory, onCreated, onClose }: NewE
     const trimmed = name.trim();
     if (!trimmed) return;
     setSaving(true);
+    // For characters, seed "Also known as" with the first name so mentions
+    // of just the first name in the manuscript resolve to this character.
+    const firstToken = trimmed.split(/\s+/)[0];
+    const seedAliases =
+      category === "characters" && firstToken && firstToken.toLowerCase() !== trimmed.toLowerCase()
+        ? [firstToken]
+        : [];
     const { data, error } = await supabase
       .from("entities")
-      .insert({ name: trimmed, category, project_id: projectId })
+      .insert({ name: trimmed, category, project_id: projectId, aliases: seedAliases } as never)
       .select("id")
       .single();
     if (error) {
