@@ -38,6 +38,7 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
   const [suggestions, setSuggestions] = useState<SuggestedLink[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const reviewedCount = totalCount - suggestions.length;
 
@@ -92,6 +93,28 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
       .eq("id", suggestion.id);
     setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
     setBusyId(null);
+  };
+
+  const handleAcceptAll = async () => {
+    if (suggestions.length === 0 || bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      const rows = suggestions.map((s) => ({
+        entity_a_id: s.entity_a.id,
+        entity_b_id: s.entity_b.id,
+        relationship: s.relationship,
+      }));
+      const ids = suggestions.map((s) => s.id);
+      const [{ error: insertErr }, { error: updateErr }] = await Promise.all([
+        supabase.from("entity_links").insert(rows),
+        supabase.from("lore_link_suggestions").update({ status: "accepted" }).in("id", ids),
+      ]);
+      if (insertErr) console.error("Bulk accept insert failed:", insertErr);
+      if (updateErr) console.error("Bulk accept status update failed:", updateErr);
+      if (!insertErr) setSuggestions([]);
+    } finally {
+      setBulkBusy(false);
+    }
   };
 
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
