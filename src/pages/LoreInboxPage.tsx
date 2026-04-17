@@ -366,6 +366,7 @@ const LoreInboxPage = () => {
   const [suggestions, setSuggestions] = useState<LoreSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptedId, setAcceptedId] = useState<string | null>(null);
+  const [acceptedMerged, setAcceptedMerged] = useState(false);
 
   const fetchSuggestions = useCallback(async () => {
     if (!activeProject) return;
@@ -417,28 +418,65 @@ const LoreInboxPage = () => {
       if (v.trim()) sectionsToWrite[k] = v.trim();
     }
 
-    const { data: entity, error: entityError } = await supabase
+    // ── Check for existing entity with same name + category ──────────────
+    const { data: existing } = await supabase
       .from("entities")
-      .insert({
-        project_id: activeProject.id,
-        category: payload.category,
-        name,
-        summary: description || null,
-        fields: fieldsToWrite,
-        sections: sectionsToWrite,
-      })
-      .select("id")
-      .single();
+      .select("id, summary, sections")
+      .eq("project_id", activeProject.id)
+      .eq("name", name)
+      .eq("category", payload.category)
+      .maybeSingle();
 
-    if (entityError || !entity) {
-      console.error("Failed to create entity:", entityError);
-      return;
+    let entityId: string;
+    let isMerge = false;
+
+    if (existing) {
+      // ── Merge path: AI-merge sections then update existing entity ──────
+      isMerge = true;
+      const existingSections = (existing.sections ?? {}) as Record<string, string>;
+      const hasExisting = Object.values(existingSections).some((v) => (v ?? "").trim());
+      const hasNew = Object.values(sectionsToWrite).some((v) => (v ?? "").trim());
+
+      let mergedSections: Record<string, string>;
+      if (hasExisting && hasNew) {
+        const { data: mergeResult } = await supabase.functions.invoke("merge-entity-sections", {
+          body: { existing_sections: existingSections, new_sections: sectionsToWrite },
+        });
+        mergedSections = (mergeResult?.merged_sections as Record<string, string>) ??
+          { ...existingSections, ...sectionsToWrite };
+      } else {
+        mergedSections = hasNew ? { ...existingSections, ...sectionsToWrite } : existingSections;
+      }
+
+      const updates: Record<string, unknown> = { sections: mergedSections };
+      if (!existing.summary && description) updates.summary = description;
+      await supabase.from("entities").update(updates).eq("id", existing.id);
+      entityId = existing.id;
+    } else {
+      // ── Create path: insert new entity (original behaviour) ─────────────
+      const { data: entity, error: entityError } = await supabase
+        .from("entities")
+        .insert({
+          project_id: activeProject.id,
+          category: payload.category,
+          name,
+          summary: description || null,
+          fields: fieldsToWrite,
+          sections: sectionsToWrite,
+        })
+        .select("id")
+        .single();
+
+      if (entityError || !entity) {
+        console.error("Failed to create entity:", entityError);
+        return;
+      }
+      entityId = entity.id;
     }
 
-    // Create / link tags.
+    // ── Create / link tags (shared by both paths) ─────────────────────────
     const tagNames = (payload.tags ?? []).filter(Boolean);
     if (tagNames.length > 0) {
-      // Fetch any existing project tags that match by name (case-insensitive).
       const { data: existingTags } = await supabase
         .from("tags")
         .select("id, name")
@@ -452,7 +490,7 @@ const LoreInboxPage = () => {
       if (newTagNames.length > 0) {
         const { data: inserted } = await supabase
           .from("tags")
-          .insert(newTagNames.map((name) => ({ project_id: activeProject.id, name })))
+          .insert(newTagNames.map((tagName) => ({ project_id: activeProject.id, name: tagName })))
           .select("id");
         createdTags = inserted ?? [];
       }
@@ -464,20 +502,22 @@ const LoreInboxPage = () => {
       if (allTagIds.length > 0) {
         await supabase
           .from("entity_tags")
-          .insert(allTagIds.map((tag_id) => ({ entity_id: entity.id, tag_id })));
+          .insert(allTagIds.map((tag_id) => ({ entity_id: entityId, tag_id })));
       }
     }
 
+    // ── Mark suggestion reviewed (shared) ────────────────────────────────
     await supabase
       .from("lore_suggestions")
       .update({
         status: overrides ? "edited" : "accepted",
-        entity_id: entity.id,
+        entity_id: entityId,
         reviewed_at: new Date().toISOString(),
       })
       .eq("id", suggestion.id);
 
-    setAcceptedId(entity.id);
+    setAcceptedMerged(isMerge);
+    setAcceptedId(entityId);
     setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
   };
 
@@ -519,7 +559,7 @@ const LoreInboxPage = () => {
         {/* Brief accepted banner */}
         {acceptedId && (
           <div className="mb-4 flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2">
-            <p className="text-[13px] text-green-300">Entity created.</p>
+            <p className="text-[13px] text-green-300">{acceptedMerged ? "Entity merged." : "Entity created."}</p>
             <button
               onClick={() => navigate(`/entity/${acceptedId}`)}
               className="flex items-center gap-1 text-[12px] text-green-400 hover:text-green-300 transition-colors"

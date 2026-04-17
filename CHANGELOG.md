@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-16 — Smart merge on duplicate entity accept
+
+- `supabase/functions/merge-entity-sections/index.ts` — new edge function. Accepts `{ existing_sections, new_sections }` (both `Record<string, string>`). Calls AI to merge them into a single coherent record preserving all facts from both. Strips code fences, falls back to shallow merge if parse fails.
+- `src/pages/LoreInboxPage.tsx` — `handleAccept` now checks for an existing entity with the same name + category (`.maybeSingle()`). If found: calls `merge-entity-sections`, then updates the existing entity's `sections` (and `summary` if previously blank). If not found: creates a new entity as before. Accepted banner now reads "Entity merged." vs "Entity created." depending on which path was taken.
+- `supabase/functions/sync-lore/index.ts` — tightened existing-entities context: now selects `sections` in addition to `name/category/summary`, and falls back to the first non-empty section value (up to 100 chars) when `summary` is blank, so the AI has enough context to avoid re-suggesting well-documented entities.
+
+---
+
 ## 2026-04-17 — Link Lore AI relationship inference
 
 - `supabase/migrations/20260419100000_create_lore_link_suggestions.sql` — creates `lore_link_suggestions` table (project_id, entity_a_id, entity_b_id, relationship, confidence INTEGER, status TEXT default 'pending', created_at) with RLS scoped to project owner.

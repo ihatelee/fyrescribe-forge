@@ -190,14 +190,17 @@ async function syncProject(
     // Fetch existing entities so the AI can avoid re-suggesting them.
     const { data: existingEntities } = await supabase
       .from("entities")
-      .select("name, category, summary")
+      .select("name, category, summary, sections")
       .eq("project_id", projectId);
 
     const entityContext = (existingEntities ?? [])
-      .map(
-        (e: { name: string; category: string; summary?: string }) =>
-          `[${e.category}] ${e.name}${e.summary ? ": " + e.summary : ""}`,
-      )
+      .map((e: { name: string; category: string; summary?: string; sections?: Record<string, string> }) => {
+        const sections = e.sections ?? {};
+        const detail = e.summary
+          ?? Object.values(sections).find((v) => (v ?? "").trim())?.slice(0, 100)
+          ?? "";
+        return `[${e.category}] ${e.name}${detail ? ": " + detail : ""}`;
+      })
       .join("\n");
 
     // ── One API call per scene ───────────────────────────────────────────────
