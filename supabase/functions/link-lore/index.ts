@@ -31,6 +31,9 @@ const FIELD_TARGET_MAP: Record<string, Array<{ field: string; targetCategory: st
 
 const ALL_FIELD_KEYS = Object.values(FIELD_TARGET_MAP).flat().map((f) => f.field);
 
+const stripHtml = (html: string) =>
+  (html ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
