@@ -451,7 +451,7 @@ const TimelinePage = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center mb-8">
           <div className="flex gap-2">
             {(["all", "world_history", "story_event"] as const).map((type) => (
               <button
@@ -470,17 +470,17 @@ const TimelinePage = () => {
                   : "Story Events"}
               </button>
             ))}
+            <button
+              onClick={() => setMajorOnly((v) => !v)}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                majorOnly
+                  ? "border-gold text-gold bg-gold-glow"
+                  : "border-border text-text-secondary hover:text-foreground"
+              }`}
+            >
+              Major events
+            </button>
           </div>
-          <button
-            onClick={() => setMajorOnly((v) => !v)}
-            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-              majorOnly
-                ? "border-gold text-gold bg-gold-glow"
-                : "border-border text-text-secondary hover:text-foreground"
-            }`}
-          >
-            {majorOnly ? "Major only (9+)" : "All events"}
-          </button>
         </div>
 
         {/* Timeline */}
