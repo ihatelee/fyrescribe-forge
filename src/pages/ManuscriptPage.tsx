@@ -1098,7 +1098,7 @@ const ManuscriptPage = () => {
   // ─── Main layout ─────────────────────────────────────────────────────
 
   const chapterSidebar = (
-    <div className="w-[240px] bg-fyrescribe-base border-l border-border overflow-hidden flex-shrink-0 flex flex-col">
+    <div data-tour="chapter-panel" className="w-[240px] bg-fyrescribe-base border-l border-border overflow-hidden flex-shrink-0 flex flex-col">
       <div className="p-3 flex-1 overflow-y-auto min-h-0">
         <div className="text-[10px] font-medium uppercase tracking-widest text-text-dimmed mb-3 px-2" style={labelStyle}>
           Chapters
@@ -1379,7 +1379,7 @@ const ManuscriptPage = () => {
           </div>
 
           {/* Editor content */}
-          <div ref={scrollContainerRef} className="relative z-10 flex-1 overflow-y-auto flex justify-center py-10">
+          <div ref={scrollContainerRef} data-tour="editor" className="relative z-10 flex-1 overflow-y-auto flex justify-center py-10">
             <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
