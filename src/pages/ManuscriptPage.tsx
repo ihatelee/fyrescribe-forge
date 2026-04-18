@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import DOMPurify from "dompurify";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
@@ -1352,43 +1353,50 @@ const ManuscriptPage = () => {
                   Format
                 </button>
                 {formatMenuOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setFormatMenuOpen(false)}
-                    />
-                    <div
-                      className="fixed z-50 bg-fyrescribe-raised border border-border rounded-md shadow-xl p-3 flex flex-col gap-3 min-w-[260px]"
-                      style={{ top: formatMenuPos.top, left: formatMenuPos.left }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => { applyFormat("bold"); setFormatMenuOpen(false); }}
-                          className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
-                          aria-label="Bold"
-                        >
-                          <Bold size={14} />
-                        </button>
-                        <button
-                          onClick={() => { applyFormat("italic"); setFormatMenuOpen(false); }}
-                          className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
-                          aria-label="Italic"
-                        >
-                          <Italic size={14} />
-                        </button>
-                        <button
-                          onClick={() => { handleThesaurus(); setFormatMenuOpen(false); }}
-                          className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
-                        >
-                          <BookOpen size={14} />
-                          Thesaurus
-                        </button>
+                  createPortal(
+                    <>
+                      <div
+                        className="fixed inset-0 z-[9998]"
+                        onClick={() => setFormatMenuOpen(false)}
+                      />
+                      <div
+                        className="fixed z-[9999] border border-border rounded-md shadow-xl p-3 flex flex-col gap-3 min-w-[260px]"
+                        style={{
+                          top: formatMenuPos.top,
+                          left: formatMenuPos.left,
+                          backgroundColor: "hsl(var(--bg-raised))",
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { applyFormat("bold"); setFormatMenuOpen(false); }}
+                            className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                            aria-label="Bold"
+                          >
+                            <Bold size={14} />
+                          </button>
+                          <button
+                            onClick={() => { applyFormat("italic"); setFormatMenuOpen(false); }}
+                            className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                            aria-label="Italic"
+                          >
+                            <Italic size={14} />
+                          </button>
+                          <button
+                            onClick={() => { handleThesaurus(); setFormatMenuOpen(false); }}
+                            className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
+                          >
+                            <BookOpen size={14} />
+                            Thesaurus
+                          </button>
+                        </div>
+                        <TextSizeSelector />
+                        <LineHeightSelector />
+                        <ColumnWidthSelector />
                       </div>
-                      <TextSizeSelector />
-                      <LineHeightSelector />
-                      <ColumnWidthSelector />
-                    </div>
-                  </>
+                    </>,
+                    document.body
+                  )
                 )}
               </div>
 
@@ -1535,15 +1543,19 @@ const ManuscriptPage = () => {
                 >
                   <MoreHorizontal size={14} />
                 </button>
-                {versionMenuOpen && (
+                {versionMenuOpen && createPortal(
                   <>
                     <div
-                      className="fixed inset-0 z-40"
+                      className="fixed inset-0 z-[9998]"
                       onClick={() => setVersionMenuOpen(false)}
                     />
                     <div
-                      className="fixed z-50 bg-fyrescribe-raised border border-border rounded-md shadow-xl py-1 min-w-[180px]"
-                      style={{ bottom: versionMenuPos.bottom, left: versionMenuPos.left }}
+                      className="fixed z-[9999] border border-border rounded-md shadow-xl py-1 min-w-[180px]"
+                      style={{
+                        bottom: versionMenuPos.bottom,
+                        left: versionMenuPos.left,
+                        backgroundColor: "hsl(var(--bg-raised))",
+                      }}
                     >
                       <button
                         onClick={() => {
@@ -1566,7 +1578,8 @@ const ManuscriptPage = () => {
                         Version History
                       </button>
                     </div>
-                  </>
+                  </>,
+                  document.body
                 )}
                 {saveVersionOpen && (
                   <SaveVersionPopover
