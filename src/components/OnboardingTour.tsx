@@ -1,10 +1,12 @@
-import { useEffect, useLayoutEffect, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { X } from "lucide-react";
 
 /* ── Step schema (data-driven) ─────────────────────────────────────────
-   Edit copy / targets / placement here. Each `target` is a CSS selector,
-   typically a `[data-tour="..."]` anchor placed on a real UI element.
-   If the target isn't found, the step renders as a centered modal card. */
+   Each step can optionally navigate to a `route` before measuring its
+   target. Tokens supported by OnboardingProvider:
+     {manuscript} → /project/<active>/manuscript (or /manuscript)
+     {entity}     → /entity/<first entity id>   (or /world/characters)
+   Anything else is treated as a plain path. */
 
 export interface TourStep {
   id: string;
@@ -14,13 +16,17 @@ export interface TourStep {
   target?: string;
   /** Preferred tooltip placement. Auto-flips if it would clip. */
   placement?: "top" | "bottom" | "left" | "right";
+  /** Route to navigate to before measuring this step's target. */
+  route?: string;
 }
 
 export const ONBOARDING_STEPS: TourStep[] = [
+  // ── Steps 1–4: Manuscript page ──
   {
     id: "welcome",
     title: "Welcome to Fyrescribe",
-    body: "A quick five-step tour. Whether you're new to writing or coming from Scrivener or Notion, you'll feel at home in a minute.",
+    body: "A quick tour of the workspace. Whether you're new to writing or coming from Scrivener or Notion, you'll feel at home in a minute.",
+    route: "{manuscript}",
   },
   {
     id: "story-setup",
@@ -28,13 +34,7 @@ export const ONBOARDING_STEPS: TourStep[] = [
     body: "Each project is one story — manuscript, world, timeline, the lot. Switch projects any time from the logo up top.",
     target: '[data-tour="project-title"]',
     placement: "bottom",
-  },
-  {
-    id: "world-building",
-    title: "Build your world",
-    body: "Characters, places, factions, magic — track every detail. Fyrescribe links them automatically as you write.",
-    target: '[data-tour="world-nav"]',
-    placement: "right",
+    route: "{manuscript}",
   },
   {
     id: "writing-editor",
@@ -42,13 +42,7 @@ export const ONBOARDING_STEPS: TourStep[] = [
     body: "A clean editor with auto-save, focus mode, and inline scene titles. Just start typing.",
     target: '[data-tour="editor"]',
     placement: "left",
-  },
-  {
-    id: "ai-tools",
-    title: "AI does the busywork",
-    body: "Sync Lore extracts new world details from your scenes. Continuity check flags contradictions. You stay in control.",
-    target: '[data-tour="ai-tools"]',
-    placement: "right",
+    route: "{manuscript}",
   },
   {
     id: "organization",
@@ -56,6 +50,61 @@ export const ONBOARDING_STEPS: TourStep[] = [
     body: "Chapters and scenes live on the right. Drag, rename, and outline as you go.",
     target: '[data-tour="chapter-panel"]',
     placement: "left",
+    route: "{manuscript}",
+  },
+  // ── Step 5: Notes ──
+  {
+    id: "notes",
+    title: "Capture loose ideas",
+    body: "Notes are quick scratch pads — research, character sketches, half-formed thoughts. They live alongside the manuscript.",
+    target: '[data-tour="notes-panel"]',
+    placement: "right",
+    route: "/notes",
+  },
+  // ── Step 6: Timeline ──
+  {
+    id: "timeline",
+    title: "Build a timeline",
+    body: "Track world history and story events in chronological order. Drag to reorder, or generate one from your existing lore.",
+    target: '[data-tour="timeline-view"]',
+    placement: "top",
+    route: "/timeline",
+  },
+  // ── Step 7: POV Tracker ──
+  {
+    id: "pov",
+    title: "Track POV across scenes",
+    body: "See which character's perspective drives each scene at a glance — useful for multi-POV novels.",
+    target: '[data-tour="pov-panel"]',
+    placement: "top",
+    route: "/pov-tracker",
+  },
+  // ── Step 8: World & Lore (back on manuscript so the sidebar shows) ──
+  {
+    id: "world-building",
+    title: "Build your world",
+    body: "Characters, places, factions, magic — track every detail. Fyrescribe links them automatically as you write.",
+    target: '[data-tour="world-nav"]',
+    placement: "right",
+    route: "{manuscript}",
+  },
+  // ── Step 9: Lore record form ──
+  {
+    id: "lore-record",
+    title: "Wikipedia-style entries",
+    body: "Each entry has a structured At-a-Glance panel and rich article body. Edit any field inline — changes auto-save.",
+    target: '[data-tour="entity-record"]',
+    placement: "left",
+    route: "{entity}",
+  },
+  // ── Step 10: Sync buttons in sidebar ──
+  {
+    id: "ai-tools",
+    title: "AI does the busywork",
+    body: "Sync Lore extracts new world details from your scenes. Sync Mentions and Sync Connections keep everything stitched together. You stay in control.",
+    target: '[data-tour="sync-buttons"]',
+    placement: "right",
+    route: "{manuscript}",
   },
 ];
 
@@ -63,6 +112,8 @@ interface OnboardingTourProps {
   steps?: TourStep[];
   onFinish: () => void;
   onSkip: () => void;
+  /** Called whenever the active step changes — provider uses this to navigate. */
+  onStepChange?: (step: TourStep) => void | Promise<void>;
 }
 
 const PADDING = 8;
@@ -81,6 +132,7 @@ const OnboardingTour = ({
   steps = ONBOARDING_STEPS,
   onFinish,
   onSkip,
+  onStepChange,
 }: OnboardingTourProps) => {
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
@@ -92,6 +144,14 @@ const OnboardingTour = ({
   const isFirst = index === 0;
   const isLast = index === steps.length - 1;
 
+  /* Notify provider so it can navigate when step changes. */
+  const lastNotifiedIndex = useRef(-1);
+  useEffect(() => {
+    if (lastNotifiedIndex.current === index) return;
+    lastNotifiedIndex.current = index;
+    onStepChange?.(step);
+  }, [index, step, onStepChange]);
+
   /* Track viewport */
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -99,8 +159,8 @@ const OnboardingTour = ({
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  /* Measure target whenever step / viewport changes. Re-measures on resize
-     and via a polling fallback so it picks up late-mounting elements. */
+  /* Measure target whenever step / viewport changes. Polls aggressively
+     to handle late-mounting elements after route changes. */
   useLayoutEffect(() => {
     if (!step.target) {
       setRect(null);
@@ -108,18 +168,29 @@ const OnboardingTour = ({
     }
     let cancelled = false;
     let attempts = 0;
+    setRect(null); // clear previous immediately to avoid wrong-spotlight flash
 
     const measure = () => {
       if (cancelled) return;
       const el = document.querySelector(step.target!) as HTMLElement | null;
       if (el) {
         const r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) {
+          // Element exists but not laid out yet — keep polling
+          if (attempts < 40) {
+            attempts++;
+            setTimeout(measure, 100);
+          } else {
+            setRect(null);
+          }
+          return;
+        }
         setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
-        // Bring into view if needed
         if (r.top < 0 || r.bottom > window.innerHeight) {
           el.scrollIntoView({ block: "center", behavior: "smooth" });
         }
-      } else if (attempts < 20) {
+      } else if (attempts < 40) {
+        // Up to ~4 s of polling for route-change mounts
         attempts++;
         setTimeout(measure, 100);
       } else {
@@ -163,7 +234,6 @@ const OnboardingTour = ({
       return { top: 0, left: 0, centered: true };
     }
     if (isMobile) {
-      // On mobile: pin to bottom of viewport for readability
       return {
         top: window.innerHeight - TOOLTIP_H_EST - VIEWPORT_MARGIN,
         left: VIEWPORT_MARGIN,
@@ -194,7 +264,6 @@ const OnboardingTour = ({
         left = rect.left + rect.width / 2 - TOOLTIP_W / 2;
     }
 
-    // Clamp into viewport
     left = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - TOOLTIP_W - VIEWPORT_MARGIN));
     top = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - TOOLTIP_H_EST - VIEWPORT_MARGIN));
 
@@ -229,7 +298,6 @@ const OnboardingTour = ({
         fill="hsl(0 0% 0% / 0.72)"
         mask="url(#onboarding-spotlight-mask)"
       />
-      {/* Glowing ring around spotlight */}
       <rect
         x={rect.left - PADDING}
         y={rect.top - PADDING}
@@ -244,7 +312,7 @@ const OnboardingTour = ({
     </svg>
   );
 
-  /* Full-screen dim if no target */
+  /* Full-screen dim if no target (centered card or mid-navigation) */
   const fullDim = !rect && (
     <div
       className="fixed inset-0 bg-black/70"
@@ -281,7 +349,6 @@ const OnboardingTour = ({
               }
         }
       >
-        {/* Skip (X) — top right */}
         <button
           onClick={onSkip}
           aria-label="Skip tour"
@@ -290,7 +357,6 @@ const OnboardingTour = ({
           <X size={16} />
         </button>
 
-        {/* Step counter */}
         <div className="text-[10px] uppercase tracking-widest text-gold mb-2">
           Step {index + 1} of {steps.length}
         </div>
@@ -309,7 +375,7 @@ const OnboardingTour = ({
         </p>
 
         {/* Progress dots */}
-        <div className="flex items-center gap-1.5 mb-5">
+        <div className="flex items-center gap-1.5 mb-5 flex-wrap">
           {steps.map((s, i) => (
             <span
               key={s.id}
