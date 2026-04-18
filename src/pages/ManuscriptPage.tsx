@@ -1543,15 +1543,19 @@ const ManuscriptPage = () => {
                 >
                   <MoreHorizontal size={14} />
                 </button>
-                {versionMenuOpen && (
+                {versionMenuOpen && createPortal(
                   <>
                     <div
-                      className="fixed inset-0 z-40"
+                      className="fixed inset-0 z-[9998]"
                       onClick={() => setVersionMenuOpen(false)}
                     />
                     <div
-                      className="fixed z-50 bg-fyrescribe-raised border border-border rounded-md shadow-xl py-1 min-w-[180px]"
-                      style={{ bottom: versionMenuPos.bottom, left: versionMenuPos.left }}
+                      className="fixed z-[9999] border border-border rounded-md shadow-xl py-1 min-w-[180px]"
+                      style={{
+                        bottom: versionMenuPos.bottom,
+                        left: versionMenuPos.left,
+                        backgroundColor: "hsl(var(--bg-raised))",
+                      }}
                     >
                       <button
                         onClick={() => {
@@ -1574,7 +1578,8 @@ const ManuscriptPage = () => {
                         Version History
                       </button>
                     </div>
-                  </>
+                  </>,
+                  document.body
                 )}
                 {saveVersionOpen && (
                   <SaveVersionPopover
