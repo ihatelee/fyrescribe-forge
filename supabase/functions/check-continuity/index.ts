@@ -47,28 +47,41 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { chapter_id, project_id } = body as { chapter_id: string; project_id: string };
+    const { chapter_id } = body as { chapter_id: string };
 
-    if (!chapter_id || !project_id) {
-      return new Response(JSON.stringify({ error: "chapter_id and project_id required" }), {
+    if (!chapter_id || typeof chapter_id !== "string") {
+      return new Response(JSON.stringify({ error: "chapter_id required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Verify project ownership
-    const { data: project, error: projectError } = await userClient
-      .from("projects")
-      .select("id")
-      .eq("id", project_id)
-      .single();
-    if (projectError || !project) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // IDOR protection: derive project_id from the chapter row using the
+    // user-scoped client (RLS-enforced), then verify the project belongs to
+    // the authenticated user. NEVER trust project_id from the request body.
+    const { data: chapterOwnership, error: chapterOwnershipError } = await userClient
+      .from("chapters")
+      .select("id, project_id")
+      .eq("id", chapter_id)
+      .maybeSingle();
+
+    if (chapterOwnershipError || !chapterOwnership) {
+      return new Response("Forbidden", { status: 403, headers: corsHeaders });
     }
 
+    const project_id = chapterOwnership.project_id;
+
+    const { data: project, error: projectError } = await userClient
+      .from("projects")
+      .select("id, user_id")
+      .eq("id", project_id)
+      .maybeSingle();
+
+    if (projectError || !project || project.user_id !== user.id) {
+      return new Response("Forbidden", { status: 403, headers: corsHeaders });
+    }
+
+    // Ownership confirmed — safe to use service-role client for downstream reads.
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch chapter and its scenes
