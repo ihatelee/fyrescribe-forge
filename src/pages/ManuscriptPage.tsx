@@ -30,7 +30,6 @@ import {
   ScanSearch,
 } from "lucide-react";
 import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
-import OnboardingTour from "@/components/OnboardingTour";
 import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Utilities ────────────────────────────────────────────────────────
