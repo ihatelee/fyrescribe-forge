@@ -30,7 +30,6 @@ import {
   ScanSearch,
 } from "lucide-react";
 import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
-import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Utilities ────────────────────────────────────────────────────────
 
@@ -249,7 +248,6 @@ const ManuscriptPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { activeProject } = useActiveProject();
   const { theme } = useTheme();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const projectId = activeProject?.id || urlProjectId;
   const targetSceneId = searchParams.get("scene");
