@@ -98,10 +98,10 @@ const ThemeSwitcher = () => {
           />
         </DropdownMenuItem>
 
-        {/* Whimsical toggle */}
+        {/* Whimsical toggle — desktop only */}
         <DropdownMenuItem
           onSelect={(e) => e.preventDefault()}
-          className="cursor-pointer flex items-center gap-2"
+          className="hidden md:flex cursor-pointer items-center gap-2"
         >
           <span className="text-gold flex-shrink-0 text-sm leading-none">✦</span>
           <span className="flex-1 text-sm">Make it Whimsical</span>

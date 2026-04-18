@@ -1302,7 +1302,7 @@ const ManuscriptPage = () => {
       </div>
 
       {theme === "outrun" && (
-        <div className="border-t border-border">
+        <div className="hidden md:block border-t border-border">
           <OutrunMusicPlayer />
         </div>
       )}

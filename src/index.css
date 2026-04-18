@@ -124,7 +124,8 @@ html.high-contrast *:focus-visible {
   outline-width: 3px;
 }
 
-/* ─── Whimsical mode ──────────────────────────────────────────────────────── */
+/* ─── Whimsical mode (desktop only — md and above) ───────────────────────── */
+@media (min-width: 768px) {
 
 /* 6. Sidebar / panel borders — warm quill-ruled sepia treatment */
 html.whimsical [data-whimsical-sidebar] {
@@ -189,6 +190,8 @@ html.whimsical [data-prose-col]::after {
   mask-image: linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%);
 }
+
+} /* end @media (min-width: 768px) — whimsical mode */
 
 .entity-link {
   border-bottom: 1px solid hsl(var(--gold) / 0.35);

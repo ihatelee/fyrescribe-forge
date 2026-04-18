@@ -182,7 +182,7 @@ const WhimsicalOverlay = () => {
   if (!whimsical) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[2]" aria-hidden="true">
+    <div className="fixed inset-0 pointer-events-none z-[2] hidden md:block" aria-hidden="true">
 
       {/* 1. Vignette — radial falloff suggesting candlelight */}
       <div
