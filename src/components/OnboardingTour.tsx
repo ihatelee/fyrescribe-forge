@@ -136,6 +136,8 @@ const OnboardingTour = ({
 }: OnboardingTourProps) => {
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
+  const [tooltipH, setTooltipH] = useState(TOOLTIP_H_EST);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 768 : false,
   );
