@@ -124,6 +124,72 @@ html.high-contrast *:focus-visible {
   outline-width: 3px;
 }
 
+/* ─── Whimsical mode ──────────────────────────────────────────────────────── */
+
+/* 6. Sidebar / panel borders — warm quill-ruled sepia treatment */
+html.whimsical [data-whimsical-sidebar] {
+  border-right-color: hsl(var(--gold) / 0.22);
+  box-shadow: 2px 0 10px -4px hsl(var(--gold) / 0.10);
+}
+
+/* Card / panel border warm tint */
+html.whimsical .border-border {
+  border-color: hsl(var(--gold) / 0.14);
+}
+
+/* Titlebar bottom border */
+html.whimsical .border-b {
+  border-bottom-color: hsl(var(--gold) / 0.14);
+}
+
+/* 1+2. Manuscript prose column — frayed / deckled side edges (paper-fiber stripes) */
+html.whimsical [data-prose-col] {
+  position: relative;
+}
+
+html.whimsical [data-prose-col]::before,
+html.whimsical [data-prose-col]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 22px;
+  pointer-events: none;
+  z-index: 1;
+  background-image:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px, transparent 3px,
+      hsl(var(--text-dimmed) / 0.11) 3px, hsl(var(--text-dimmed) / 0.11) 4px
+    );
+}
+
+html.whimsical [data-prose-col]::before {
+  left: -22px;
+  background-image:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px, transparent 3px,
+      hsl(var(--text-dimmed) / 0.11) 3px, hsl(var(--text-dimmed) / 0.11) 4px
+    ),
+    linear-gradient(to right, transparent 0%, hsl(var(--text-dimmed) / 0.18) 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%);
+}
+
+html.whimsical [data-prose-col]::after {
+  right: -22px;
+  background-image:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px, transparent 3px,
+      hsl(var(--text-dimmed) / 0.11) 3px, hsl(var(--text-dimmed) / 0.11) 4px
+    ),
+    linear-gradient(to left, transparent 0%, hsl(var(--text-dimmed) / 0.18) 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%);
+}
+
 .entity-link {
   border-bottom: 1px solid hsl(var(--gold) / 0.35);
   cursor: pointer;

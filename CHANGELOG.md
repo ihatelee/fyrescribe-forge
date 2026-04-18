@@ -4,6 +4,20 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-18 — Make it Whimsical
+
+- `supabase/migrations/20260418_add_whimsical_pref.sql` — adds `whimsical_enabled boolean default false` column to `user_preferences`.
+- `src/integrations/supabase/types.ts` — added `whimsical_enabled` to `user_preferences` Row / Insert / Update types.
+- `src/contexts/ThemeContext.tsx` — added `whimsical` state, `setWhimsical` setter, `html.whimsical` class toggle (same pattern as `high-contrast` / `dyslexia-font`), DB load/persist via `whimsical_enabled`.
+- `src/components/WhimsicalOverlay.tsx` (new) — fixed-position, pointer-events-none overlay that applies all 7 effects when `whimsical` is true: (1) radial vignette (candlelight falloff), (2) SVG `feTurbulence` parchment grain at 4% opacity, (3) three organic ink blot accents (turbulence-displaced SVG ellipses), (4) two Celtic bracket corner flourishes with tick marks and terminal dots, (5) left/right deckled page-edge strips (turbulence-displaced gradients), (7) wavy scroll-curl footer with gold terminal circles.
+- `src/index.css` — `html.whimsical` CSS block: sidebar border warm glow, card/panel border warm sepia tint, titlebar warm border; `[data-prose-col]` frayed-edge pseudo-elements (horizontal fiber stripes masked to fade at top/bottom).
+- `src/components/ThemeSwitcher.tsx` — added "Make it Whimsical" toggle item (✦ icon + Switch) after the sparkle toggle.
+- `src/App.tsx` — mounts `<WhimsicalOverlay />` at z-[2], between sparkle and page content.
+- `src/components/Sidebar.tsx` — added `data-whimsical-sidebar` attribute to root div for CSS targeting.
+- `src/pages/ManuscriptPage.tsx` — added `data-prose-col` attribute to the prose column div in both normal and focus-mode render paths.
+
+---
+
 ## 2026-04-17 — Lore Inbox: fast accept + Accept All
 
 - `src/pages/LoreInboxPage.tsx` — **Fast accept (optimistic UI):** `handleAccept` no longer blocks on the AI `merge-entity-sections` call. Extracted core logic into `acceptOneSuggestion` which applies a shallow section merge immediately (so the card dismisses at once), then fires the AI merge in the background as a fire-and-forget `.then()` chain that silently patches the entity when done.

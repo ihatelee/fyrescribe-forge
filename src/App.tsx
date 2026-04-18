@@ -10,6 +10,7 @@ import { OnboardingProvider } from "./contexts/OnboardingContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GlobalSparkle from "./components/GlobalSparkle";
 import OutrunGlobals from "./components/OutrunGlobals";
+import WhimsicalOverlay from "./components/WhimsicalOverlay";
 import AuthPage from "./pages/AuthPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import OnboardingPage from "./pages/OnboardingPage";
@@ -31,6 +32,7 @@ const App = () => (
       <ProjectProvider>
         <TooltipProvider>
           <GlobalSparkle />
+          <WhimsicalOverlay />
           <OutrunGlobals />
           <Toaster />
           <Sonner />
