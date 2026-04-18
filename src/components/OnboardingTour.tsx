@@ -235,9 +235,10 @@ const OnboardingTour = ({
     if (!rect) {
       return { top: 0, left: 0, centered: true };
     }
+    const h = tooltipH || TOOLTIP_H_EST;
     if (isMobile) {
       return {
-        top: window.innerHeight - TOOLTIP_H_EST - VIEWPORT_MARGIN,
+        top: window.innerHeight - h - VIEWPORT_MARGIN,
         left: VIEWPORT_MARGIN,
         centered: false,
       };
@@ -249,15 +250,15 @@ const OnboardingTour = ({
 
     switch (placement) {
       case "right":
-        top = rect.top + rect.height / 2 - TOOLTIP_H_EST / 2;
+        top = rect.top + rect.height / 2 - h / 2;
         left = rect.left + rect.width + PADDING + 4;
         break;
       case "left":
-        top = rect.top + rect.height / 2 - TOOLTIP_H_EST / 2;
+        top = rect.top + rect.height / 2 - h / 2;
         left = rect.left - TOOLTIP_W - PADDING - 4;
         break;
       case "top":
-        top = rect.top - TOOLTIP_H_EST - PADDING - 4;
+        top = rect.top - h - PADDING - 4;
         left = rect.left + rect.width / 2 - TOOLTIP_W / 2;
         break;
       case "bottom":
@@ -267,7 +268,7 @@ const OnboardingTour = ({
     }
 
     left = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - TOOLTIP_W - VIEWPORT_MARGIN));
-    top = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - TOOLTIP_H_EST - VIEWPORT_MARGIN));
+    top = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - h - VIEWPORT_MARGIN));
 
     return { top, left, centered: false };
   };
