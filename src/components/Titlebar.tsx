@@ -75,7 +75,7 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
       </div>
 
       {activeProject && (
-        <div className="hidden lg:flex items-center gap-1.5 group">
+        <div data-tour="project-title" className="hidden lg:flex items-center gap-1.5 group">
           {editing ? (
             <input
               autoFocus

@@ -300,7 +300,7 @@ const Sidebar = () => {
           </div>
         </div>
 
-        <div>
+        <div data-tour="world-nav">
           <div className="px-3 mb-2 flex items-center justify-between">
             <span className="text-[10px] font-medium uppercase tracking-widest text-text-dimmed">
               World & Lore
@@ -326,7 +326,7 @@ const Sidebar = () => {
         </div>
       </div>
 
-      <div className="p-2 border-t border-border space-y-1">
+      <div data-tour="ai-tools" className="p-2 border-t border-border space-y-1">
         {/* Full sync patience note */}
         {fullSyncNote && (
           <p className="px-3 py-1.5 text-[10px] text-gold/80 bg-gold/5 border border-gold/10 rounded-md">

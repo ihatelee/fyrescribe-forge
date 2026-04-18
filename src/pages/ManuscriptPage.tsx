@@ -30,6 +30,8 @@ import {
   ScanSearch,
 } from "lucide-react";
 import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
+import OnboardingTour from "@/components/OnboardingTour";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Utilities ────────────────────────────────────────────────────────
 
@@ -248,6 +250,7 @@ const ManuscriptPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { activeProject } = useActiveProject();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const projectId = activeProject?.id || urlProjectId;
   const targetSceneId = searchParams.get("scene");
@@ -285,6 +288,7 @@ const ManuscriptPage = () => {
   const [chapterMenuOpenId, setChapterMenuOpenId] = useState<string | null>(null);
   const [continuityCheckingId, setContinuityCheckingId] = useState<string | null>(null);
   const [continuityPanel, setContinuityPanel] = useState<{ chapterTitle: string; issues: ContinuityIssue[] } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   type TextSize = "small" | "medium" | "large" | "xl";
   const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
@@ -547,6 +551,44 @@ const ManuscriptPage = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
+
+  // ─── First-time onboarding tour ─────────────────────────────────────
+  useEffect(() => {
+    if (!user || loading) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("user_preferences")
+        .select("has_completed_onboarding")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.error("Failed to load onboarding state:", error);
+        return;
+      }
+      // No row yet => brand new user => show tour
+      if (!data || data.has_completed_onboarding === false) {
+        // Brief delay so target elements are mounted/laid out
+        setTimeout(() => !cancelled && setShowOnboarding(true), 400);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, loading]);
+
+  const markOnboardingComplete = useCallback(async () => {
+    setShowOnboarding(false);
+    if (!user) return;
+    const { error } = await supabase
+      .from("user_preferences")
+      .upsert(
+        { user_id: user.id, has_completed_onboarding: true },
+        { onConflict: "user_id" },
+      );
+    if (error) console.error("Failed to save onboarding state:", error);
+  }, [user]);
 
   // ─── Auto-save ──────────────────────────────────────────────────────
 
@@ -1098,7 +1140,7 @@ const ManuscriptPage = () => {
   // ─── Main layout ─────────────────────────────────────────────────────
 
   const chapterSidebar = (
-    <div className="w-[240px] bg-fyrescribe-base border-l border-border overflow-hidden flex-shrink-0 flex flex-col">
+    <div data-tour="chapter-panel" className="w-[240px] bg-fyrescribe-base border-l border-border overflow-hidden flex-shrink-0 flex flex-col">
       <div className="p-3 flex-1 overflow-y-auto min-h-0">
         <div className="text-[10px] font-medium uppercase tracking-widest text-text-dimmed mb-3 px-2" style={labelStyle}>
           Chapters
@@ -1379,7 +1421,7 @@ const ManuscriptPage = () => {
           </div>
 
           {/* Editor content */}
-          <div ref={scrollContainerRef} className="relative z-10 flex-1 overflow-y-auto flex justify-center py-10">
+          <div ref={scrollContainerRef} data-tour="editor" className="relative z-10 flex-1 overflow-y-auto flex justify-center py-10">
             <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -1563,6 +1605,12 @@ const ManuscriptPage = () => {
           </>
         )}
       </div>
+      {showOnboarding && (
+        <OnboardingTour
+          onFinish={markOnboardingComplete}
+          onSkip={markOnboardingComplete}
+        />
+      )}
     </AppLayout>
   );
 };
