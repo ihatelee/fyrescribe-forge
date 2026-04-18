@@ -340,6 +340,7 @@ const OnboardingTour = ({
 
       {/* Tooltip card */}
       <div
+        ref={tooltipRef}
         role="dialog"
         aria-labelledby="onboarding-title"
         aria-describedby="onboarding-body"
