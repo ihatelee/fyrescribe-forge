@@ -27,13 +27,13 @@ const OPTIONS: Array<{
     value: "lore",
     icon: BookOpen,
     label: "Lore Sheets",
-    description: "Exports all entities as a .pdf grouped by category",
+    description: "Exports all entities as a .docx grouped by category",
   },
   {
     value: "everything",
     icon: Package,
     label: "Everything",
-    description: "Downloads both the .docx and .pdf",
+    description: "Downloads both .docx files",
   },
 ];
 

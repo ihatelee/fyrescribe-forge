@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Lore sheets export switched from .pdf to .docx
+
+- `src/lib/exportLore.ts` — replaced `jspdf` renderer with `docx` package. Structure per entity: entity name as `HEADING_1`, italic category label (9pt grey), non-empty sections as `HEADING_2` + body paragraphs, At a Glance fields as a borderless two-column table (key bold 35% / value 65%, light bottom-border separators on each row), linked entities (non-field-picker relationships) as a `bullet: { level: 0 }` list. Category group dividers (bold uppercase, thick bottom border) appear before the first entity in each group; page break inserted before every entity except the first. Document styles: H1 18pt bold, H2 11pt bold. Filename changed from `…-lore-sheets.pdf` to `…-lore-sheets.docx`.
+- `src/components/ExportModal.tsx` — updated Lore Sheets description from ".pdf" to ".docx"; updated Everything description to "Downloads both .docx files".
+
+---
+
 ## 2026-04-17 — Export: Manuscript as .docx + Lore Sheets as .pdf
 
 - `src/lib/exportManuscript.ts` — new utility. Fetches chapters (ordered by `order`) and scenes (ordered by `order`), strips HTML from scene content, and builds a `docx.Document`: project title as TITLE, each chapter as HEADING_1 with a page break before it (except the first), each scene as HEADING_2, body text as 12pt paragraphs. Uses `Packer.toBlob()` and a programmatic `<a download>` click. Depends on the `docx` npm package.
