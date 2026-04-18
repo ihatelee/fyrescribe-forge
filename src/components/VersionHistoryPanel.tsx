@@ -122,7 +122,7 @@ const VersionHistoryPanel = ({
       />
 
       {/* Slide-over */}
-      <div className="fixed top-0 right-0 bottom-0 w-[420px] bg-fyrescribe-base border-l border-border z-[100] flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
+      <div className="fixed top-0 right-0 bottom-0 w-full sm:w-[420px] max-w-full bg-fyrescribe-base border-l border-border z-[100] flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
