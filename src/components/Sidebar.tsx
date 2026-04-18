@@ -334,6 +334,7 @@ const Sidebar = () => {
           </p>
         )}
 
+        <div data-tour="sync-buttons" className="space-y-1">
         {/* Sync Lore + Full Sync */}
         <div className="flex items-center gap-1">
           <button
