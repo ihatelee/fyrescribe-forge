@@ -1,5 +1,7 @@
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, PlayCircle } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme, type InterfaceScale } from "@/contexts/ThemeContext";
+import { useActiveProject } from "@/contexts/ProjectContext";
 import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
@@ -22,6 +24,23 @@ const AccessibilityPanel = () => {
     dyslexiaFont,
     setDyslexiaFont,
   } = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { activeProject } = useActiveProject();
+
+  const handleShowTutorial = () => {
+    const onManuscript = location.pathname.includes("/manuscript");
+    if (!onManuscript) {
+      const target = activeProject
+        ? `/project/${activeProject.id}/manuscript`
+        : "/manuscript";
+      navigate(target);
+      // Wait for ManuscriptPage to mount its listener
+      setTimeout(() => window.dispatchEvent(new Event("onboarding-replay")), 600);
+    } else {
+      window.dispatchEvent(new Event("onboarding-replay"));
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -86,6 +105,17 @@ const AccessibilityPanel = () => {
             onCheckedChange={setDyslexiaFont}
             className="scale-75"
           />
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        {/* Replay onboarding tutorial */}
+        <DropdownMenuItem
+          onSelect={handleShowTutorial}
+          className="cursor-pointer flex items-center gap-2"
+        >
+          <PlayCircle size={14} className="text-gold" />
+          <span className="flex-1 text-sm">Show Tutorial</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
