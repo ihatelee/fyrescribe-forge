@@ -24,6 +24,23 @@ const AccessibilityPanel = () => {
     dyslexiaFont,
     setDyslexiaFont,
   } = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { activeProject } = useActiveProject();
+
+  const handleShowTutorial = () => {
+    const onManuscript = location.pathname.includes("/manuscript");
+    if (!onManuscript) {
+      const target = activeProject
+        ? `/project/${activeProject.id}/manuscript`
+        : "/manuscript";
+      navigate(target);
+      // Wait for ManuscriptPage to mount its listener
+      setTimeout(() => window.dispatchEvent(new Event("onboarding-replay")), 600);
+    } else {
+      window.dispatchEvent(new Event("onboarding-replay"));
+    }
+  };
 
   return (
     <DropdownMenu>
