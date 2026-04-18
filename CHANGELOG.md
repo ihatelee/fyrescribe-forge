@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Export: Manuscript as .docx + Lore Sheets as .pdf
+
+- `src/lib/exportManuscript.ts` — new utility. Fetches chapters (ordered by `order`) and scenes (ordered by `order`), strips HTML from scene content, and builds a `docx.Document`: project title as TITLE, each chapter as HEADING_1 with a page break before it (except the first), each scene as HEADING_2, body text as 12pt paragraphs. Uses `Packer.toBlob()` and a programmatic `<a download>` click. Depends on the `docx` npm package.
+- `src/lib/exportLore.ts` — new utility. Fetches all non-archived entities and all their `entity_links` (both directions). Groups and sorts entities by category order (characters → places → factions → events → history → artifacts → creatures → magic → doctrine), then alphabetically by name. For each entity, renders to A4 pages via `jsPDF`: entity name (20pt bold), category label (9pt grey, uppercase), horizontal rule, then each non-empty section as a labelled text block with line wrapping. At a Glance fields rendered as a two-column grid (key label + value). Linked entities (non-field relationships) listed with name · relationship. Depends on the `jspdf` npm package.
+- `src/components/ExportModal.tsx` — new modal with three radio-card options: Manuscript (.docx), Lore Sheets (.pdf), Everything (both). Single Export CTA; shows spinner during generation. Error message on failure. Closes on success.
+- `src/pages/ProjectsPage.tsx` — added `exportTarget` state, `Download` icon import, `ExportModal` import. New "Export" `DropdownMenuItem` added above "Archive" in the project card 3-dot menu. Renders `<ExportModal>` when `exportTarget` is set.
+
+---
+
 ## 2026-04-17 — Scene version history + mobile responsive layout (pull)
 
 ### Scene version history

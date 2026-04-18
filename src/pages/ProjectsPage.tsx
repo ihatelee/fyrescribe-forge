@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Loader2, MoreVertical, Copy, Archive, Trash2, ChevronDown, Pencil } from "lucide-react";
+import { Plus, Loader2, MoreVertical, Copy, Archive, Trash2, ChevronDown, Pencil, Download } from "lucide-react";
 import Titlebar from "@/components/Titlebar";
+import ExportModal from "@/components/ExportModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,6 +50,9 @@ const ProjectsPage = () => {
 
   // Unarchive confirmation state
   const [unarchiveTarget, setUnarchiveTarget] = useState<Project | null>(null);
+
+  // Export modal state
+  const [exportTarget, setExportTarget] = useState<Project | null>(null);
 
   // Inline title editing
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
@@ -217,6 +221,16 @@ const ProjectsPage = () => {
                           <Copy size={14} className="mr-2" />
                           Duplicate
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExportTarget(project);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Download size={14} className="mr-2" />
+                          Export
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => handleArchive(project, e)} className="cursor-pointer">
                           <Archive size={14} className="mr-2" />
                           Archive
@@ -381,6 +395,14 @@ const ProjectsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {exportTarget && (
+        <ExportModal
+          projectId={exportTarget.id}
+          projectTitle={exportTarget.title}
+          onClose={() => setExportTarget(null)}
+        />
+      )}
     </div>
   );
 };
