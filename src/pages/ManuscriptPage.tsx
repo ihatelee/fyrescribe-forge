@@ -578,6 +578,13 @@ const ManuscriptPage = () => {
     };
   }, [user, loading]);
 
+  // Allow other components (e.g. Settings) to replay the tour
+  useEffect(() => {
+    const onReplay = () => setShowOnboarding(true);
+    window.addEventListener("onboarding-replay", onReplay);
+    return () => window.removeEventListener("onboarding-replay", onReplay);
+  }, []);
+
   const markOnboardingComplete = useCallback(async () => {
     setShowOnboarding(false);
     if (!user) return;
