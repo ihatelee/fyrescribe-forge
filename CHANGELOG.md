@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Lore Inbox: fast accept + Accept All
+
+- `src/pages/LoreInboxPage.tsx` — **Fast accept (optimistic UI):** `handleAccept` no longer blocks on the AI `merge-entity-sections` call. Extracted core logic into `acceptOneSuggestion` which applies a shallow section merge immediately (so the card dismisses at once), then fires the AI merge in the background as a fire-and-forget `.then()` chain that silently patches the entity when done.
+- `src/pages/LoreInboxPage.tsx` — **Accept All:** Added `handleAcceptAll` which snapshots the pending list and iterates it sequentially (to avoid tag name races), dismissing each card in turn. Header toolbar now shows an "Accept All" button alongside the pending count when suggestions exist. A green status banner ("Accepted N entities") appears on completion and auto-dismisses after 4 s.
+
+---
+
 ## 2026-04-18 — Mobile & manuscript bug fixes
 
 - `src/pages/ManuscriptPage.tsx` — **Bug 1 (dropdown backgrounds on mobile):** Format menu and Version menu dropdowns were `position: absolute` inside an ancestor with `overflow: hidden`, causing them to be clipped on mobile. Both dropdowns now use `position: fixed` with coordinates captured via `getBoundingClientRect()` at open time (same pattern as `POVSelector`). Added `formatButtonRef`, `versionMenuButtonRef`, `formatMenuPos`/`versionMenuPos` state, and `openFormatMenu`/`openVersionMenu` callbacks. Parent wrappers no longer need `relative`.

@@ -367,6 +367,8 @@ const LoreInboxPage = () => {
   const [loading, setLoading] = useState(true);
   const [acceptedId, setAcceptedId] = useState<string | null>(null);
   const [acceptedMerged, setAcceptedMerged] = useState(false);
+  const [acceptAllStatus, setAcceptAllStatus] = useState<string | null>(null);
+  const [acceptingAll, setAcceptingAll] = useState(false);
 
   const fetchSuggestions = useCallback(async () => {
     if (!activeProject) return;
@@ -391,11 +393,15 @@ const LoreInboxPage = () => {
     fetchSuggestions();
   }, [fetchSuggestions]);
 
-  const handleAccept = async (
+  // Core accept logic — shared by individual accept and Accept All.
+  // Returns { entityId, isMerge } on success or null on failure.
+  // Dismisses the card immediately; if a duplicate exists the AI merge
+  // runs in the background and silently patches the entity when done.
+  const acceptOneSuggestion = async (
     suggestion: LoreSuggestion,
     overrides?: { name: string; description: string },
-  ) => {
-    if (!activeProject) return;
+  ): Promise<{ entityId: string; isMerge: boolean } | null> => {
+    if (!activeProject) return null;
     const payload = suggestion.payload;
     const name = overrides?.name ?? payload.name;
     const description = overrides?.description ?? payload.description;
@@ -431,32 +437,43 @@ const LoreInboxPage = () => {
     let isMerge = false;
 
     if (existing) {
-      // ── Merge path: AI-merge sections then update existing entity ──────
       isMerge = true;
       const existingSections = (existing.sections ?? {}) as Record<string, string>;
       const hasExisting = Object.values(existingSections).some((v) => (v ?? "").trim());
       const hasNew = Object.values(sectionsToWrite).some((v) => (v ?? "").trim());
 
-      let mergedSections: Record<string, string>;
-      if (hasExisting && hasNew) {
-        const { data: mergeResult } = await supabase.functions.invoke("merge-entity-sections", {
-          body: { existing_sections: existingSections, new_sections: sectionsToWrite },
-        });
-        mergedSections = (mergeResult?.merged_sections as Record<string, string>) ??
-          { ...existingSections, ...sectionsToWrite };
-      } else {
-        mergedSections = hasNew ? { ...existingSections, ...sectionsToWrite } : existingSections;
-      }
-
-      const updates: { sections: Record<string, string>; summary?: string } = { sections: mergedSections };
+      // ── Optimistic: apply shallow merge immediately so the card can dismiss ──
+      const optimisticSections = hasNew
+        ? { ...existingSections, ...sectionsToWrite }
+        : existingSections;
+      const updates: { sections: Record<string, string>; summary?: string } = {
+        sections: optimisticSections,
+      };
       if (!existing.summary && description) updates.summary = description;
       await supabase.from("entities").update(updates).eq("id", existing.id);
       entityId = existing.id;
+
+      // ── Background AI merge — fire and forget ──────────────────────────
+      if (hasExisting && hasNew) {
+        const bgEntityId = entityId;
+        supabase.functions
+          .invoke("merge-entity-sections", {
+            body: { existing_sections: existingSections, new_sections: sectionsToWrite },
+          })
+          .then(({ data: mergeResult }) => {
+            const merged =
+              (mergeResult?.merged_sections as Record<string, string>) ?? optimisticSections;
+            return supabase.from("entities").update({ sections: merged }).eq("id", bgEntityId);
+          })
+          .catch((e) => console.error("Background merge failed:", e));
+      }
     } else {
-      // ── Create path: insert new entity (original behaviour) ─────────────
+      // ── Create path: insert new entity ───────────────────────────────────
       const firstToken = name.split(/\s+/)[0];
       const seedAliases =
-        payload.category === "characters" && firstToken && firstToken.toLowerCase() !== name.toLowerCase()
+        payload.category === "characters" &&
+        firstToken &&
+        firstToken.toLowerCase() !== name.toLowerCase()
           ? [firstToken]
           : [];
       const { data: entity, error: entityError } = await supabase
@@ -475,7 +492,7 @@ const LoreInboxPage = () => {
 
       if (entityError || !entity) {
         console.error("Failed to create entity:", entityError);
-        return;
+        return null;
       }
       entityId = entity.id;
     }
@@ -512,7 +529,7 @@ const LoreInboxPage = () => {
       }
     }
 
-    // ── Mark suggestion reviewed (shared) ────────────────────────────────
+    // ── Mark suggestion reviewed ──────────────────────────────────────────
     await supabase
       .from("lore_suggestions")
       .update({
@@ -522,9 +539,34 @@ const LoreInboxPage = () => {
       })
       .eq("id", suggestion.id);
 
-    setAcceptedMerged(isMerge);
-    setAcceptedId(entityId);
     setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
+    return { entityId, isMerge };
+  };
+
+  const handleAccept = async (
+    suggestion: LoreSuggestion,
+    overrides?: { name: string; description: string },
+  ) => {
+    const result = await acceptOneSuggestion(suggestion, overrides);
+    if (result) {
+      setAcceptedMerged(result.isMerge);
+      setAcceptedId(result.entityId);
+    }
+  };
+
+  const handleAcceptAll = async () => {
+    if (!activeProject || suggestions.length === 0 || acceptingAll) return;
+    setAcceptingAll(true);
+    setAcceptedId(null); // clear any individual accept banner
+    const toAccept = [...suggestions]; // snapshot before cards start dismissing
+    let count = 0;
+    for (const s of toAccept) {
+      const result = await acceptOneSuggestion(s);
+      if (result) count++;
+    }
+    setAcceptAllStatus(`Accepted ${count} ${count === 1 ? "entity" : "entities"}`);
+    setAcceptingAll(false);
+    setTimeout(() => setAcceptAllStatus(null), 4000);
   };
 
   const handleReject = async (id: string) => {
@@ -555,12 +597,29 @@ const LoreInboxPage = () => {
       <div className="p-6 max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="font-display text-xl text-foreground tracking-wide">Lore Inbox</h1>
-          {suggestions.length > 0 && (
-            <span className="text-[12px] text-text-dimmed">
-              {suggestions.length} pending
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {suggestions.length > 0 && (
+              <>
+                <span className="text-[12px] text-text-dimmed">{suggestions.length} pending</span>
+                <button
+                  onClick={handleAcceptAll}
+                  disabled={acceptingAll}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md bg-green-500/10 text-green-300 border border-green-500/20 hover:bg-green-500/20 disabled:opacity-50 transition-colors"
+                >
+                  {acceptingAll ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                  Accept All
+                </button>
+              </>
+            )}
+          </div>
         </div>
+
+        {/* Accept All status banner */}
+        {acceptAllStatus && (
+          <div className="mb-4 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2">
+            <p className="text-[13px] text-green-300">{acceptAllStatus}</p>
+          </div>
+        )}
 
         {/* Brief accepted banner */}
         {acceptedId && (
