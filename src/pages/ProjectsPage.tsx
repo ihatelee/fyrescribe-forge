@@ -217,10 +217,6 @@ const ProjectsPage = () => {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-card border-border">
-                        <DropdownMenuItem onClick={(e) => handleDuplicate(project, e)} className="cursor-pointer">
-                          <Copy size={14} className="mr-2" />
-                          Duplicate
-                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
@@ -230,6 +226,10 @@ const ProjectsPage = () => {
                         >
                           <Download size={14} className="mr-2" />
                           Export
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => handleDuplicate(project, e)} className="cursor-pointer">
+                          <Copy size={14} className="mr-2" />
+                          Duplicate
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => handleArchive(project, e)} className="cursor-pointer">
                           <Archive size={14} className="mr-2" />
