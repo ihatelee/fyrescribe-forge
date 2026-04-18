@@ -685,7 +685,6 @@ export type Database = {
           theme: string
           updated_at: string
           user_id: string
-          whimsical_enabled: boolean
         }
         Insert: {
           created_at?: string
@@ -699,7 +698,6 @@ export type Database = {
           theme?: string
           updated_at?: string
           user_id: string
-          whimsical_enabled?: boolean
         }
         Update: {
           created_at?: string
@@ -713,7 +711,6 @@ export type Database = {
           theme?: string
           updated_at?: string
           user_id?: string
-          whimsical_enabled?: boolean
         }
         Relationships: []
       }
