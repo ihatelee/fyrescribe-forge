@@ -334,6 +334,7 @@ const Sidebar = () => {
           </p>
         )}
 
+        <div data-tour="sync-buttons" className="space-y-1">
         {/* Sync Lore + Full Sync */}
         <div className="flex items-center gap-1">
           <button
@@ -394,6 +395,7 @@ const Sidebar = () => {
         {tagsMessage && (
           <p className="px-3 text-[10px] text-text-dimmed">{tagsMessage}</p>
         )}
+        </div>
 
         {/* Visual divider between sync controls and Lore Inbox */}
         <div className="h-px bg-border my-2" />

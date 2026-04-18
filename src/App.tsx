@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProjectProvider } from "./contexts/ProjectContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { OnboardingProvider } from "./contexts/OnboardingContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GlobalSparkle from "./components/GlobalSparkle";
 import OutrunGlobals from "./components/OutrunGlobals";
@@ -34,21 +35,23 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<AuthPage />} />
-              <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
-              <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
-              <Route path="/project/:projectId/manuscript" element={<ProtectedRoute><ManuscriptPage /></ProtectedRoute>} />
-              <Route path="/manuscript" element={<ProtectedRoute><ManuscriptPage /></ProtectedRoute>} />
-              <Route path="/world/:category" element={<ProtectedRoute><EntityGalleryPage /></ProtectedRoute>} />
-              <Route path="/world" element={<ProtectedRoute><EntityGalleryPage /></ProtectedRoute>} />
-              <Route path="/entity/:id" element={<ProtectedRoute><EntityDetailPage /></ProtectedRoute>} />
-              <Route path="/timeline" element={<ProtectedRoute><TimelinePage /></ProtectedRoute>} />
-              <Route path="/pov-tracker" element={<ProtectedRoute><POVTrackerPage /></ProtectedRoute>} />
-              <Route path="/lore-inbox" element={<ProtectedRoute><LoreInboxPage /></ProtectedRoute>} />
-              <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <OnboardingProvider>
+              <Routes>
+                <Route path="/" element={<AuthPage />} />
+                <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+                <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+                <Route path="/project/:projectId/manuscript" element={<ProtectedRoute><ManuscriptPage /></ProtectedRoute>} />
+                <Route path="/manuscript" element={<ProtectedRoute><ManuscriptPage /></ProtectedRoute>} />
+                <Route path="/world/:category" element={<ProtectedRoute><EntityGalleryPage /></ProtectedRoute>} />
+                <Route path="/world" element={<ProtectedRoute><EntityGalleryPage /></ProtectedRoute>} />
+                <Route path="/entity/:id" element={<ProtectedRoute><EntityDetailPage /></ProtectedRoute>} />
+                <Route path="/timeline" element={<ProtectedRoute><TimelinePage /></ProtectedRoute>} />
+                <Route path="/pov-tracker" element={<ProtectedRoute><POVTrackerPage /></ProtectedRoute>} />
+                <Route path="/lore-inbox" element={<ProtectedRoute><LoreInboxPage /></ProtectedRoute>} />
+                <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </OnboardingProvider>
           </BrowserRouter>
         </TooltipProvider>
       </ProjectProvider>

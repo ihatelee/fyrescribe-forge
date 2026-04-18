@@ -59,7 +59,7 @@ const POVTrackerPage = () => {
   return (
     <AppLayout>
       <MobileUnavailable feature="POV Tracker" />
-      <div className="hidden lg:block p-6">
+      <div data-tour="pov-panel" className="hidden lg:block p-6">
         <h1 className="font-display text-xl text-foreground tracking-wide mb-6">
           POV Tracker
         </h1>

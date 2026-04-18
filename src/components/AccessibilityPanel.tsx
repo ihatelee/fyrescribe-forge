@@ -1,7 +1,6 @@
 import { SlidersHorizontal, PlayCircle } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme, type InterfaceScale } from "@/contexts/ThemeContext";
-import { useActiveProject } from "@/contexts/ProjectContext";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
@@ -24,23 +23,7 @@ const AccessibilityPanel = () => {
     dyslexiaFont,
     setDyslexiaFont,
   } = useTheme();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { activeProject } = useActiveProject();
-
-  const handleShowTutorial = () => {
-    const onManuscript = location.pathname.includes("/manuscript");
-    if (!onManuscript) {
-      const target = activeProject
-        ? `/project/${activeProject.id}/manuscript`
-        : "/manuscript";
-      navigate(target);
-      // Wait for ManuscriptPage to mount its listener
-      setTimeout(() => window.dispatchEvent(new Event("onboarding-replay")), 600);
-    } else {
-      window.dispatchEvent(new Event("onboarding-replay"));
-    }
-  };
+  const { startTour } = useOnboarding();
 
   return (
     <DropdownMenu>
@@ -111,7 +94,7 @@ const AccessibilityPanel = () => {
 
         {/* Replay onboarding tutorial */}
         <DropdownMenuItem
-          onSelect={handleShowTutorial}
+          onSelect={() => startTour()}
           className="cursor-pointer flex items-center gap-2"
         >
           <PlayCircle size={14} className="text-gold" />
