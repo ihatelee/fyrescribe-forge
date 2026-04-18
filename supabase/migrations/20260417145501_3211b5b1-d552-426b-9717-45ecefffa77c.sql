@@ -1,4 +1,4 @@
-CREATE TABLE public.lore_link_suggestions (
+CREATE TABLE IF NOT EXISTS public.lore_link_suggestions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE NOT NULL,
   entity_a_id UUID REFERENCES public.entities(id) ON DELETE CASCADE NOT NULL,

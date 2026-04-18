@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Migration cleanup + drop scene_tags
+
+- `supabase/migrations/20260417145501_3211b5b1.sql` — added `IF NOT EXISTS` to `CREATE TABLE lore_link_suggestions` so clean DB replays no longer fail when the duplicate migration (`20260419100000`) runs after it.
+- `supabase/migrations/20260419100000_create_lore_link_suggestions.sql` — converted to a documented no-op. The table was already created by `20260417145501`; the duplicate `CREATE TABLE` without an `IF NOT EXISTS` guard would have errored on replay.
+- `supabase/migrations/20260417000000_notes_user_id_rls.sql` — wrapped the `ALTER TABLE notes` block in a `DO $$ BEGIN IF EXISTS (...) THEN ... END IF; END $$` conditional. On clean replay the notes table is created later (`20260417002613`), so this migration is now a safe no-op when the table doesn't exist yet.
+- `supabase/migrations/20260420000000_db_cleanup.sql` — new migration. Drops duplicate RLS policy `"Users can manage their own mentions"` from `entity_mentions` (the weaker version lacking `WITH CHECK`, created by `20260418000000`); the correct policy `"Users manage own entity_mentions"` (with `WITH CHECK`, from `20260417041534`) is retained. Also drops the orphaned `scene_tags` table, which was created in the initial migration but has never been referenced in any application code.
+
+---
+
 ## 2026-04-17 — Extend search to manuscript content
 
 - `src/hooks/useLoreSearch.ts` — added `SceneSearchResult` interface (`type: "scene"`, `id`, `title`, `chapterTitle`, `content`). Added a fourth parallel query (`scenes` table, `ilike` on `content`, with `chapters(title)` join, limit 10) to the existing `Promise.all`. Results mapped to `SceneSearchResult[]` and returned as `sceneResults`. Hook now returns `{ results, sceneResults, isLoading, error }`.
