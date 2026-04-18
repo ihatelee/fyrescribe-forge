@@ -1343,7 +1343,7 @@ const ManuscriptPage = () => {
               </div>
 
               {/* Mobile / tablet-portrait: Format menu */}
-              <div className="lg:hidden">
+              <div className="lg:hidden flex items-center gap-1">
                 <button
                   ref={formatButtonRef}
                   onClick={openFormatMenu}
@@ -1351,6 +1351,14 @@ const ManuscriptPage = () => {
                 >
                   <Type size={14} />
                   Format
+                </button>
+                <button
+                  onClick={handleThesaurus}
+                  className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
+                  aria-label="Thesaurus"
+                >
+                  <BookOpen size={14} />
+                  Thesaurus
                 </button>
                 {formatMenuOpen && (
                   createPortal(
@@ -1381,13 +1389,6 @@ const ManuscriptPage = () => {
                             aria-label="Italic"
                           >
                             <Italic size={14} />
-                          </button>
-                          <button
-                            onClick={() => { handleThesaurus(); setFormatMenuOpen(false); }}
-                            className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
-                          >
-                            <BookOpen size={14} />
-                            Thesaurus
                           </button>
                         </div>
                         <TextSizeSelector />
