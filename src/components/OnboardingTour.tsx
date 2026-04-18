@@ -275,6 +275,15 @@ const OnboardingTour = ({
 
   const pos = computeTooltipPos();
 
+  /* Measure actual tooltip height after render so we can clamp it inside the viewport. */
+  useLayoutEffect(() => {
+    if (!tooltipRef.current) return;
+    const h = tooltipRef.current.offsetHeight;
+    if (h && Math.abs(h - tooltipH) > 2) {
+      setTooltipH(h);
+    }
+  });
+
   /* SVG mask for spotlight cutout */
   const spotlightCutout = rect && (
     <svg
