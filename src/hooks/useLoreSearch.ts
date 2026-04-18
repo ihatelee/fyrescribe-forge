@@ -11,8 +11,17 @@ export interface LoreSearchResult {
   summary: string | null;
 }
 
+export interface SceneSearchResult {
+  type: "scene";
+  id: string;
+  title: string;
+  chapterTitle: string;
+  content: string;
+}
+
 export function useLoreSearch(projectId: string | undefined, query: string) {
   const [results, setResults] = useState<LoreSearchResult[]>([]);
+  const [sceneResults, setSceneResults] = useState<SceneSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,6 +29,7 @@ export function useLoreSearch(projectId: string | undefined, query: string) {
     const q = query.trim();
     if (!projectId || q.length < 2) {
       setResults([]);
+      setSceneResults([]);
       setIsLoading(false);
       return;
     }
@@ -37,15 +47,21 @@ export function useLoreSearch(projectId: string | undefined, query: string) {
           .is("archived_at", null)
           .limit(20);
 
-      const [nameRes, fieldsRes, sectionsRes] = await Promise.all([
+      const [nameRes, fieldsRes, sectionsRes, sceneRes] = await Promise.all([
         base().or(`name.ilike.%${q}%,summary.ilike.%${q}%`),
         base().filter("fields::text", "ilike", `%${q}%`),
         base().filter("sections::text", "ilike", `%${q}%`),
+        supabase
+          .from("scenes")
+          .select("id, title, content, chapters(title)")
+          .eq("project_id", projectId)
+          .ilike("content", `%${q}%`)
+          .limit(10),
       ]);
 
       if (cancelled) return;
 
-      const err = nameRes.error ?? fieldsRes.error ?? sectionsRes.error;
+      const err = nameRes.error ?? fieldsRes.error ?? sectionsRes.error ?? sceneRes.error;
       if (err) {
         setError(err.message);
         setIsLoading(false);
@@ -65,7 +81,17 @@ export function useLoreSearch(projectId: string | undefined, query: string) {
         }
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mappedScenes: SceneSearchResult[] = (sceneRes.data ?? []).map((s: any) => ({
+        type: "scene" as const,
+        id: s.id,
+        title: s.title,
+        chapterTitle: s.chapters?.title ?? "",
+        content: s.content ?? "",
+      }));
+
       setResults(merged);
+      setSceneResults(mappedScenes);
       setIsLoading(false);
     }, 300);
 
@@ -75,5 +101,5 @@ export function useLoreSearch(projectId: string | undefined, query: string) {
     };
   }, [projectId, query]);
 
-  return { results, isLoading, error };
+  return { results, sceneResults, isLoading, error };
 }

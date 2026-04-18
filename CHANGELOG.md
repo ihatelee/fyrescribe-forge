@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Extend search to manuscript content
+
+- `src/hooks/useLoreSearch.ts` — added `SceneSearchResult` interface (`type: "scene"`, `id`, `title`, `chapterTitle`, `content`). Added a fourth parallel query (`scenes` table, `ilike` on `content`, with `chapters(title)` join, limit 10) to the existing `Promise.all`. Results mapped to `SceneSearchResult[]` and returned as `sceneResults`. Hook now returns `{ results, sceneResults, isLoading, error }`.
+- `src/components/LoreSearchModal.tsx` — added `extractSnippet` helper (strips HTML, finds query term, returns ~60 chars either side with ellipsis). Added `handleSceneSelect` navigating to `/project/:projectId/manuscript?scene=:sceneId`. Results area now shows an "Entities" section header + entity list, then a "Manuscript" section header + scene list with `FileText` icon, scene title, chapter name, and content snippet. Empty state updated to "No results found" (covers both types). Placeholder updated to "Search entities and manuscript content". Max-height increased from `max-h-80` to `max-h-96` to accommodate two sections.
+
+---
+
 ## 2026-04-17 — Lore sheets export switched from .pdf to .docx
 
 - `src/lib/exportLore.ts` — replaced `jspdf` renderer with `docx` package. Structure per entity: entity name as `HEADING_1`, italic category label (9pt grey), non-empty sections as `HEADING_2` + body paragraphs, At a Glance fields as a borderless two-column table (key bold 35% / value 65%, light bottom-border separators on each row), linked entities (non-field-picker relationships) as a `bullet: { level: 0 }` list. Category group dividers (bold uppercase, thick bottom border) appear before the first entity in each group; page break inserted before every entity except the first. Document styles: H1 18pt bold, H2 11pt bold. Filename changed from `…-lore-sheets.pdf` to `…-lore-sheets.docx`.
