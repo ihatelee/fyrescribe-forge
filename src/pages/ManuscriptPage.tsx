@@ -1542,7 +1542,7 @@ const ManuscriptPage = () => {
                       onClick={() => setVersionMenuOpen(false)}
                     />
                     <div
-                      className="fixed z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl py-1 min-w-[180px]"
+                      className="fixed z-50 bg-fyrescribe-raised border border-border rounded-md shadow-xl py-1 min-w-[180px]"
                       style={{ bottom: versionMenuPos.bottom, left: versionMenuPos.left }}
                     >
                       <button
