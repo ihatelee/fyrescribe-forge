@@ -47,8 +47,9 @@ const VersionHistoryPanel = ({
 
   useEffect(() => {
     let cancelled = false;
+    let isInitial = true;
     const load = async () => {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const { data, error } = await supabase
         .from("scene_versions")
         .select("*")
@@ -57,7 +58,10 @@ const VersionHistoryPanel = ({
       if (!cancelled) {
         if (error) console.error("Failed to load versions:", error);
         setVersions((data as SceneVersion[]) ?? []);
-        setLoading(false);
+        if (isInitial) {
+          setLoading(false);
+          isInitial = false;
+        }
       }
     };
     load();
