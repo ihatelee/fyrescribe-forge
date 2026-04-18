@@ -94,7 +94,7 @@ const AccessibilityPanel = () => {
 
         {/* Replay onboarding tutorial */}
         <DropdownMenuItem
-          onSelect={handleShowTutorial}
+          onSelect={() => startTour()}
           className="cursor-pointer flex items-center gap-2"
         >
           <PlayCircle size={14} className="text-gold" />
