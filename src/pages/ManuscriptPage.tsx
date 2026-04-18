@@ -26,7 +26,9 @@ import {
   PanelRight,
   Type,
   MoreHorizontal,
+  ScanSearch,
 } from "lucide-react";
+import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
 
 // ─── Utilities ────────────────────────────────────────────────────────
 
@@ -278,6 +280,10 @@ const ManuscriptPage = () => {
 
   const [dragSceneId, setDragSceneId] = useState<string | null>(null);
   const [dragOverChapterId, setDragOverChapterId] = useState<string | null>(null);
+
+  const [chapterMenuOpenId, setChapterMenuOpenId] = useState<string | null>(null);
+  const [continuityCheckingId, setContinuityCheckingId] = useState<string | null>(null);
+  const [continuityPanel, setContinuityPanel] = useState<{ chapterTitle: string; issues: ContinuityIssue[] } | null>(null);
 
   type TextSize = "small" | "medium" | "large" | "xl";
   const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
@@ -795,6 +801,24 @@ const ManuscriptPage = () => {
     setDragOverChapterId(null);
   };
 
+  // ─── Continuity check ───────────────────────────────────────────────
+
+  const handleCheckContinuity = async (chapterId: string) => {
+    setChapterMenuOpenId(null);
+    setContinuityCheckingId(chapterId);
+    try {
+      const res = await supabase.functions.invoke("check-continuity", {
+        body: { chapter_id: chapterId, project_id: projectId },
+      });
+      if (res.error) throw res.error;
+      setContinuityPanel({ chapterTitle: res.data.chapter_title, issues: res.data.issues ?? [] });
+    } catch (err) {
+      console.error("Continuity check failed:", err);
+    } finally {
+      setContinuityCheckingId(null);
+    }
+  };
+
   // ─── Formatting / thesaurus ─────────────────────────────────────────
 
   const applyFormat = useCallback((command: string) => {
@@ -1095,7 +1119,7 @@ const ManuscriptPage = () => {
             return (
               <div
                 key={chapter.id}
-                className={`mb-1 rounded-sm transition-colors ${
+                className={`relative mb-1 rounded-sm transition-colors group ${
                   dragOverChapterId === chapter.id ? "bg-gold-glow ring-1 ring-gold/30" : ""
                 }`}
                 onDragOver={(e) => { e.preventDefault(); setDragOverChapterId(chapter.id); }}
@@ -1146,7 +1170,35 @@ const ManuscriptPage = () => {
                       {chapter.title}
                     </span>
                   )}
+
+                  {/* 3-dots menu trigger */}
+                  {continuityCheckingId === chapter.id ? (
+                    <Loader2 size={11} className="ml-auto flex-shrink-0 animate-spin text-text-dimmed" />
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setChapterMenuOpenId(chapterMenuOpenId === chapter.id ? null : chapter.id); }}
+                      className="ml-auto opacity-0 group-hover:opacity-100 flex-shrink-0 p-0.5 rounded hover:bg-fyrescribe-hover transition-all text-text-dimmed hover:text-foreground"
+                    >
+                      <MoreHorizontal size={11} />
+                    </button>
+                  )}
                 </div>
+
+                {/* Chapter context menu */}
+                {chapterMenuOpenId === chapter.id && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setChapterMenuOpenId(null)} />
+                    <div className="absolute left-0 right-0 top-full z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl py-1 mt-0.5">
+                      <button
+                        onClick={() => handleCheckContinuity(chapter.id)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                      >
+                        <ScanSearch size={12} />
+                        Check Continuity
+                      </button>
+                    </div>
+                  </>
+                )}
 
                 {isExpanded && (
                   <div className="ml-4 mt-0.5 space-y-0.5">
@@ -1376,6 +1428,15 @@ const ManuscriptPage = () => {
               loading={thesaurusLoading}
               onClose={() => setThesaurusOpen(false)}
               onReplace={replaceWithSynonym}
+            />
+          )}
+
+          {/* Continuity panel */}
+          {continuityPanel && (
+            <ContinuityPanel
+              chapterTitle={continuityPanel.chapterTitle}
+              issues={continuityPanel.issues}
+              onClose={() => setContinuityPanel(null)}
             />
           )}
 
