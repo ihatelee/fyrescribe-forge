@@ -26,6 +26,7 @@ import {
   PanelRight,
   Type,
   MoreHorizontal,
+  MoreVertical,
   ScanSearch,
 } from "lucide-react";
 import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
@@ -1119,13 +1120,14 @@ const ManuscriptPage = () => {
             return (
               <div
                 key={chapter.id}
-                className={`relative mb-1 rounded-sm transition-colors group ${
+                className={`mb-1 rounded-sm transition-colors group ${
                   dragOverChapterId === chapter.id ? "bg-gold-glow ring-1 ring-gold/30" : ""
                 }`}
                 onDragOver={(e) => { e.preventDefault(); setDragOverChapterId(chapter.id); }}
                 onDragLeave={() => setDragOverChapterId(null)}
                 onDrop={() => handleDropSceneOnChapter(chapter.id)}
               >
+                <div className="relative">
                 <div
                   className={`w-full flex items-center gap-1 px-2 py-1.5 text-[13px] rounded-sm transition-colors ${
                     activeChapterId === chapter.id
@@ -1177,9 +1179,9 @@ const ManuscriptPage = () => {
                   ) : (
                     <button
                       onClick={(e) => { e.stopPropagation(); setChapterMenuOpenId(chapterMenuOpenId === chapter.id ? null : chapter.id); }}
-                      className="ml-auto opacity-0 group-hover:opacity-100 flex-shrink-0 p-0.5 rounded hover:bg-fyrescribe-hover transition-all text-text-dimmed hover:text-foreground"
+                      className="ml-auto flex-shrink-0 p-0.5 rounded hover:bg-fyrescribe-hover transition-all text-text-dimmed hover:text-foreground"
                     >
-                      <MoreHorizontal size={11} />
+                      <MoreVertical size={12} />
                     </button>
                   )}
                 </div>
@@ -1199,6 +1201,7 @@ const ManuscriptPage = () => {
                     </div>
                   </>
                 )}
+                </div>
 
                 {isExpanded && (
                   <div className="ml-4 mt-0.5 space-y-0.5">
