@@ -4,6 +4,23 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-17 — Scene version history + mobile responsive layout (pull)
+
+### Scene version history
+- `supabase/migrations/20260417201706_…sql` — creates `scene_versions` table: `scene_id` (FK → scenes, cascade delete), `project_id` (FK → projects), `name TEXT`, `content TEXT`, `word_count INTEGER`, `word_delta INTEGER` (delta from prior version), `summary TEXT`, `created_at`. Two indexes (scene_id+created_at, project_id). RLS: project owner only.
+- `supabase/functions/summarize-version/index.ts` — new edge function. Fetches the saved version and the immediately preceding version for the same scene. Diffs them via a single-sentence AI prompt (max 18 words) using Lovable's AI gateway (`google/gemini-2.5-flash`). Writes the summary back to `scene_versions.summary`. Falls back gracefully if no prior version exists (summarises the scene as-is instead of diffing).
+- `src/components/SaveVersionPopover.tsx` — small inline popover (absolute-positioned, opens above trigger) with an optional version name field and Save/Cancel. Enter key submits; Escape closes.
+- `src/components/VersionHistoryPanel.tsx` — slide-in panel listing all versions for the active scene, newest first. Each card shows name, date, word count, delta (+/−), and the AI-generated summary (polling until it appears). Restore button: two-step confirm; sets scene content and marks `is_dirty`. Delete button: two-step confirm; removes the version row.
+- `src/pages/ManuscriptPage.tsx` — integrated versioning: `handleSaveVersion` captures freshest content from `contentCache`, computes word delta vs prior version, inserts into `scene_versions`, then fire-and-forgets `summarize-version`. `handleRestoreVersion` writes restored content back to the scene and sets `is_dirty`. New toolbar controls: Save Version button (opens `SaveVersionPopover`), History button (opens `VersionHistoryPanel`). Version saved/failed toast (2.5 s). Chapter panel and format menu now have collapsible state tracked in component. Text size defaults to `small` on mobile and `medium` on desktop.
+
+### Mobile responsive layout
+- `src/components/AppLayout.tsx` — sidebar now split into two paths: desktop (`hidden lg:block` fixed sidebar) and mobile/tablet-portrait (slide-in drawer triggered by a custom `mobile-nav-toggle` / `mobile-nav-close` window event). Drawer has a backdrop overlay that closes on tap. Body scroll locked while drawer is open.
+- `src/components/Titlebar.tsx` — accepts `showSidebarToggle` prop; renders a hamburger `Menu` button (mobile-only, `lg:hidden`) that fires the `mobile-nav-toggle` event. Titlebar labels ("Settings", "Ambiance", "Profile") hidden on mobile (`hidden lg:inline`). Logo slightly smaller on mobile.
+- `src/components/MobileUnavailable.tsx` — new utility component. Shows a "not available on mobile" message with a `Monitor` icon for features that require desktop. Wrapped in `lg:hidden` so it never renders on desktop.
+- `src/pages/NotesPage.tsx` — notes list panel becomes a fixed left drawer on mobile (`translate-x` toggle), with a `PanelLeft` floating button to reopen it and a backdrop overlay to close it. Desktop layout unchanged (`lg:relative lg:w-[280px]`).
+
+---
+
 ## 2026-04-17 — Code audit and cleanup
 
 ### Audit findings
