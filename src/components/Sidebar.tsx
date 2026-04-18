@@ -395,6 +395,7 @@ const Sidebar = () => {
         {tagsMessage && (
           <p className="px-3 text-[10px] text-text-dimmed">{tagsMessage}</p>
         )}
+        </div>
 
         {/* Visual divider between sync controls and Lore Inbox */}
         <div className="h-px bg-border my-2" />
