@@ -106,6 +106,17 @@ const AccessibilityPanel = () => {
             className="scale-75"
           />
         </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        {/* Replay onboarding tutorial */}
+        <DropdownMenuItem
+          onSelect={handleShowTutorial}
+          className="cursor-pointer flex items-center gap-2"
+        >
+          <PlayCircle size={14} className="text-gold" />
+          <span className="flex-1 text-sm">Show Tutorial</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
