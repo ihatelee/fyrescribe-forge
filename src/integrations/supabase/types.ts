@@ -448,36 +448,6 @@ export type Database = {
         }
         Relationships: []
       }
-      scene_tags: {
-        Row: {
-          scene_id: string
-          tag_id: string
-        }
-        Insert: {
-          scene_id: string
-          tag_id: string
-        }
-        Update: {
-          scene_id?: string
-          tag_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "scene_tags_scene_id_fkey"
-            columns: ["scene_id"]
-            isOneToOne: false
-            referencedRelation: "scenes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scene_tags_tag_id_fkey"
-            columns: ["tag_id"]
-            isOneToOne: false
-            referencedRelation: "tags"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       scene_versions: {
         Row: {
           content: string
