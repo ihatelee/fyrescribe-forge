@@ -309,6 +309,7 @@ const NotesPage = () => {
 
         {/* ─── Left panel: note list ─────────────────────────────── */}
         <div
+          data-tour="notes-panel"
           className={`bg-fyrescribe-base border-r border-border flex flex-col flex-shrink-0
             lg:relative lg:w-[280px] lg:translate-x-0
             fixed left-0 top-20 bottom-0 w-[280px] z-50 transition-transform duration-200
