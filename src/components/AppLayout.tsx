@@ -32,7 +32,7 @@ const AppLayout = ({ children, showSidebar = true }: AppLayoutProps) => {
   }, [mobileNavOpen]);
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col">
+    <div className="h-[100dvh] overflow-hidden flex flex-col">
       <Titlebar showSidebarToggle={showSidebar} />
 
       {showSidebar && (

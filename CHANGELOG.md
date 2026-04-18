@@ -4,6 +4,17 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-18 — Mobile & manuscript bug fixes
+
+- `src/pages/ManuscriptPage.tsx` — **Bug 1 (dropdown backgrounds on mobile):** Format menu and Version menu dropdowns were `position: absolute` inside an ancestor with `overflow: hidden`, causing them to be clipped on mobile. Both dropdowns now use `position: fixed` with coordinates captured via `getBoundingClientRect()` at open time (same pattern as `POVSelector`). Added `formatButtonRef`, `versionMenuButtonRef`, `formatMenuPos`/`versionMenuPos` state, and `openFormatMenu`/`openVersionMenu` callbacks. Parent wrappers no longer need `relative`.
+- `src/pages/ManuscriptPage.tsx` — **Bug 2 (focus mode exit on mobile):** Focus mode toolbar rendered the full `formattingControls` set inline, leaving no room for the Exit button on narrow screens. Restructured to mirror the main toolbar: desktop shows all controls + Exit text; mobile shows a compact Format button + an X icon button (`ml-auto flex-shrink-0`) that is always visible and cannot be pushed off-screen. Focus mode container also gets `paddingBottom: env(safe-area-inset-bottom, 0px)` for iOS notch safety.
+- `src/pages/ManuscriptPage.tsx` — **Bug 3 (no bottom padding):** Scroll container changed from `py-10` to `pt-10 pb-32 lg:pb-24` — 8 rem bottom padding on mobile, 6 rem on desktop.
+- `src/pages/ManuscriptPage.tsx` — **Bug 4 (iOS Safari bottom bar):** Main editor container changed from `h-[calc(100vh-80px)]` to `h-[calc(100dvh-80px)]`.
+- `src/components/AppLayout.tsx` — **Bug 4:** Root layout container changed from `h-screen` to `h-[100dvh]`.
+- `src/index.css` — **Bug 4:** `html, body, #root` height declaration now sets `100vh` then overrides with `100dvh` (ignored by browsers that don't support it, used by iOS Safari 16+ and Chrome 108+).
+
+---
+
 ## 2026-04-17 — Migration cleanup + drop scene_tags
 
 - `supabase/migrations/20260417145501_3211b5b1.sql` — added `IF NOT EXISTS` to `CREATE TABLE lore_link_suggestions` so clean DB replays no longer fail when the duplicate migration (`20260419100000`) runs after it.

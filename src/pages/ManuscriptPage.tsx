@@ -269,12 +269,16 @@ const ManuscriptPage = () => {
   const [focusMode, setFocusMode] = useState(false);
   const [chapterPanelOpen, setChapterPanelOpen] = useState(false);
   const [formatMenuOpen, setFormatMenuOpen] = useState(false);
+  const [formatMenuPos, setFormatMenuPos] = useState({ top: 0, left: 0 });
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);
+  const [versionMenuPos, setVersionMenuPos] = useState({ bottom: 0, left: 0 });
   const [thesaurusOpen, setThesaurusOpen] = useState(false);
   const [thesaurusWord, setThesaurusWord] = useState("");
   const [thesaurusSynonyms, setThesaurusSynonyms] = useState<string[]>([]);
   const [thesaurusLoading, setThesaurusLoading] = useState(false);
   const savedRangeRef = useRef<Range | null>(null);
+  const formatButtonRef = useRef<HTMLButtonElement>(null);
+  const versionMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -826,6 +830,22 @@ const ManuscriptPage = () => {
     document.execCommand(command, false);
   }, []);
 
+  const openFormatMenu = useCallback(() => {
+    if (formatButtonRef.current) {
+      const rect = formatButtonRef.current.getBoundingClientRect();
+      setFormatMenuPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setFormatMenuOpen((v) => !v);
+  }, []);
+
+  const openVersionMenu = useCallback(() => {
+    if (versionMenuButtonRef.current) {
+      const rect = versionMenuButtonRef.current.getBoundingClientRect();
+      setVersionMenuPos({ bottom: window.innerHeight - rect.top + 4, left: rect.left });
+    }
+    setVersionMenuOpen((v) => !v);
+  }, []);
+
   const handleThesaurus = useCallback(async () => {
     const sel = window.getSelection();
     const raw = sel?.toString().trim() ?? "";
@@ -1050,14 +1070,30 @@ const ManuscriptPage = () => {
 
   if (focusMode) {
     return (
-      <div className="fixed inset-0 bg-background z-[100] flex flex-col">
-        <div className="flex items-center justify-between p-3">
-          {formattingControls}
+      <div className="fixed inset-0 bg-background z-[100] flex flex-col" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+        <div className="flex items-center gap-2 p-3">
+          {/* Desktop: all formatting controls inline */}
+          <div className="hidden lg:flex items-center gap-1 flex-1 min-w-0">
+            {formattingControls}
+          </div>
+          {/* Mobile: compact Format button (uses same ref + handler as main toolbar) */}
+          <div className="lg:hidden">
+            <button
+              ref={formatButtonRef}
+              onClick={openFormatMenu}
+              className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
+            >
+              <Type size={14} />
+              Format
+            </button>
+          </div>
+          {/* Exit — always visible, flex-shrink-0 so it can never be pushed off-screen */}
           <button
             onClick={() => setFocusMode(false)}
-            className="text-text-dimmed hover:text-text-secondary text-xs flex items-center gap-1 transition-colors"
+            className="ml-auto flex-shrink-0 text-text-dimmed hover:text-text-secondary text-xs flex items-center gap-1.5 transition-colors"
           >
-            Exit Focus Mode
+            <X size={14} />
+            <span className="hidden sm:inline">Exit Focus Mode</span>
           </button>
         </div>
         <div className="flex-1 flex justify-center overflow-y-auto pb-24 relative">
@@ -1284,7 +1320,7 @@ const ManuscriptPage = () => {
 
   return (
     <AppLayout>
-      <div className="flex h-[calc(100vh-80px)]">
+      <div className="flex h-[calc(100dvh-80px)]">
         {/* Editor area */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Subtle white overlay to lift legibility on dark themes */}
@@ -1306,9 +1342,10 @@ const ManuscriptPage = () => {
               </div>
 
               {/* Mobile / tablet-portrait: Format menu */}
-              <div className="lg:hidden relative">
+              <div className="lg:hidden">
                 <button
-                  onClick={() => setFormatMenuOpen((v) => !v)}
+                  ref={formatButtonRef}
+                  onClick={openFormatMenu}
                   className="p-1.5 rounded text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-1 text-xs"
                 >
                   <Type size={14} />
@@ -1320,7 +1357,9 @@ const ManuscriptPage = () => {
                       className="fixed inset-0 z-40"
                       onClick={() => setFormatMenuOpen(false)}
                     />
-                    <div className="absolute left-0 top-full mt-1 z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl p-3 flex flex-col gap-3 min-w-[260px]">
+                    <div
+                      className="fixed z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl p-3 flex flex-col gap-3 min-w-[260px]"
+                      style={{ top: formatMenuPos.top, left: formatMenuPos.left }}
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => { applyFormat("bold"); setFormatMenuOpen(false); }}
@@ -1379,7 +1418,7 @@ const ManuscriptPage = () => {
           </div>
 
           {/* Editor content */}
-          <div ref={scrollContainerRef} data-tour="editor" className="relative z-10 flex-1 overflow-y-auto flex justify-center py-10">
+          <div ref={scrollContainerRef} data-tour="editor" className="relative z-10 flex-1 overflow-y-auto flex justify-center pt-10 pb-32 lg:pb-24">
             <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -1484,10 +1523,11 @@ const ManuscriptPage = () => {
               </div>
 
               {/* Mobile / tablet-portrait: overflow menu */}
-              <div className="lg:hidden relative">
+              <div className="lg:hidden">
                 <div className="w-px h-3 bg-border inline-block mr-3 align-middle" />
                 <button
-                  onClick={() => setVersionMenuOpen((v) => !v)}
+                  ref={versionMenuButtonRef}
+                  onClick={openVersionMenu}
                   disabled={!activeSceneId}
                   aria-label="Version actions"
                   className="hover:text-text-secondary transition-colors disabled:opacity-40 align-middle"
@@ -1500,7 +1540,9 @@ const ManuscriptPage = () => {
                       className="fixed inset-0 z-40"
                       onClick={() => setVersionMenuOpen(false)}
                     />
-                    <div className="absolute left-0 bottom-full mb-1 z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl py-1 min-w-[180px]">
+                    <div
+                      className="fixed z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl py-1 min-w-[180px]"
+                      style={{ bottom: versionMenuPos.bottom, left: versionMenuPos.left }}
                       <button
                         onClick={() => {
                           setVersionMenuOpen(false);
