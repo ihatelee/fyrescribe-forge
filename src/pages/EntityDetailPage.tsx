@@ -1567,7 +1567,7 @@ const EntityDetailInner = () => {
           </div>
 
           {/* ===== AT A GLANCE PANEL ===== */}
-          <div className="w-full lg:w-[260px] flex-shrink-0">
+          <div data-tour="entity-record" className="w-full lg:w-[260px] flex-shrink-0">
             <div className="lg:sticky lg:top-16">
               <div className="bg-fyrescribe-raised border border-border rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-border">
