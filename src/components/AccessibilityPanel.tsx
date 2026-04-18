@@ -1,5 +1,7 @@
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, PlayCircle } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme, type InterfaceScale } from "@/contexts/ThemeContext";
+import { useActiveProject } from "@/contexts/ProjectContext";
 import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
