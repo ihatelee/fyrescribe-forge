@@ -1358,7 +1358,7 @@ const ManuscriptPage = () => {
                       onClick={() => setFormatMenuOpen(false)}
                     />
                     <div
-                      className="fixed z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl p-3 flex flex-col gap-3 min-w-[260px]"
+                      className="fixed z-50 bg-fyrescribe-raised border border-border rounded-md shadow-xl p-3 flex flex-col gap-3 min-w-[260px]"
                       style={{ top: formatMenuPos.top, left: formatMenuPos.left }}
                     >
                       <div className="flex items-center gap-1">
@@ -1542,7 +1542,7 @@ const ManuscriptPage = () => {
                       onClick={() => setVersionMenuOpen(false)}
                     />
                     <div
-                      className="fixed z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl py-1 min-w-[180px]"
+                      className="fixed z-50 bg-fyrescribe-raised border border-border rounded-md shadow-xl py-1 min-w-[180px]"
                       style={{ bottom: versionMenuPos.bottom, left: versionMenuPos.left }}
                     >
                       <button
