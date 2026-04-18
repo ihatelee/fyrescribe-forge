@@ -30,6 +30,8 @@ import {
   ScanSearch,
 } from "lucide-react";
 import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
+import OnboardingTour from "@/components/OnboardingTour";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Utilities ────────────────────────────────────────────────────────
 
@@ -248,6 +250,7 @@ const ManuscriptPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { activeProject } = useActiveProject();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const projectId = activeProject?.id || urlProjectId;
   const targetSceneId = searchParams.get("scene");
@@ -285,6 +288,7 @@ const ManuscriptPage = () => {
   const [chapterMenuOpenId, setChapterMenuOpenId] = useState<string | null>(null);
   const [continuityCheckingId, setContinuityCheckingId] = useState<string | null>(null);
   const [continuityPanel, setContinuityPanel] = useState<{ chapterTitle: string; issues: ContinuityIssue[] } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   type TextSize = "small" | "medium" | "large" | "xl";
   const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
