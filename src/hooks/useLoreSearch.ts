@@ -47,10 +47,12 @@ export function useLoreSearch(projectId: string | undefined, query: string) {
           .is("archived_at", null)
           .limit(20);
 
-      const [nameRes, fieldsRes, sectionsRes, sceneRes] = await Promise.all([
+      // Note: JSONB columns (fields, sections) can't be ilike-filtered via PostgREST
+      // without a SQL function. Name + summary + aliases cover most cases; scene
+      // content search handles the rest.
+      const [nameRes, aliasRes, sceneRes] = await Promise.all([
         base().or(`name.ilike.%${q}%,summary.ilike.%${q}%`),
-        base().filter("fields::text", "ilike", `%${q}%`),
-        base().filter("sections::text", "ilike", `%${q}%`),
+        base().contains("aliases", [q]),
         supabase
           .from("scenes")
           .select("id, title, content, chapters(title)")
@@ -61,7 +63,8 @@ export function useLoreSearch(projectId: string | undefined, query: string) {
 
       if (cancelled) return;
 
-      const err = nameRes.error ?? fieldsRes.error ?? sectionsRes.error ?? sceneRes.error;
+      const err = nameRes.error ?? sceneRes.error;
+      // aliasRes uses exact array containment; ignore its errors silently
       if (err) {
         setError(err.message);
         setIsLoading(false);
@@ -72,8 +75,7 @@ export function useLoreSearch(projectId: string | undefined, query: string) {
       const merged: LoreSearchResult[] = [];
       for (const row of [
         ...(nameRes.data ?? []),
-        ...(fieldsRes.data ?? []),
-        ...(sectionsRes.data ?? []),
+        ...(aliasRes.data ?? []),
       ]) {
         if (!seen.has(row.id)) {
           seen.add(row.id);
