@@ -552,6 +552,44 @@ const ManuscriptPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
+  // ─── First-time onboarding tour ─────────────────────────────────────
+  useEffect(() => {
+    if (!user || loading) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("user_preferences")
+        .select("has_completed_onboarding")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.error("Failed to load onboarding state:", error);
+        return;
+      }
+      // No row yet => brand new user => show tour
+      if (!data || data.has_completed_onboarding === false) {
+        // Brief delay so target elements are mounted/laid out
+        setTimeout(() => !cancelled && setShowOnboarding(true), 400);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, loading]);
+
+  const markOnboardingComplete = useCallback(async () => {
+    setShowOnboarding(false);
+    if (!user) return;
+    const { error } = await supabase
+      .from("user_preferences")
+      .upsert(
+        { user_id: user.id, has_completed_onboarding: true },
+        { onConflict: "user_id" },
+      );
+    if (error) console.error("Failed to save onboarding state:", error);
+  }, [user]);
+
   // ─── Auto-save ──────────────────────────────────────────────────────
 
 
