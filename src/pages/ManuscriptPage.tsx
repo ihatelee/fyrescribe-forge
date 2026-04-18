@@ -1565,12 +1565,6 @@ const ManuscriptPage = () => {
           </>
         )}
       </div>
-      {showOnboarding && (
-        <OnboardingTour
-          onFinish={markOnboardingComplete}
-          onSkip={markOnboardingComplete}
-        />
-      )}
     </AppLayout>
   );
 };
