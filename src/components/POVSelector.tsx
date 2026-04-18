@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { User, Check, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -123,14 +124,19 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
         />
       </button>
 
-      {open && dropdownPos && (
+      {open && dropdownPos && createPortal(
         <div
           role="listbox"
-          style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left }}
+          style={{
+            position: "fixed",
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            backgroundColor: "hsl(var(--bg-raised))",
+          }}
           className={cn(
             "z-[9999]",
             "min-w-[200px] max-h-72 overflow-y-auto",
-            "bg-fyrescribe-raised border border-border rounded-md shadow-xl",
+            "border border-border rounded-md shadow-xl",
             "animate-fade-in py-1",
           )}
         >
@@ -187,7 +193,8 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
               Saving…
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
