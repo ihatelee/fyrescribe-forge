@@ -10,6 +10,7 @@ import { OnboardingProvider } from "./contexts/OnboardingContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GlobalSparkle from "./components/GlobalSparkle";
 import OutrunGlobals from "./components/OutrunGlobals";
+import AmbianceAudioHost from "./components/AmbianceAudioHost";
 import AuthPage from "./pages/AuthPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import OnboardingPage from "./pages/OnboardingPage";
@@ -32,6 +33,7 @@ const App = () => (
         <TooltipProvider>
           <GlobalSparkle />
           <OutrunGlobals />
+          <AmbianceAudioHost />
           <Toaster />
           <Sonner />
           <BrowserRouter>

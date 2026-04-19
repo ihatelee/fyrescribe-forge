@@ -153,7 +153,7 @@ const AmbianceAudioHost = () => {
     };
   }, []);
 
-  return <audio ref={audioRef} preload="none" loop />;
+  return <audio ref={audioRef} preload="none" loop data-ambiance-host="true" />;
 };
 
 export default AmbianceAudioHost;

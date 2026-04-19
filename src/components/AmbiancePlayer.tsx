@@ -1,103 +1,36 @@
-import { useRef, useEffect, useState } from "react";
 import { Play, Pause, SpeakerHigh } from "@phosphor-icons/react";
-import { useTheme, ThemeName } from "@/contexts/ThemeContext";
-
-const VOLUME_KEY = "fyrescribe_ambiance_volume";
-
-// Soundscape tracks per theme.
-// Files live in the public `soundscapes` storage bucket.
-// To add/swap a track: upload an MP3 to the bucket via the backend UI,
-// then ensure the file name matches `{theme}.mp3`.
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const bucketUrl = (file: string) =>
-  `${SUPABASE_URL}/storage/v1/object/public/soundscapes/${file}`;
-
-type Track = { src: string; credit: string };
-
-const TRACKS: Record<ThemeName, Track> = {
-  outrun:    { src: "http://www.nihilore.com/s/Motion-Blur.mp3", credit: "♪ Nihilore" },
-  midnight:  { src: bucketUrl("AmbienceForest MIX64_09.mp3"),       credit: "♪ Untitled" },
-  fireside:  { src: bucketUrl("Fireplace With Night Ambience.mp3"), credit: "♪ Untitled" },
-  lavender:  { src: bucketUrl("Nature Rain.mp3"),                   credit: "♪ Untitled" },
-  enchanted: { src: bucketUrl("Nature.mp3"),                        credit: "♪ Untitled" },
-  daylight:  { src: bucketUrl("soundjay_nature_main-01.mp3"),       credit: "♪ Untitled" },
-};
-
-const readVolume = (): number => {
-  const saved = localStorage.getItem(VOLUME_KEY);
-  return saved !== null ? Number(saved) : 0.05;
-};
+import { useTheme } from "@/contexts/ThemeContext";
+import { ambianceStore, useAmbianceState } from "@/lib/ambianceStore";
+import { getTrackForTheme } from "./AmbianceAudioHost";
 
 /**
- * Compact horizontal ambiance player for the titlebar.
+ * Compact horizontal ambiance player UI for the titlebar.
  *
- * Behaviour:
- * - Hidden when the active theme has no playlist OR the user disabled Soundscape.
- * - Auto-plays on theme switch when Soundscape is on (browser may block first attempt).
- * - Toggling Soundscape off pauses immediately; toggling back on resumes if a track exists.
- * - Volume persisted to localStorage.
+ * This component is purely presentational/control: the actual <audio>
+ * element lives in <AmbianceAudioHost /> at the App root so playback
+ * survives route changes. We read state from the singleton ambianceStore
+ * and dispatch volume changes back into it.
  */
 const AmbiancePlayer = () => {
   const { theme, soundscape } = useTheme();
-  const track = TRACKS[theme];
+  const track = getTrackForTheme(theme);
   const hasTrack = !!track?.src;
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [volume, setVolume] = useState(readVolume);
+  const { playing, targetVolume } = useAmbianceState();
 
-  // Theme change → load new track and (if soundscape on) try to autoplay.
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !hasTrack) return;
-    audio.src = track.src;
-    audio.load();
-    if (soundscape) {
-      audio
-        .play()
-        .then(() => setPlaying(true))
-        .catch(() => setPlaying(false));
-    } else {
-      audio.pause();
-      setPlaying(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme]);
-
-  // Soundscape toggle changes: pause immediately when turned off, resume when turned on.
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !hasTrack) return;
-    if (!soundscape) {
-      audio.pause();
-      setPlaying(false);
-    } else if (audio.paused) {
-      audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [soundscape]);
-
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume;
-    localStorage.setItem(VOLUME_KEY, String(volume));
-  }, [volume]);
+  // Hide when the user disabled the soundscape or this theme has no track.
+  if (!hasTrack || !soundscape) return null;
 
   const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio || !hasTrack) return;
+    // Find the audio element rendered by the host and toggle it directly.
+    const audio = document.querySelector<HTMLAudioElement>("audio[data-ambiance-host]");
+    if (!audio) return;
     if (playing) {
       audio.pause();
-      setPlaying(false);
+      ambianceStore.set({ playing: false });
     } else {
-      if (!audio.src) {
-        audio.src = track.src;
-        audio.load();
-      }
-      audio.play().then(() => setPlaying(true)).catch(() => {});
+      audio.play().then(() => ambianceStore.set({ playing: true })).catch(() => {});
     }
   };
-
-  // Hide when the user disabled the soundscape or this theme has no track
-  if (!hasTrack || !soundscape) return null;
 
   const isOutrun = theme === "outrun";
   const accentVar = isOutrun ? "var(--neon-yellow)" : "var(--gold)";
@@ -113,8 +46,6 @@ const AmbiancePlayer = () => {
         boxShadow: `0 0 10px hsl(${accentVar} / 0.06)`,
       }}
     >
-      <audio ref={audioRef} src={track.src} preload="none" loop />
-
       <button
         onClick={togglePlay}
         aria-label={playing ? "Pause ambiance" : "Play ambiance"}
@@ -141,22 +72,24 @@ const AmbiancePlayer = () => {
         min={0}
         max={1}
         step={0.02}
-        value={volume}
-        onChange={(e) => setVolume(Number(e.target.value))}
+        value={targetVolume}
+        onChange={(e) => ambianceStore.set({ targetVolume: Number(e.target.value) })}
         className="w-20 h-[3px] cursor-pointer rounded appearance-none"
         style={{
           accentColor: accent,
-          background: `linear-gradient(to right, ${accent} ${volume * 100}%, ${accentFaint} ${volume * 100}%)`,
+          background: `linear-gradient(to right, ${accent} ${targetVolume * 100}%, ${accentFaint} ${targetVolume * 100}%)`,
         }}
         aria-label="Ambiance volume"
       />
 
-      <span
-        className="text-[9px] tracking-widest whitespace-nowrap"
-        style={{ color: `hsl(${accentVar} / 0.55)`, fontFamily: "var(--font-body)" }}
-      >
-        {track.credit}
-      </span>
+      {isOutrun && track.credit && (
+        <span
+          className="text-[9px] tracking-widest whitespace-nowrap"
+          style={{ color: `hsl(${accentVar} / 0.55)`, fontFamily: "var(--font-body)" }}
+        >
+          {track.credit}
+        </span>
+      )}
     </div>
   );
 };
