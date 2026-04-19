@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ThemeSwitcher from "./ThemeSwitcher";
 import AccessibilityPanel from "./AccessibilityPanel";
+import AmbiancePlayer from "./AmbiancePlayer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,6 +104,7 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
       )}
 
       <div className="flex items-center gap-2 lg:gap-4">
+        <AmbiancePlayer />
         <div className="flex flex-col items-center gap-0.5">
           <AccessibilityPanel />
           <span className="hidden lg:inline text-[10px] text-text-dimmed">Settings</span>
