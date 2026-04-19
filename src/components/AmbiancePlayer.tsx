@@ -34,18 +34,17 @@ const readVolume = (): number => {
  */
 const AmbiancePlayer = () => {
   const { theme, soundscape } = useTheme();
-  const tracks = PLAYLISTS[theme] ?? [];
+  const track = TRACKS[theme];
+  const hasTrack = !!track?.src;
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [trackIndex, setTrackIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(readVolume);
 
-  // Theme change → reset to track 0 and (if soundscape on) try to autoplay.
+  // Theme change → load new track and (if soundscape on) try to autoplay.
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !tracks.length) return;
-    setTrackIndex(0);
-    audio.src = tracks[0];
+    if (!audio || !hasTrack) return;
+    audio.src = track.src;
     audio.load();
     if (soundscape) {
       audio
@@ -62,7 +61,7 @@ const AmbiancePlayer = () => {
   // Soundscape toggle changes: pause immediately when turned off, resume when turned on.
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !tracks.length) return;
+    if (!audio || !hasTrack) return;
     if (!soundscape) {
       audio.pause();
       setPlaying(false);
@@ -72,18 +71,6 @@ const AmbiancePlayer = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soundscape]);
 
-  // Advance to next track when current ends
-  const handleEnded = () => {
-    if (!tracks.length) return;
-    const next = (trackIndex + 1) % tracks.length;
-    setTrackIndex(next);
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.src = tracks[next];
-    audio.load();
-    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-  };
-
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
     localStorage.setItem(VOLUME_KEY, String(volume));
@@ -91,21 +78,21 @@ const AmbiancePlayer = () => {
 
   const togglePlay = () => {
     const audio = audioRef.current;
-    if (!audio || !tracks.length) return;
+    if (!audio || !hasTrack) return;
     if (playing) {
       audio.pause();
       setPlaying(false);
     } else {
-      if (!audio.src && tracks[0]) {
-        audio.src = tracks[0];
+      if (!audio.src) {
+        audio.src = track.src;
         audio.load();
       }
       audio.play().then(() => setPlaying(true)).catch(() => {});
     }
   };
 
-  // Hide when the user disabled the soundscape or this theme has no tracks
-  if (!tracks.length || !soundscape) return null;
+  // Hide when the user disabled the soundscape or this theme has no track
+  if (!hasTrack || !soundscape) return null;
 
   const isOutrun = theme === "outrun";
   const accentVar = isOutrun ? "var(--neon-yellow)" : "var(--gold)";
