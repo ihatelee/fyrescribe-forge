@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-18 — Universal ambiance player (placeholder)
+
+- `src/components/AmbiancePlayer.tsx` (new) — replaces `OutrunMusicPlayer`. Multi-track sequential playlist per theme; tracks loop back to track 1 after the last. `PLAYLISTS` map holds CDN mp3 URL arrays keyed by `ThemeName`. Non-Outrun themes have empty arrays — the component returns `null` for those themes so the player stays hidden until real URLs are added. Volume persisted to `fyrescribe_ambiance_volume`. No autoplay on mount or theme change.
+- `src/pages/ManuscriptPage.tsx` — swapped `OutrunMusicPlayer` import for `AmbiancePlayer`; removed `theme === "outrun"` render guard (player self-hides via `null` return when playlist is empty); `hidden md:block` wrapper retained for mobile suppression.
+
+---
+
 ## 2026-04-17 — Lore Inbox: fast accept + Accept All
 
 - `src/pages/LoreInboxPage.tsx` — **Fast accept (optimistic UI):** `handleAccept` no longer blocks on the AI `merge-entity-sections` call. Extracted core logic into `acceptOneSuggestion` which applies a shallow section merge immediately (so the card dismisses at once), then fires the AI merge in the background as a fire-and-forget `.then()` chain that silently patches the entity when done.
