@@ -524,6 +524,22 @@ const ManuscriptPage = () => {
     return () => cancelAnimationFrame(id);
   }, [activeSceneId, loading, focusMode]);
 
+  // Esc exits focus mode (ignored when typing in an input/textarea so it
+  // doesn't conflict with inline title editing).
+  useEffect(() => {
+    if (!focusMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      e.preventDefault();
+      setFocusMode(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focusMode]);
+
   // ─── sessionStorage scroll/scene restore ────────────────────────────
 
   useEffect(() => {
