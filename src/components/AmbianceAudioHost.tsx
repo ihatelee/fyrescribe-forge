@@ -148,7 +148,9 @@ const AmbianceAudioHost = () => {
         ambianceStore.set({ currentVolume: cap });
       }
     });
-    return unsub;
+    return () => {
+      unsub();
+    };
   }, []);
 
   return <audio ref={audioRef} preload="none" loop />;
