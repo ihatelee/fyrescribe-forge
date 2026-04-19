@@ -1130,7 +1130,7 @@ const ManuscriptPage = () => {
           </button>
         </div>
         <div className="flex-1 flex justify-center overflow-y-auto relative">
-          <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto pb-[100px]`}>
+          <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto pb-[250px]`}>
             {activeChapter &&
               activeScene &&
               scenes
