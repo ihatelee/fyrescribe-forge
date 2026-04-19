@@ -328,9 +328,9 @@ const ManuscriptPage = () => {
 
   type ColumnWidth = "narrow" | "wide" | "full";
   const COLUMN_WIDTH_CLASSES: Record<ColumnWidth, string> = {
-    narrow: "max-w-2xl px-8",
-    wide: "max-w-4xl px-4",
-    full: "w-full px-8",
+    narrow: "max-w-2xl px-8 pb-8",
+    wide: "max-w-4xl px-4 pb-4",
+    full: "w-full px-8 pb-8",
   };
   const [columnWidth, setColumnWidth] = useState<ColumnWidth>("narrow");
 
@@ -1456,7 +1456,7 @@ const ManuscriptPage = () => {
           </div>
 
           {/* Editor content */}
-          <div ref={scrollContainerRef} data-tour="editor" className="relative z-10 flex-1 overflow-y-auto flex justify-center pt-10 pb-32 lg:pb-24">
+          <div ref={scrollContainerRef} data-tour="editor" className="relative z-10 flex-1 overflow-y-auto flex justify-center pt-10">
             <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
