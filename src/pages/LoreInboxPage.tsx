@@ -424,10 +424,18 @@ const LoreInboxPage = () => {
       if (v.trim()) sectionsToWrite[k] = v.trim();
     }
 
+    // For characters, the first name should always be a moniker so manuscript
+    // mentions of just the first name resolve to this character.
+    const firstToken = name.split(/\s+/)[0];
+    const shouldSeedFirstName =
+      payload.category === "characters" &&
+      !!firstToken &&
+      firstToken.toLowerCase() !== name.toLowerCase();
+
     // ── Check for existing entity with same name + category ──────────────
     const { data: existing } = await supabase
       .from("entities")
-      .select("id, summary, sections")
+      .select("id, summary, sections, aliases")
       .eq("project_id", activeProject.id)
       .eq("name", name)
       .eq("category", payload.category)
@@ -446,10 +454,24 @@ const LoreInboxPage = () => {
       const optimisticSections = hasNew
         ? { ...existingSections, ...sectionsToWrite }
         : existingSections;
-      const updates: { sections: Record<string, string>; summary?: string } = {
+      const updates: {
+        sections: Record<string, string>;
+        summary?: string;
+        aliases?: string[];
+      } = {
         sections: optimisticSections,
       };
       if (!existing.summary && description) updates.summary = description;
+
+      // Ensure first-name alias exists on the existing character entity too.
+      if (shouldSeedFirstName) {
+        const existingAliases = (existing.aliases ?? []) as string[];
+        const hasFirstName = existingAliases.some(
+          (a) => a.toLowerCase() === firstToken.toLowerCase(),
+        );
+        if (!hasFirstName) updates.aliases = [...existingAliases, firstToken];
+      }
+
       await supabase.from("entities").update(updates).eq("id", existing.id);
       entityId = existing.id;
 
@@ -469,13 +491,7 @@ const LoreInboxPage = () => {
       }
     } else {
       // ── Create path: insert new entity ───────────────────────────────────
-      const firstToken = name.split(/\s+/)[0];
-      const seedAliases =
-        payload.category === "characters" &&
-        firstToken &&
-        firstToken.toLowerCase() !== name.toLowerCase()
-          ? [firstToken]
-          : [];
+      const seedAliases = shouldSeedFirstName ? [firstToken] : [];
       const { data: entity, error: entityError } = await supabase
         .from("entities")
         .insert({
