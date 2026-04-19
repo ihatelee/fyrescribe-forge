@@ -1477,6 +1477,7 @@ const ManuscriptPage = () => {
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
+                    onKeyDown={handleEditorKeyDown}
                     onClick={handleEditorClick}
                   />
                 </>
