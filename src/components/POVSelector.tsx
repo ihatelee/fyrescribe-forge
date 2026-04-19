@@ -23,6 +23,7 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load POV-flagged character entities for the project
   useEffect(() => {
