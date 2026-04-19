@@ -328,9 +328,9 @@ const ManuscriptPage = () => {
 
   type ColumnWidth = "narrow" | "wide" | "full";
   const COLUMN_WIDTH_CLASSES: Record<ColumnWidth, string> = {
-    narrow: "max-w-2xl px-8",
-    wide: "max-w-4xl px-4",
-    full: "w-full px-8",
+    narrow: "max-w-2xl px-8 pb-8",
+    wide: "max-w-4xl px-4 pb-4",
+    full: "w-full px-8 pb-8",
   };
   const [columnWidth, setColumnWidth] = useState<ColumnWidth>("narrow");
 
