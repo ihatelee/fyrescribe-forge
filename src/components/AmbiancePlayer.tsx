@@ -4,18 +4,23 @@ import { useTheme, ThemeName } from "@/contexts/ThemeContext";
 
 const VOLUME_KEY = "fyrescribe_ambiance_volume";
 
-// Track + credit per theme.
-// To add a track: drop the MP3 in `public/soundscapes/` and update the `src` below.
-// Set `src: ""` to hide the player for that theme.
+// Soundscape tracks per theme.
+// Files live in the public `soundscapes` storage bucket.
+// To add/swap a track: upload an MP3 to the bucket via the backend UI,
+// then ensure the file name matches `{theme}.mp3`.
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const bucketUrl = (file: string) =>
+  `${SUPABASE_URL}/storage/v1/object/public/soundscapes/${file}`;
+
 type Track = { src: string; credit: string };
 
 const TRACKS: Record<ThemeName, Track> = {
   outrun:    { src: "http://www.nihilore.com/s/Motion-Blur.mp3", credit: "♪ Nihilore" },
-  midnight:  { src: "/soundscapes/midnight.mp3",  credit: "♪ Untitled" },
-  fireside:  { src: "/soundscapes/fireside.mp3",  credit: "♪ Untitled" },
-  enchanted: { src: "/soundscapes/enchanted.mp3", credit: "♪ Untitled" },
-  daylight:  { src: "/soundscapes/daylight.mp3",  credit: "♪ Untitled" },
-  lavender:  { src: "/soundscapes/lavender.mp3",  credit: "♪ Untitled" },
+  midnight:  { src: bucketUrl("midnight.mp3"),  credit: "♪ Untitled" },
+  fireside:  { src: bucketUrl("fireside.mp3"),  credit: "♪ Untitled" },
+  enchanted: { src: bucketUrl("enchanted.mp3"), credit: "♪ Untitled" },
+  daylight:  { src: bucketUrl("daylight.mp3"),  credit: "♪ Untitled" },
+  lavender:  { src: bucketUrl("lavender.mp3"),  credit: "♪ Untitled" },
 };
 
 const readVolume = (): number => {
