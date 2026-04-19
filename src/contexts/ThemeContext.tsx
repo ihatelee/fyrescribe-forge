@@ -13,8 +13,6 @@ interface ThemeContextType {
   setTheme: (t: ThemeName) => void;
   sparkle: boolean;
   setSparkle: (v: boolean) => void;
-  whimsical: boolean;
-  setWhimsical: (v: boolean) => void;
   iconSetName: IconSetName;
   setIconSet: (v: IconSetName) => void;
   icons: IconSet;
@@ -31,8 +29,6 @@ const ThemeContext = createContext<ThemeContextType>({
   setTheme: () => {},
   sparkle: false,
   setSparkle: () => {},
-  whimsical: false,
-  setWhimsical: () => {},
   iconSetName: "fantasy",
   setIconSet: () => {},
   icons: ICON_SETS.fantasy,
@@ -388,7 +384,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [theme, setThemeState] = useState<ThemeName>("midnight");
   const [sparkle, setSparkleState] = useState(false);
-  const [whimsical, setWhimsicalState] = useState(false);
   const [iconSetName, setIconSetState] = useState<IconSetName>("fantasy");
   const [interfaceScale, setInterfaceScaleState] = useState<InterfaceScale>(100);
   const [highContrast, setHighContrastState] = useState(false);
@@ -400,14 +395,13 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     supabase
       .from("user_preferences")
-      .select("theme, sparkle_enabled, whimsical_enabled, icon_set, interface_scale, high_contrast, dyslexia_font")
+      .select("theme, sparkle_enabled, icon_set, interface_scale, high_contrast, dyslexia_font")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
           setThemeState(data.theme as ThemeName);
           setSparkleState(data.sparkle_enabled);
-          setWhimsicalState(data.whimsical_enabled ?? false);
           if (data.icon_set) {
             setIconSetState(data.icon_set as IconSetName);
           } else {
@@ -433,14 +427,9 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     applyAccessibility(interfaceScale, highContrast, dyslexiaFont, theme);
   }, [theme, interfaceScale, highContrast, dyslexiaFont]);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("whimsical", whimsical);
-  }, [whimsical]);
-
   const persistPrefs = async (
     t: ThemeName,
     s: boolean,
-    w: boolean,
     i: IconSetName,
     scale: InterfaceScale,
     hc: boolean,
@@ -452,7 +441,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         user_id: user.id,
         theme: t,
         sparkle_enabled: s,
-        whimsical_enabled: w,
         icon_set: i,
         interface_scale: scale,
         high_contrast: hc,
@@ -465,37 +453,32 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   const setTheme = (t: ThemeName) => {
     setThemeState(t);
-    persistPrefs(t, sparkle, whimsical, iconSetName, interfaceScale, highContrast, dyslexiaFont);
+    persistPrefs(t, sparkle, iconSetName, interfaceScale, highContrast, dyslexiaFont);
   };
 
   const setSparkle = (v: boolean) => {
     setSparkleState(v);
-    persistPrefs(theme, v, whimsical, iconSetName, interfaceScale, highContrast, dyslexiaFont);
-  };
-
-  const setWhimsical = (v: boolean) => {
-    setWhimsicalState(v);
-    persistPrefs(theme, sparkle, v, iconSetName, interfaceScale, highContrast, dyslexiaFont);
+    persistPrefs(theme, v, iconSetName, interfaceScale, highContrast, dyslexiaFont);
   };
 
   const setIconSet = (v: IconSetName) => {
     setIconSetState(v);
-    persistPrefs(theme, sparkle, whimsical, v, interfaceScale, highContrast, dyslexiaFont);
+    persistPrefs(theme, sparkle, v, interfaceScale, highContrast, dyslexiaFont);
   };
 
   const setInterfaceScale = (v: InterfaceScale) => {
     setInterfaceScaleState(v);
-    persistPrefs(theme, sparkle, whimsical, iconSetName, v, highContrast, dyslexiaFont);
+    persistPrefs(theme, sparkle, iconSetName, v, highContrast, dyslexiaFont);
   };
 
   const setHighContrast = (v: boolean) => {
     setHighContrastState(v);
-    persistPrefs(theme, sparkle, whimsical, iconSetName, interfaceScale, v, dyslexiaFont);
+    persistPrefs(theme, sparkle, iconSetName, interfaceScale, v, dyslexiaFont);
   };
 
   const setDyslexiaFont = (v: boolean) => {
     setDyslexiaFontState(v);
-    persistPrefs(theme, sparkle, whimsical, iconSetName, interfaceScale, highContrast, v);
+    persistPrefs(theme, sparkle, iconSetName, interfaceScale, highContrast, v);
   };
 
   // Outrun theme always uses the sci-fi icon set regardless of saved preference
@@ -508,8 +491,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         setTheme,
         sparkle,
         setSparkle,
-        whimsical,
-        setWhimsical,
         iconSetName,
         setIconSet,
         icons,

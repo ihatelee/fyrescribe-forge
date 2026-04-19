@@ -265,7 +265,7 @@ const Sidebar = () => {
 
   return (
     <>
-    <div data-whimsical-sidebar className="w-[190px] h-full bg-fyrescribe-base border-r border-border flex flex-col">
+    <div className="w-[190px] h-full bg-fyrescribe-base border-r border-border flex flex-col">
       <div className="flex-1 overflow-y-auto py-4 px-2 space-y-6">
         <div>
           <div className="px-3 mb-2 text-[10px] font-medium uppercase tracking-widest text-text-dimmed">

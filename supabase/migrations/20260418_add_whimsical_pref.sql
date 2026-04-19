@@ -1,2 +1,0 @@
-ALTER TABLE public.user_preferences
-  ADD COLUMN IF NOT EXISTS whimsical_enabled boolean NOT NULL DEFAULT false;

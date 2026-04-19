@@ -8,7 +8,7 @@ import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { stripRtf, parseManuscript } from "@/lib/manuscriptParser";
-import AmbiancePlayer from "@/components/AmbiancePlayer";
+import OutrunMusicPlayer from "@/components/OutrunMusicPlayer";
 import POVSelector from "@/components/POVSelector";
 import SaveVersionPopover from "@/components/SaveVersionPopover";
 import VersionHistoryPanel, { SceneVersion } from "@/components/VersionHistoryPanel";
@@ -1098,7 +1098,7 @@ const ManuscriptPage = () => {
           </button>
         </div>
         <div className="flex-1 flex justify-center overflow-y-auto pb-24 relative">
-          <div data-prose-col className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
+          <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
             {activeChapter &&
               activeScene &&
               scenes
@@ -1301,9 +1301,11 @@ const ManuscriptPage = () => {
         )}
       </div>
 
-      <div className="hidden md:block border-t border-border">
-        <AmbiancePlayer />
-      </div>
+      {theme === "outrun" && (
+        <div className="border-t border-border">
+          <OutrunMusicPlayer />
+        </div>
+      )}
 
       <div className="p-3 border-t border-border">
         <button
@@ -1427,7 +1429,7 @@ const ManuscriptPage = () => {
 
           {/* Editor content */}
           <div ref={scrollContainerRef} data-tour="editor" className="relative z-10 flex-1 overflow-y-auto flex justify-center pt-10 pb-32 lg:pb-24">
-            <div data-prose-col className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
+            <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <Loader2 size={20} className="animate-spin text-text-dimmed" />

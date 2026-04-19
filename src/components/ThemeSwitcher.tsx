@@ -22,7 +22,7 @@ const THEMES: { value: ThemeName; label: string; swatch: string; suffix?: string
 ];
 
 const ThemeSwitcher = () => {
-  const { theme, setTheme, sparkle, setSparkle, whimsical, setWhimsical, iconSetName, setIconSet } = useTheme();
+  const { theme, setTheme, sparkle, setSparkle, iconSetName, setIconSet } = useTheme();
   // When outrun is active the icon set is forced to scifi regardless of saved preference
   const effectiveIconSet = theme === "outrun" ? "scifi" : iconSetName;
 
@@ -97,22 +97,6 @@ const ThemeSwitcher = () => {
             className="scale-75"
           />
         </DropdownMenuItem>
-
-        {/* Whimsical toggle — desktop only, not shown on Outrun */}
-        {theme !== "outrun" && (
-        <DropdownMenuItem
-          onSelect={(e) => e.preventDefault()}
-          className="hidden md:flex cursor-pointer items-center gap-2"
-        >
-          <span className="text-gold flex-shrink-0 text-sm leading-none">✦</span>
-          <span className="flex-1 text-sm">Make it Whimsical</span>
-          <Switch
-            checked={whimsical}
-            onCheckedChange={setWhimsical}
-            className="scale-75"
-          />
-        </DropdownMenuItem>
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
