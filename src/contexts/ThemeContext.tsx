@@ -436,6 +436,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const persistPrefs = async (
     t: ThemeName,
     s: boolean,
+    snd: boolean,
     i: IconSetName,
     scale: InterfaceScale,
     hc: boolean,
@@ -447,6 +448,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         user_id: user.id,
         theme: t,
         sparkle_enabled: s,
+        soundscape_enabled: snd,
         icon_set: i,
         interface_scale: scale,
         high_contrast: hc,
@@ -459,32 +461,37 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   const setTheme = (t: ThemeName) => {
     setThemeState(t);
-    persistPrefs(t, sparkle, iconSetName, interfaceScale, highContrast, dyslexiaFont);
+    persistPrefs(t, sparkle, soundscape, iconSetName, interfaceScale, highContrast, dyslexiaFont);
   };
 
   const setSparkle = (v: boolean) => {
     setSparkleState(v);
-    persistPrefs(theme, v, iconSetName, interfaceScale, highContrast, dyslexiaFont);
+    persistPrefs(theme, v, soundscape, iconSetName, interfaceScale, highContrast, dyslexiaFont);
+  };
+
+  const setSoundscape = (v: boolean) => {
+    setSoundscapeState(v);
+    persistPrefs(theme, sparkle, v, iconSetName, interfaceScale, highContrast, dyslexiaFont);
   };
 
   const setIconSet = (v: IconSetName) => {
     setIconSetState(v);
-    persistPrefs(theme, sparkle, v, interfaceScale, highContrast, dyslexiaFont);
+    persistPrefs(theme, sparkle, soundscape, v, interfaceScale, highContrast, dyslexiaFont);
   };
 
   const setInterfaceScale = (v: InterfaceScale) => {
     setInterfaceScaleState(v);
-    persistPrefs(theme, sparkle, iconSetName, v, highContrast, dyslexiaFont);
+    persistPrefs(theme, sparkle, soundscape, iconSetName, v, highContrast, dyslexiaFont);
   };
 
   const setHighContrast = (v: boolean) => {
     setHighContrastState(v);
-    persistPrefs(theme, sparkle, iconSetName, interfaceScale, v, dyslexiaFont);
+    persistPrefs(theme, sparkle, soundscape, iconSetName, interfaceScale, v, dyslexiaFont);
   };
 
   const setDyslexiaFont = (v: boolean) => {
     setDyslexiaFontState(v);
-    persistPrefs(theme, sparkle, iconSetName, interfaceScale, highContrast, v);
+    persistPrefs(theme, sparkle, soundscape, iconSetName, interfaceScale, highContrast, v);
   };
 
   // Outrun theme always uses the sci-fi icon set regardless of saved preference
@@ -497,6 +504,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         setTheme,
         sparkle,
         setSparkle,
+        soundscape,
+        setSoundscape,
         iconSetName,
         setIconSet,
         icons,
