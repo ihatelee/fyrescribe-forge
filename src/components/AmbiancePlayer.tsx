@@ -4,15 +4,18 @@ import { useTheme, ThemeName } from "@/contexts/ThemeContext";
 
 const VOLUME_KEY = "fyrescribe_ambiance_volume";
 
-// Track URLs per theme. Add CDN mp3 URLs here when ready.
-// Empty array = the player stays hidden for that theme.
-const PLAYLISTS: Record<ThemeName, string[]> = {
-  outrun:    ["http://www.nihilore.com/s/Motion-Blur.mp3"],
-  midnight:  [],
-  fireside:  [],
-  enchanted: [],
-  daylight:  [],
-  lavender:  [],
+// Track + credit per theme.
+// To add a track: drop the MP3 in `public/soundscapes/` and update the `src` below.
+// Set `src: ""` to hide the player for that theme.
+type Track = { src: string; credit: string };
+
+const TRACKS: Record<ThemeName, Track> = {
+  outrun:    { src: "http://www.nihilore.com/s/Motion-Blur.mp3", credit: "♪ Nihilore" },
+  midnight:  { src: "/soundscapes/midnight.mp3",  credit: "♪ Untitled" },
+  fireside:  { src: "/soundscapes/fireside.mp3",  credit: "♪ Untitled" },
+  enchanted: { src: "/soundscapes/enchanted.mp3", credit: "♪ Untitled" },
+  daylight:  { src: "/soundscapes/daylight.mp3",  credit: "♪ Untitled" },
+  lavender:  { src: "/soundscapes/lavender.mp3",  credit: "♪ Untitled" },
 };
 
 const readVolume = (): number => {
