@@ -98,6 +98,14 @@ const NotesPage = () => {
     return () => window.removeEventListener("mousedown", onDown);
   }, [menuOpenId]);
 
+  // ─── Autosize title textarea when active note changes ───────────────
+  useEffect(() => {
+    const t = titleInputRef.current;
+    if (!t) return;
+    t.style.height = "auto";
+    t.style.height = `${t.scrollHeight}px`;
+  }, [activeNoteId]);
+
   // ─── Save (debounced) ───────────────────────────────────────────────
   const persistNote = useDebouncedCallback(
     async (noteId: string, patch: { title?: string; content?: string }) => {
