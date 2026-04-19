@@ -4,15 +4,18 @@ import { useTheme, ThemeName } from "@/contexts/ThemeContext";
 
 const VOLUME_KEY = "fyrescribe_ambiance_volume";
 
-// Track URLs per theme. Add CDN mp3 URLs here when ready.
-// Empty array = the player stays hidden for that theme.
-const PLAYLISTS: Record<ThemeName, string[]> = {
-  outrun:    ["http://www.nihilore.com/s/Motion-Blur.mp3"],
-  midnight:  [],
-  fireside:  [],
-  enchanted: [],
-  daylight:  [],
-  lavender:  [],
+// Track + credit per theme.
+// To add a track: drop the MP3 in `public/soundscapes/` and update the `src` below.
+// Set `src: ""` to hide the player for that theme.
+type Track = { src: string; credit: string };
+
+const TRACKS: Record<ThemeName, Track> = {
+  outrun:    { src: "http://www.nihilore.com/s/Motion-Blur.mp3", credit: "♪ Nihilore" },
+  midnight:  { src: "/soundscapes/midnight.mp3",  credit: "♪ Untitled" },
+  fireside:  { src: "/soundscapes/fireside.mp3",  credit: "♪ Untitled" },
+  enchanted: { src: "/soundscapes/enchanted.mp3", credit: "♪ Untitled" },
+  daylight:  { src: "/soundscapes/daylight.mp3",  credit: "♪ Untitled" },
+  lavender:  { src: "/soundscapes/lavender.mp3",  credit: "♪ Untitled" },
 };
 
 const readVolume = (): number => {
@@ -31,18 +34,17 @@ const readVolume = (): number => {
  */
 const AmbiancePlayer = () => {
   const { theme, soundscape } = useTheme();
-  const tracks = PLAYLISTS[theme] ?? [];
+  const track = TRACKS[theme];
+  const hasTrack = !!track?.src;
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [trackIndex, setTrackIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(readVolume);
 
-  // Theme change → reset to track 0 and (if soundscape on) try to autoplay.
+  // Theme change → load new track and (if soundscape on) try to autoplay.
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !tracks.length) return;
-    setTrackIndex(0);
-    audio.src = tracks[0];
+    if (!audio || !hasTrack) return;
+    audio.src = track.src;
     audio.load();
     if (soundscape) {
       audio
@@ -59,7 +61,7 @@ const AmbiancePlayer = () => {
   // Soundscape toggle changes: pause immediately when turned off, resume when turned on.
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !tracks.length) return;
+    if (!audio || !hasTrack) return;
     if (!soundscape) {
       audio.pause();
       setPlaying(false);
@@ -69,18 +71,6 @@ const AmbiancePlayer = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soundscape]);
 
-  // Advance to next track when current ends
-  const handleEnded = () => {
-    if (!tracks.length) return;
-    const next = (trackIndex + 1) % tracks.length;
-    setTrackIndex(next);
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.src = tracks[next];
-    audio.load();
-    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-  };
-
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
     localStorage.setItem(VOLUME_KEY, String(volume));
@@ -88,21 +78,21 @@ const AmbiancePlayer = () => {
 
   const togglePlay = () => {
     const audio = audioRef.current;
-    if (!audio || !tracks.length) return;
+    if (!audio || !hasTrack) return;
     if (playing) {
       audio.pause();
       setPlaying(false);
     } else {
-      if (!audio.src && tracks[0]) {
-        audio.src = tracks[0];
+      if (!audio.src) {
+        audio.src = track.src;
         audio.load();
       }
       audio.play().then(() => setPlaying(true)).catch(() => {});
     }
   };
 
-  // Hide when the user disabled the soundscape or this theme has no tracks
-  if (!tracks.length || !soundscape) return null;
+  // Hide when the user disabled the soundscape or this theme has no track
+  if (!hasTrack || !soundscape) return null;
 
   const isOutrun = theme === "outrun";
   const accentVar = isOutrun ? "var(--neon-yellow)" : "var(--gold)";
@@ -118,7 +108,7 @@ const AmbiancePlayer = () => {
         boxShadow: `0 0 10px hsl(${accentVar} / 0.06)`,
       }}
     >
-      <audio ref={audioRef} src={tracks[0]} preload="none" onEnded={handleEnded} />
+      <audio ref={audioRef} src={track.src} preload="none" loop />
 
       <button
         onClick={togglePlay}
@@ -155,6 +145,13 @@ const AmbiancePlayer = () => {
         }}
         aria-label="Ambiance volume"
       />
+
+      <span
+        className="text-[9px] tracking-widest whitespace-nowrap"
+        style={{ color: `hsl(${accentVar} / 0.55)`, fontFamily: "var(--font-body)" }}
+      >
+        {track.credit}
+      </span>
     </div>
   );
 };
