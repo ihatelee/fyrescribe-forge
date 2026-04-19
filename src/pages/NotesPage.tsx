@@ -138,7 +138,7 @@ const NotesPage = () => {
     if (!activeProject || !user) return;
     const { data, error } = await supabase
       .from("notes")
-      .insert({ project_id: activeProject.id, user_id: user.id, title: "Untitled", content: "" })
+      .insert({ project_id: activeProject.id, user_id: user.id, title: "", content: "" })
       .select("*")
       .single();
     if (error || !data) {
