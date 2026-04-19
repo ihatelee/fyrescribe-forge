@@ -1129,7 +1129,7 @@ const ManuscriptPage = () => {
             <span className="hidden sm:inline">Exit Focus Mode</span>
           </button>
         </div>
-        <div className="flex-1 flex justify-center overflow-y-auto pb-24 relative">
+        <div className="flex-1 flex justify-center overflow-y-auto pb-[100px] relative">
           <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto`}>
             {activeChapter &&
               activeScene &&
