@@ -1130,7 +1130,7 @@ const ManuscriptPage = () => {
           </button>
         </div>
         <div className="flex-1 flex justify-center overflow-y-auto relative">
-          <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto pb-[100px]`}>
+          <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto pb-[250px]`}>
             {activeChapter &&
               activeScene &&
               scenes
@@ -1457,7 +1457,7 @@ const ManuscriptPage = () => {
 
           {/* Editor content */}
           <div ref={scrollContainerRef} data-tour="editor" className="relative z-10 flex-1 overflow-y-auto flex justify-center pt-10">
-            <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto pb-[100px]`}>
+            <div className={`w-full ${COLUMN_WIDTH_CLASSES[columnWidth]} mx-auto pb-[250px]`}>
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <Loader2 size={20} className="animate-spin text-text-dimmed" />
