@@ -150,6 +150,16 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
       else entitySections[f.key] = f.value;
     }
 
+    // For characters, seed "Also known as" with the first name so manuscript
+    // mentions of just the first name resolve to this character.
+    const firstToken = entityName.split(/\s+/)[0];
+    const seedAliases =
+      category === "characters" &&
+      firstToken &&
+      firstToken.toLowerCase() !== entityName.toLowerCase()
+        ? [firstToken]
+        : [];
+
     const { data, error: insertError } = await supabase
       .from("entities")
       .insert({
@@ -159,7 +169,8 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
         summary: extractedSummary.trim() || null,
         fields: entityFields,
         sections: entitySections,
-      })
+        aliases: seedAliases,
+      } as never)
       .select("id")
       .single();
 
