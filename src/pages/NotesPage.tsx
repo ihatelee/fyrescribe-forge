@@ -463,13 +463,26 @@ const NotesPage = () => {
               {/* Editor body */}
               <div className="flex-1 overflow-y-auto">
                 <div className="max-w-3xl mx-auto px-10 py-10">
-                  <input
+                  <textarea
                     ref={titleInputRef}
                     key={`title-${activeNote.id}`}
                     value={activeNote.title}
                     onChange={(e) => handleTitleChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        editorRef.current?.focus();
+                      }
+                    }}
                     placeholder="Untitled"
-                    className="w-full bg-transparent outline-none border-none font-display text-3xl text-foreground mb-6 placeholder:text-text-dimmed/60"
+                    rows={1}
+                    ref-noop=""
+                    onInput={(e) => {
+                      const t = e.currentTarget;
+                      t.style.height = "auto";
+                      t.style.height = `${t.scrollHeight}px`;
+                    }}
+                    className="w-full bg-transparent outline-none border-none font-display text-3xl text-foreground mb-6 placeholder:text-text-dimmed/60 resize-none overflow-hidden leading-tight break-words"
                   />
 
                   <div
