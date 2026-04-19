@@ -693,20 +693,17 @@ const ManuscriptPage = () => {
     [activeSceneId, saveScene]
   );
 
-  // Custom Enter handling:
-  //   Enter        → paragraph break (two <br>s, producing a blank line gap)
-  //   Shift+Enter  → single line break (one <br>)
-  // Uses execCommand("insertHTML") so the change is captured by the browser's
-  // native undo stack and triggers the standard `input` event for autosave.
+  // Custom Enter handling — uses real newlines (the editor is whitespace-pre-wrap),
+  // which avoids inconsistent <br>/<div>/<p> insertion across browsers that caused
+  // 3-line "ghost" gaps when the browser had already wrapped lines in block tags.
+  //   Enter        → paragraph break (blank line gap = "\n\n")
+  //   Shift+Enter  → single line break ("\n")
+  // execCommand("insertText") goes through the native undo stack and fires `input`.
   const handleEditorKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
     e.preventDefault();
-    const html = e.shiftKey
-      ? "<br>"
-      // Two <br>s yields a visible blank line between paragraphs.
-      // The trailing zero-width space keeps the caret on the new line in all browsers.
-      : "<br><br>\u200B";
-    document.execCommand("insertHTML", false, html);
+    const text = e.shiftKey ? "\n" : "\n\n";
+    document.execCommand("insertText", false, text);
   }, []);
 
   // ─── Scene / chapter selection ──────────────────────────────────────
