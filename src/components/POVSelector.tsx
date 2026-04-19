@@ -23,6 +23,7 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load POV-flagged character entities for the project
   useEffect(() => {
@@ -57,7 +58,10 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideContainer = containerRef.current?.contains(target);
+      const insideDropdown = dropdownRef.current?.contains(target);
+      if (!insideContainer && !insideDropdown) {
         setOpen(false);
       }
     };
@@ -126,6 +130,7 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
 
       {open && dropdownPos && createPortal(
         <div
+          ref={dropdownRef}
           role="listbox"
           style={{
             position: "fixed",
