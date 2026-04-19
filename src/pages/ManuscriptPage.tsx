@@ -524,6 +524,22 @@ const ManuscriptPage = () => {
     return () => cancelAnimationFrame(id);
   }, [activeSceneId, loading, focusMode]);
 
+  // Esc exits focus mode (ignored when typing in an input/textarea so it
+  // doesn't conflict with inline title editing).
+  useEffect(() => {
+    if (!focusMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      e.preventDefault();
+      setFocusMode(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focusMode]);
+
   // ─── sessionStorage scroll/scene restore ────────────────────────────
 
   useEffect(() => {
@@ -676,6 +692,22 @@ const ManuscriptPage = () => {
     },
     [activeSceneId, saveScene]
   );
+
+  // Custom Enter handling:
+  //   Enter        → paragraph break (two <br>s, producing a blank line gap)
+  //   Shift+Enter  → single line break (one <br>)
+  // Uses execCommand("insertHTML") so the change is captured by the browser's
+  // native undo stack and triggers the standard `input` event for autosave.
+  const handleEditorKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    const html = e.shiftKey
+      ? "<br>"
+      // Two <br>s yields a visible blank line between paragraphs.
+      // The trailing zero-width space keeps the caret on the new line in all browsers.
+      : "<br><br>\u200B";
+    document.execCommand("insertHTML", false, html);
+  }, []);
 
   // ─── Scene / chapter selection ──────────────────────────────────────
 
@@ -1116,6 +1148,7 @@ const ManuscriptPage = () => {
               contentEditable
               suppressContentEditableWarning
               onInput={handleEditorInput}
+              onKeyDown={handleEditorKeyDown}
             />
           </div>
           {thesaurusOpen && (
@@ -1460,6 +1493,7 @@ const ManuscriptPage = () => {
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
+                    onKeyDown={handleEditorKeyDown}
                     onClick={handleEditorClick}
                   />
                 </>
