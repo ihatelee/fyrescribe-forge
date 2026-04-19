@@ -108,7 +108,7 @@ const AmbiancePlayer = () => {
         boxShadow: `0 0 10px hsl(${accentVar} / 0.06)`,
       }}
     >
-      <audio ref={audioRef} src={tracks[0]} preload="none" onEnded={handleEnded} />
+      <audio ref={audioRef} src={track.src} preload="none" loop />
 
       <button
         onClick={togglePlay}
@@ -145,6 +145,13 @@ const AmbiancePlayer = () => {
         }}
         aria-label="Ambiance volume"
       />
+
+      <span
+        className="text-[9px] tracking-widest whitespace-nowrap"
+        style={{ color: `hsl(${accentVar} / 0.55)`, fontFamily: "var(--font-body)" }}
+      >
+        {track.credit}
+      </span>
     </div>
   );
 };
