@@ -4,6 +4,21 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-18 — Whimsical v2 + Universal Ambiance Player
+
+**Whimsical mode visual overhaul:**
+- `scripts/gen-textures.ts` (new) — deterministic PNG texture generator; outputs `src/lib/whimsicalTextures.ts` with `PARCHMENT_B64`, `GHOST_B64`, and deckled-edge SVG mask constants.
+- `src/lib/whimsicalTextures.ts` (new, auto-generated) — inline base64 textures; parchment grain 64×64 (~2.9 KB), ghost manuscript 128×128 (~6.6 KB), left/right deckled-edge SVG masks.
+- `src/components/WhimsicalOverlay.tsx` — full rewrite: removed old SVG corner brackets, ink blots, fiber stripes, scroll curl. Now: (1) radial vignette at 58% edge opacity, (2) SVG `feTurbulence` noise at 4.5%, (3) ghost manuscript texture at 4% opacity. `useWhimsicalVars` hook sets `--w-parchment` CSS custom property on `documentElement` so static CSS `::before` rules can use the inline PNG data URL.
+- `src/index.css` — whimsical block rewritten: all selectors scoped to `html.whimsical:not([data-theme="outrun"])`. `[data-prose-col]` gets `isolation: isolate`; `::before` uses `var(--w-parchment)` background + 50-point `clip-path: polygon()` for organic deckled left/right edges; opacity 7%. Active nav item warm treatment (gold tint + inset left border). Sidebar and card border warm sepia treatment retained.
+- `src/components/ThemeSwitcher.tsx` — "Make it Whimsical" toggle hidden when `theme === "outrun"` (in addition to existing mobile hide).
+
+**Universal ambiance player:**
+- `src/components/AmbiancePlayer.tsx` (new) — replaces `OutrunMusicPlayer`; theme-aware track selection (night ambiance, crackling fire, enchanted forest, gentle rain, synthwave per theme); no autoplay on mount; volume persisted to `fyrescribe_ambiance_volume`; graceful track swap on theme change; accent color switches to neon-yellow on Outrun, gold otherwise.
+- `src/pages/ManuscriptPage.tsx` — replaced `OutrunMusicPlayer` (Outrun-only) with `AmbiancePlayer` (always rendered, hidden on mobile via `hidden md:block`).
+
+---
+
 ## 2026-04-18 — Make it Whimsical
 
 - `supabase/migrations/20260418_add_whimsical_pref.sql` — adds `whimsical_enabled boolean default false` column to `user_preferences`.

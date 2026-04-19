@@ -98,7 +98,8 @@ const ThemeSwitcher = () => {
           />
         </DropdownMenuItem>
 
-        {/* Whimsical toggle — desktop only */}
+        {/* Whimsical toggle — desktop only, not shown on Outrun */}
+        {theme !== "outrun" && (
         <DropdownMenuItem
           onSelect={(e) => e.preventDefault()}
           className="hidden md:flex cursor-pointer items-center gap-2"
@@ -111,6 +112,7 @@ const ThemeSwitcher = () => {
             className="scale-75"
           />
         </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
