@@ -130,6 +130,7 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
 
       {open && dropdownPos && createPortal(
         <div
+          ref={dropdownRef}
           role="listbox"
           style={{
             position: "fixed",
