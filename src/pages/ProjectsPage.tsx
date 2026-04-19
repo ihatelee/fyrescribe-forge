@@ -74,11 +74,6 @@ const ProjectsPage = () => {
     if (error) console.error("Failed to fetch projects:", error);
 
     const list = (data as Project[]) || [];
-    if (list.length === 0) {
-      navigate("/onboarding", { replace: true });
-      return;
-    }
-
     setProjects(list);
     setLoading(false);
   };
