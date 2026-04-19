@@ -467,7 +467,12 @@ const NotesPage = () => {
                     ref={titleInputRef}
                     key={`title-${activeNote.id}`}
                     value={activeNote.title}
-                    onChange={(e) => handleTitleChange(e.target.value)}
+                    onChange={(e) => {
+                      handleTitleChange(e.target.value);
+                      const t = e.currentTarget;
+                      t.style.height = "auto";
+                      t.style.height = `${t.scrollHeight}px`;
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -476,12 +481,6 @@ const NotesPage = () => {
                     }}
                     placeholder="Untitled"
                     rows={1}
-                    ref-noop=""
-                    onInput={(e) => {
-                      const t = e.currentTarget;
-                      t.style.height = "auto";
-                      t.style.height = `${t.scrollHeight}px`;
-                    }}
                     className="w-full bg-transparent outline-none border-none font-display text-3xl text-foreground mb-6 placeholder:text-text-dimmed/60 resize-none overflow-hidden leading-tight break-words"
                   />
 
