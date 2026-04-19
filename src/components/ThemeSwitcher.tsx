@@ -1,8 +1,8 @@
-import { Paintbrush, Check, SparkleIcon } from "lucide-react";
+import { Paintbrush, Check } from "lucide-react";
 import { useTheme, ThemeName } from "@/contexts/ThemeContext";
 import { Switch } from "@/components/ui/switch";
 import { ICON_SET_META, ICON_SETS, type IconSetName } from "@/lib/iconSets";
-import { Sparkle as SparklePhosphor } from "@phosphor-icons/react";
+import { Sparkle as SparklePhosphor, MusicNotes } from "@phosphor-icons/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +22,7 @@ const THEMES: { value: ThemeName; label: string; swatch: string; suffix?: string
 ];
 
 const ThemeSwitcher = () => {
-  const { theme, setTheme, sparkle, setSparkle, iconSetName, setIconSet } = useTheme();
+  const { theme, setTheme, sparkle, setSparkle, soundscape, setSoundscape, iconSetName, setIconSet } = useTheme();
   // When outrun is active the icon set is forced to scifi regardless of saved preference
   const effectiveIconSet = theme === "outrun" ? "scifi" : iconSetName;
 
@@ -94,6 +94,20 @@ const ThemeSwitcher = () => {
           <Switch
             checked={sparkle}
             onCheckedChange={setSparkle}
+            className="scale-75"
+          />
+        </DropdownMenuItem>
+
+        {/* Soundscape toggle */}
+        <DropdownMenuItem
+          onSelect={(e) => e.preventDefault()}
+          className="cursor-pointer flex items-center gap-2"
+        >
+          <MusicNotes size={14} weight="duotone" className="text-gold flex-shrink-0" />
+          <span className="flex-1 text-sm">Soundscape</span>
+          <Switch
+            checked={soundscape}
+            onCheckedChange={setSoundscape}
             className="scale-75"
           />
         </DropdownMenuItem>
