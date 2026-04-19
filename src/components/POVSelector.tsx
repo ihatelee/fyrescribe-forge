@@ -58,7 +58,10 @@ const POVSelector = ({ projectId, sceneId, povCharacterId, onChange }: POVSelect
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideContainer = containerRef.current?.contains(target);
+      const insideDropdown = dropdownRef.current?.contains(target);
+      if (!insideContainer && !insideDropdown) {
         setOpen(false);
       }
     };
