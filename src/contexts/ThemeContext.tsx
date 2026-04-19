@@ -13,6 +13,8 @@ interface ThemeContextType {
   setTheme: (t: ThemeName) => void;
   sparkle: boolean;
   setSparkle: (v: boolean) => void;
+  soundscape: boolean;
+  setSoundscape: (v: boolean) => void;
   iconSetName: IconSetName;
   setIconSet: (v: IconSetName) => void;
   icons: IconSet;
@@ -29,6 +31,8 @@ const ThemeContext = createContext<ThemeContextType>({
   setTheme: () => {},
   sparkle: false,
   setSparkle: () => {},
+  soundscape: true,
+  setSoundscape: () => {},
   iconSetName: "fantasy",
   setIconSet: () => {},
   icons: ICON_SETS.fantasy,
@@ -384,6 +388,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [theme, setThemeState] = useState<ThemeName>("midnight");
   const [sparkle, setSparkleState] = useState(false);
+  const [soundscape, setSoundscapeState] = useState(true);
   const [iconSetName, setIconSetState] = useState<IconSetName>("fantasy");
   const [interfaceScale, setInterfaceScaleState] = useState<InterfaceScale>(100);
   const [highContrast, setHighContrastState] = useState(false);
@@ -395,13 +400,14 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     supabase
       .from("user_preferences")
-      .select("theme, sparkle_enabled, icon_set, interface_scale, high_contrast, dyslexia_font")
+      .select("theme, sparkle_enabled, soundscape_enabled, icon_set, interface_scale, high_contrast, dyslexia_font")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
           setThemeState(data.theme as ThemeName);
           setSparkleState(data.sparkle_enabled);
+          setSoundscapeState(data.soundscape_enabled ?? true);
           if (data.icon_set) {
             setIconSetState(data.icon_set as IconSetName);
           } else {
