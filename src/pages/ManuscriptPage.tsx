@@ -1132,6 +1132,7 @@ const ManuscriptPage = () => {
               contentEditable
               suppressContentEditableWarning
               onInput={handleEditorInput}
+              onKeyDown={handleEditorKeyDown}
             />
           </div>
           {thesaurusOpen && (
