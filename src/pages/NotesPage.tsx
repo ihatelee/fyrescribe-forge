@@ -58,7 +58,7 @@ const NotesPage = () => {
   const [notesPanelOpen, setNotesPanelOpen] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const contentCache = useRef<Map<string, string>>(new Map());
   const titleCache = useRef<Map<string, string>>(new Map());
 
