@@ -13,6 +13,7 @@ import { useSyncExternalStore } from "react";
 type Listener = () => void;
 
 const VOLUME_KEY = "fyrescribe_ambiance_volume";
+const OUTRUN_INDEX_KEY = "fyrescribe_ambiance_outrun_index";
 
 export type AmbianceState = {
   playing: boolean;
@@ -22,6 +23,8 @@ export type AmbianceState = {
   currentVolume: number;
   /** Currently loaded src (for change detection). */
   src: string | null;
+  /** Index into the outrun playlist (0..N-1). Persisted. */
+  outrunTrackIndex: number;
 };
 
 const readSavedVolume = (): number => {
@@ -33,11 +36,22 @@ const readSavedVolume = (): number => {
   }
 };
 
+const readSavedOutrunIndex = (): number => {
+  try {
+    const saved = localStorage.getItem(OUTRUN_INDEX_KEY);
+    const n = saved !== null ? Number(saved) : 0;
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+  } catch {
+    return 0;
+  }
+};
+
 let state: AmbianceState = {
   playing: false,
   targetVolume: readSavedVolume(),
   currentVolume: 0,
   src: null,
+  outrunTrackIndex: readSavedOutrunIndex(),
 };
 
 const listeners = new Set<Listener>();
@@ -55,6 +69,13 @@ export const ambianceStore = {
     if (patch.targetVolume !== undefined) {
       try {
         localStorage.setItem(VOLUME_KEY, String(patch.targetVolume));
+      } catch {
+        /* ignore */
+      }
+    }
+    if (patch.outrunTrackIndex !== undefined) {
+      try {
+        localStorage.setItem(OUTRUN_INDEX_KEY, String(patch.outrunTrackIndex));
       } catch {
         /* ignore */
       }

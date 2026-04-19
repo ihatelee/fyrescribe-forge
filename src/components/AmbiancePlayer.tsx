@@ -1,7 +1,7 @@
-import { Play, Pause, SpeakerHigh } from "@phosphor-icons/react";
+import { Play, Pause, SpeakerHigh, SkipForward } from "@phosphor-icons/react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ambianceStore, useAmbianceState } from "@/lib/ambianceStore";
-import { getTrackForTheme } from "./AmbianceAudioHost";
+import { getTrackForTheme, getOutrunPlaylist } from "./AmbianceAudioHost";
 
 /**
  * Compact horizontal ambiance player UI for the titlebar.
@@ -13,9 +13,10 @@ import { getTrackForTheme } from "./AmbianceAudioHost";
  */
 const AmbiancePlayer = () => {
   const { theme, soundscape } = useTheme();
-  const track = getTrackForTheme(theme);
+  const { playing, targetVolume, outrunTrackIndex } = useAmbianceState();
+  const isOutrun = theme === "outrun";
+  const track = getTrackForTheme(theme, outrunTrackIndex);
   const hasTrack = !!track?.src;
-  const { playing, targetVolume } = useAmbianceState();
 
   // Hide when the user disabled the soundscape or this theme has no track.
   if (!hasTrack || !soundscape) return null;
@@ -32,7 +33,11 @@ const AmbiancePlayer = () => {
     }
   };
 
-  const isOutrun = theme === "outrun";
+  const skipOutrunTrack = () => {
+    const playlistLength = getOutrunPlaylist().length;
+    ambianceStore.set({ outrunTrackIndex: (outrunTrackIndex + 1) % playlistLength });
+  };
+
   const accentVar = isOutrun ? "var(--neon-yellow)" : "var(--gold)";
   const accent = `hsl(${accentVar})`;
   const accentFaint = `hsl(${accentVar} / 0.2)`;
@@ -59,6 +64,22 @@ const AmbiancePlayer = () => {
       >
         {playing ? <Pause size={9} weight="fill" /> : <Play size={9} weight="fill" />}
       </button>
+
+      {isOutrun && (
+        <button
+          onClick={skipOutrunTrack}
+          aria-label="Skip to next outrun track"
+          className="flex-shrink-0 w-4 h-4 flex items-center justify-center rounded-full transition-colors"
+          style={{
+            color: accent,
+            background: `hsl(${accentVar} / 0.12)`,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = `hsl(${accentVar} / 0.22)`)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = `hsl(${accentVar} / 0.12)`)}
+        >
+          <SkipForward size={9} weight="fill" />
+        </button>
+      )}
 
       <SpeakerHigh
         size={11}
