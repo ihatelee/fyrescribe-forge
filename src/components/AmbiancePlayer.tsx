@@ -5,7 +5,7 @@ import { useTheme, ThemeName } from "@/contexts/ThemeContext";
 const VOLUME_KEY = "fyrescribe_ambiance_volume";
 
 // Track URLs per theme. Add CDN mp3 URLs here when ready.
-// An empty array means the player stays hidden for that theme.
+// Empty array = the player stays hidden for that theme.
 const PLAYLISTS: Record<ThemeName, string[]> = {
   outrun:    ["http://www.nihilore.com/s/Motion-Blur.mp3"],
   midnight:  [],
@@ -20,30 +20,56 @@ const readVolume = (): number => {
   return saved !== null ? Number(saved) : 0.05;
 };
 
+/**
+ * Compact horizontal ambiance player for the titlebar.
+ *
+ * Behaviour:
+ * - Hidden when the active theme has no playlist OR the user disabled Soundscape.
+ * - Auto-plays on theme switch when Soundscape is on (browser may block first attempt).
+ * - Toggling Soundscape off pauses immediately; toggling back on resumes if a track exists.
+ * - Volume persisted to localStorage.
+ */
 const AmbiancePlayer = () => {
-  const { theme } = useTheme();
+  const { theme, soundscape } = useTheme();
   const tracks = PLAYLISTS[theme] ?? [];
   const audioRef = useRef<HTMLAudioElement>(null);
   const [trackIndex, setTrackIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(readVolume);
 
-  // Swap playlist on theme change — reset to track 0, don't autoplay
+  // Theme change → reset to track 0 and (if soundscape on) try to autoplay.
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !tracks.length) return;
     setTrackIndex(0);
-    setPlaying(false);
-    audio.pause();
-    if (tracks[0]) {
-      audio.src = tracks[0];
-      audio.load();
+    audio.src = tracks[0];
+    audio.load();
+    if (soundscape) {
+      audio
+        .play()
+        .then(() => setPlaying(true))
+        .catch(() => setPlaying(false));
+    } else {
+      audio.pause();
+      setPlaying(false);
     }
-    // tracks identity changes with theme; playing excluded intentionally
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme]);
 
-  // Advance to next track when current one ends
+  // Soundscape toggle changes: pause immediately when turned off, resume when turned on.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !tracks.length) return;
+    if (!soundscape) {
+      audio.pause();
+      setPlaying(false);
+    } else if (audio.paused) {
+      audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soundscape]);
+
+  // Advance to next track when current ends
   const handleEnded = () => {
     if (!tracks.length) return;
     const next = (trackIndex + 1) % tracks.length;
@@ -75,8 +101,8 @@ const AmbiancePlayer = () => {
     }
   };
 
-  // No tracks for this theme — render nothing
-  if (!tracks.length) return null;
+  // Hide when the user disabled the soundscape or this theme has no tracks
+  if (!tracks.length || !soundscape) return null;
 
   const isOutrun = theme === "outrun";
   const accentVar = isOutrun ? "var(--neon-yellow)" : "var(--gold)";
@@ -84,62 +110,51 @@ const AmbiancePlayer = () => {
   const accentFaint = `hsl(${accentVar} / 0.2)`;
 
   return (
-    <div className="px-2 pb-2">
+    <div
+      className="hidden md:flex items-center gap-2 h-7 px-2 rounded-full"
+      style={{
+        background: "hsl(var(--bg-raised))",
+        border: `1px solid hsl(${accentVar} / 0.35)`,
+        boxShadow: `0 0 10px hsl(${accentVar} / 0.06)`,
+      }}
+    >
       <audio ref={audioRef} src={tracks[0]} preload="none" onEnded={handleEnded} />
-      <div
-        className="rounded px-2 py-2 space-y-2"
+
+      <button
+        onClick={togglePlay}
+        aria-label={playing ? "Pause ambiance" : "Play ambiance"}
+        className="flex-shrink-0 w-4 h-4 flex items-center justify-center rounded-full transition-colors"
         style={{
-          background: "hsl(var(--bg-raised))",
-          border: `1px solid hsl(${accentVar} / 0.25)`,
-          boxShadow: `0 0 10px hsl(${accentVar} / 0.06)`,
+          color: accent,
+          background: `hsl(${accentVar} / 0.12)`,
         }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = `hsl(${accentVar} / 0.22)`)}
+        onMouseLeave={(e) => (e.currentTarget.style.background = `hsl(${accentVar} / 0.12)`)}
       >
-        <div className="flex items-center gap-2 overflow-hidden">
-          <button
-            onClick={togglePlay}
-            aria-label={playing ? "Pause ambiance" : "Play ambiance"}
-            className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded transition-all"
-            style={{
-              color: accent,
-              border: `1px solid hsl(${accentVar} / 0.5)`,
-              background: `hsl(${accentVar} / 0.08)`,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = `hsl(${accentVar} / 0.18)`)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = `hsl(${accentVar} / 0.08)`)}
-          >
-            {playing ? <Pause size={9} weight="fill" /> : <Play size={9} weight="fill" />}
-          </button>
+        {playing ? <Pause size={9} weight="fill" /> : <Play size={9} weight="fill" />}
+      </button>
 
-          <SpeakerHigh
-            size={10}
-            weight="duotone"
-            className="flex-shrink-0"
-            style={{ color: `hsl(${accentVar} / 0.55)` }}
-          />
+      <SpeakerHigh
+        size={11}
+        weight="duotone"
+        className="flex-shrink-0"
+        style={{ color: `hsl(${accentVar} / 0.6)` }}
+      />
 
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.02}
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            className="flex-1 min-w-0 h-[3px] cursor-pointer rounded appearance-none"
-            style={{
-              accentColor: accent,
-              background: `linear-gradient(to right, ${accent} ${volume * 100}%, ${accentFaint} ${volume * 100}%)`,
-            }}
-            aria-label="Ambiance volume"
-          />
-        </div>
-
-        <div
-          className="text-[9px] tracking-widest"
-          style={{ color: `hsl(${accentVar} / 0.45)`, fontFamily: "var(--font-body)" }}
-        >
-          ♪ {isOutrun ? "Nihilore" : `Track ${trackIndex + 1} / ${tracks.length}`}
-        </div>
-      </div>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.02}
+        value={volume}
+        onChange={(e) => setVolume(Number(e.target.value))}
+        className="w-20 h-[3px] cursor-pointer rounded appearance-none"
+        style={{
+          accentColor: accent,
+          background: `linear-gradient(to right, ${accent} ${volume * 100}%, ${accentFaint} ${volume * 100}%)`,
+        }}
+        aria-label="Ambiance volume"
+      />
     </div>
   );
 };

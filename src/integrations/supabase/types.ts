@@ -681,6 +681,7 @@ export type Database = {
           icon_set: string
           id: string
           interface_scale: number
+          soundscape_enabled: boolean
           sparkle_enabled: boolean
           theme: string
           updated_at: string
@@ -695,6 +696,7 @@ export type Database = {
           icon_set?: string
           id?: string
           interface_scale?: number
+          soundscape_enabled?: boolean
           sparkle_enabled?: boolean
           theme?: string
           updated_at?: string
@@ -709,6 +711,7 @@ export type Database = {
           icon_set?: string
           id?: string
           interface_scale?: number
+          soundscape_enabled?: boolean
           sparkle_enabled?: boolean
           theme?: string
           updated_at?: string

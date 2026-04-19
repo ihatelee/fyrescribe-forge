@@ -339,7 +339,7 @@ const Sidebar = () => {
         <div className="flex items-center gap-1">
           <button
             onClick={() => handleSync(false)}
-            className="flex-1 flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover"
+            className="flex-1 flex items-center justify-start text-left gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover"
           >
             <SyncIcon size={12} weight="duotone" className={syncing ? "animate-spin" : ""} />
             {syncing ? "Syncing…" : "Sync Lore"}
@@ -361,7 +361,7 @@ const Sidebar = () => {
         <button
           onClick={handleSyncMentions}
           disabled={syncingMentions || !activeProject}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
+          className="w-full flex items-center justify-start text-left gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
         >
           <SyncIcon size={12} weight="duotone" className={syncingMentions ? "animate-spin" : ""} />
           {syncingMentions ? "Scanning…" : "Sync Mentions"}
@@ -374,7 +374,7 @@ const Sidebar = () => {
         <button
           onClick={handleLinkLore}
           disabled={linkingLore || !activeProject}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
+          className="w-full flex items-center justify-start text-left gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
         >
           <SyncIcon size={12} weight="duotone" className={linkingLore ? "animate-spin" : ""} />
           {linkingLore ? "Linking…" : "Sync Connections"}
@@ -387,7 +387,7 @@ const Sidebar = () => {
         <button
           onClick={handleSyncTags}
           disabled={syncingTags || !activeProject}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
+          className="w-full flex items-center justify-start text-left gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
         >
           <SyncIcon size={12} weight="duotone" className={syncingTags ? "animate-spin" : ""} />
           {syncingTags ? "Tagging…" : "Sync Tags"}

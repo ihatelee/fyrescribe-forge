@@ -8,7 +8,7 @@ import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { stripRtf, parseManuscript } from "@/lib/manuscriptParser";
-import AmbiancePlayer from "@/components/AmbiancePlayer";
+
 import POVSelector from "@/components/POVSelector";
 import SaveVersionPopover from "@/components/SaveVersionPopover";
 import VersionHistoryPanel, { SceneVersion } from "@/components/VersionHistoryPanel";
@@ -1301,9 +1301,6 @@ const ManuscriptPage = () => {
         )}
       </div>
 
-      <div className="hidden md:block border-t border-border">
-        <AmbiancePlayer />
-      </div>
 
       <div className="p-3 border-t border-border">
         <button
