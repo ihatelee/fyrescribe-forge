@@ -16,11 +16,11 @@ type Track = { src: string; credit: string };
 
 const TRACKS: Record<ThemeName, Track> = {
   outrun:    { src: "http://www.nihilore.com/s/Motion-Blur.mp3", credit: "♪ Nihilore" },
-  midnight:  { src: bucketUrl("midnight.mp3"),  credit: "♪ Untitled" },
-  fireside:  { src: bucketUrl("fireside.mp3"),  credit: "♪ Untitled" },
-  enchanted: { src: bucketUrl("enchanted.mp3"), credit: "♪ Untitled" },
-  daylight:  { src: bucketUrl("daylight.mp3"),  credit: "♪ Untitled" },
-  lavender:  { src: bucketUrl("lavender.mp3"),  credit: "♪ Untitled" },
+  midnight:  { src: bucketUrl("AmbienceForest MIX64_09.mp3"),       credit: "♪ Untitled" },
+  fireside:  { src: bucketUrl("Fireplace With Night Ambience.mp3"), credit: "♪ Untitled" },
+  lavender:  { src: bucketUrl("Nature Rain.mp3"),                   credit: "♪ Untitled" },
+  enchanted: { src: bucketUrl("Nature.mp3"),                        credit: "♪ Untitled" },
+  daylight:  { src: bucketUrl("soundjay_nature_main-01.mp3"),       credit: "♪ Untitled" },
 };
 
 const readVolume = (): number => {
