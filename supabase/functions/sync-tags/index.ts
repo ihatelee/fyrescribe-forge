@@ -194,7 +194,7 @@ async function runFieldTaggingPass(
 
   // Already-filled summary
   const alreadyFilledLines = [...alreadyFilled]
-    .map((key) => {
+    .map((key: string) => {
       const [entityId, fieldKey] = key.split(":");
       const entity = (entities ?? []).find((e: any) => e.id === entityId);
       return entity ? `${entity.name} (${entity.category}): ${fieldKey}` : null;
