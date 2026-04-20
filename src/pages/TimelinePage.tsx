@@ -475,13 +475,24 @@ const TimelinePage = () => {
               </button>
             ))}
             <button
+              type="button"
+              role="switch"
+              aria-checked={majorOnly}
               onClick={() => setMajorOnly((v) => !v)}
-              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+              title={majorOnly ? "Showing major events only — click to show all" : "Show only major events"}
+              className={`h-7 px-2.5 rounded-full border flex items-center gap-1.5 text-[11px] uppercase tracking-wider transition-colors ${
                 majorOnly
-                  ? "border-gold text-gold bg-gold-glow"
-                  : "border-border text-text-secondary hover:text-foreground"
+                  ? "bg-gold/10 border-gold/40 text-gold hover:bg-gold/15"
+                  : "bg-fyrescribe-raised border-border text-text-dimmed hover:text-foreground hover:border-gold/30"
               }`}
             >
+              <span
+                className={`w-3 h-3 rounded-sm border flex items-center justify-center transition-colors ${
+                  majorOnly ? "bg-gold border-gold" : "border-text-dimmed"
+                }`}
+              >
+                {majorOnly && <Check size={10} className="text-fyrescribe-raised" strokeWidth={3} />}
+              </span>
               Major events
             </button>
           </div>
