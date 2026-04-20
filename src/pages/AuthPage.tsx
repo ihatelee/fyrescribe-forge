@@ -81,7 +81,7 @@ const AuthPage = () => {
       >
         <div className="flex flex-col items-center gap-3">
           <img src={logoSrc} alt="Fyrescribe" className="h-16" />
-          <p className="text-muted-foreground text-lg font-normal font-['EB_Garamond']">
+          <p className="text-white text-lg font-normal font-['EB_Garamond']">
             Tell us a tale beside the fyre
           </p>
         </div>
