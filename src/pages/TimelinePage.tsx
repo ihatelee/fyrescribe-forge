@@ -208,7 +208,7 @@ const AddEventModal = ({ projectId, onCreated, onClose }: AddEventModalProps) =>
 const TimelinePage = () => {
   const { activeProject } = useActiveProject();
   const [filter, setFilter] = useState<"all" | TimelineEventType>("all");
-  const [majorOnly, setMajorOnly] = useState(true);
+  const [majorOnly, setMajorOnly] = useState(false);
   const MAJOR_THRESHOLD = 7;
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
