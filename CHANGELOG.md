@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Fyrescribe persona: give sync-lore a voice
+
+- `supabase/functions/sync-lore/index.ts` — Replaced the `TONE — THIS IS A HARD RULE:` block with a `YOU ARE FYRESCRIBE.` persona block at the top of the prompt. Persona frames the AI as the author's sharp, concise research assistant who lives inside the manuscript — not a document summarizer. Keeps the WRONG/RIGHT examples (updated), adds proportional-length guidance ("two sentences if a character appeared once and said two things"), and retains the no-invention rule.
+
+---
+
 ## 2026-04-22 — Add explicit instruction for Background field in sync-lore prompt
 
 - `supabase/functions/sync-lore/index.ts` — `"Background"` character section now has inline instructions matching the treatment of `"Notable Events"`: populate with backstory, history, or origin details from the scene text only; do not invent; leave empty if nothing is known. Includes a grounded example ("Grew up in the same neighbourhood as Owen. Has a reputation for clumsiness.").
