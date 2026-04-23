@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Sync-lore fixes: Notable Events, short description strengthening, fuzzy name dedup
+
+- `supabase/functions/sync-lore/index.ts` — **Fix 1 (Notable Events / Background):** Added `"Notable Events"` to the character sections allowed keys in `buildPrompt`, matching `CATEGORY_SECTIONS["characters"]` in `EntityDetailPage`. All five character section keys are now present: Overview, Background, Personality, Relationships, Notable Events.
+- `supabase/functions/sync-lore/index.ts` — **Fix 2 (short_description vs Overview):** Strengthened `short_description` instruction to `REQUIRED`, added an explicit example sentence, and added "Do NOT copy from Overview / Do NOT exceed 20 words" constraints. `sections.Overview` marked `REQUIRED` with a 3–5 sentence minimum and an explicit note that it must be substantially longer than `short_description`.
+- `src/pages/LoreInboxPage.tsx` — **Fix 3 (fuzzy duplicate detection):** Replaced the exact `.eq("name", name).maybeSingle()` lookup with a fetch of all same-category entities followed by a JavaScript `find` that matches when either name contains the other (case-insensitive). Handles renamed entities (e.g. suggestion "Evette" merging into existing "Evette Koval") without creating a duplicate.
+
+---
+
 ## 2026-04-22 — Sync-lore fixes: short description, informal place names, merge error surfacing
 
 - `supabase/functions/sync-lore/index.ts` — **Fix 1 (description/overview duplication):** Added `short_description` to the `AISuggestion` interface. `buildPrompt` now requests `short_description` as an explicit top-level field (one sentence, ≤20 words, must differ in length and content from `sections.Overview`). The sections `Overview` prompt is updated to request a full paragraph. Row builder maps `short_description` → `payload.description`; `sections.Overview` is preserved as a separate full-paragraph field. Falls back to first non-empty section only when the AI omits `short_description`.

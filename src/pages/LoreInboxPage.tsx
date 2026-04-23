@@ -433,14 +433,21 @@ const LoreInboxPage = () => {
       !!firstToken &&
       firstToken.toLowerCase() !== name.toLowerCase();
 
-    // ── Check for existing entity with same name + category ──────────────
-    const { data: existing } = await supabase
+    // ── Check for existing entity with fuzzy name match + same category ──
+    // Fetches all entities of the same category and finds a match where either
+    // name contains the other (case-insensitive). This handles renames like
+    // "Evette" → "Evette Koval" without creating a duplicate.
+    const { data: categoryEntities } = await supabase
       .from("entities")
-      .select("id, summary, sections, aliases")
+      .select("id, name, summary, sections, aliases")
       .eq("project_id", activeProject.id)
-      .eq("name", name)
-      .eq("category", payload.category)
-      .maybeSingle();
+      .eq("category", payload.category);
+
+    const nameLower = name.toLowerCase();
+    const existing = (categoryEntities ?? []).find((e) => {
+      const eLower = e.name.toLowerCase();
+      return eLower === nameLower || eLower.includes(nameLower) || nameLower.includes(eLower);
+    }) ?? null;
 
     let entityId: string;
     let isMerge = false;

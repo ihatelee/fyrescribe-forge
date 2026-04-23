@@ -409,10 +409,10 @@ Return a JSON array. Each element must have exactly these keys:
   - item: named objects, artifacts, weapons
   - lore: named magic systems, factions, events, creatures, doctrines, historical periods
 - "name": the proper name, 1–5 words
-- "short_description": One sentence only. The minimum needed to identify this entity at a glance. No more than 20 words. Must be different in length and content from sections.Overview.
+- "short_description": REQUIRED. Maximum one sentence, maximum 20 words. This must be a simple identifier only — name, role, and one key trait. Example: "A young ranger who patrols the Whisperwood Forest." Do NOT copy from Overview. Do NOT exceed 20 words.
 - "source_sentence": the exact sentence from the scene where this entity first appears, copied verbatim
 - "sections": object with article-style content. Only include a key when the scene has clear evidence for it. Max 60 words per value.
-  - character → allowed keys: "Overview" (a full paragraph summarising this entity's role, nature, and significance — not a one-liner), "Background", "Personality", "Relationships"
+  - character → allowed keys: "Overview" (REQUIRED. A full paragraph, 3–5 sentences minimum, summarising this entity's role, nature, and significance in the story so far. Must be substantially longer and more detailed than short_description.), "Background", "Personality", "Relationships", "Notable Events"
   - location  → allowed keys: "Description", "History", "Notable Inhabitants", "Points of Interest"
   - item      → allowed keys: "Description", "History", "Powers", "Current Whereabouts"
   - lore      → allowed keys: "Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts"
