@@ -367,6 +367,7 @@ const LoreInboxPage = () => {
   const [loading, setLoading] = useState(true);
   const [acceptedId, setAcceptedId] = useState<string | null>(null);
   const [acceptedMerged, setAcceptedMerged] = useState(false);
+  const [acceptedNoNewInfo, setAcceptedNoNewInfo] = useState(false);
   const [acceptAllStatus, setAcceptAllStatus] = useState<string | null>(null);
   const [acceptingAll, setAcceptingAll] = useState(false);
 
@@ -394,13 +395,13 @@ const LoreInboxPage = () => {
   }, [fetchSuggestions]);
 
   // Core accept logic — shared by individual accept and Accept All.
-  // Returns { entityId, isMerge } on success or null on failure.
+  // Returns { entityId, isMerge, noNewInfo } on success or null on failure.
   // Dismisses the card immediately; if a duplicate exists the AI merge
   // runs in the background and silently patches the entity when done.
   const acceptOneSuggestion = async (
     suggestion: LoreSuggestion,
     overrides?: { name: string; description: string },
-  ): Promise<{ entityId: string; isMerge: boolean } | null> => {
+  ): Promise<{ entityId: string; isMerge: boolean; noNewInfo: boolean } | null> => {
     if (!activeProject) return null;
     const payload = suggestion.payload;
     const name = overrides?.name ?? payload.name;
@@ -443,12 +444,15 @@ const LoreInboxPage = () => {
 
     let entityId: string;
     let isMerge = false;
+    let noNewInfo = false;
 
     if (existing) {
       isMerge = true;
       const existingSections = (existing.sections ?? {}) as Record<string, string>;
       const hasExisting = Object.values(existingSections).some((v) => (v ?? "").trim());
       const hasNew = Object.values(sectionsToWrite).some((v) => (v ?? "").trim());
+
+      if (!hasNew) noNewInfo = true;
 
       // ── Optimistic: apply shallow merge immediately so the card can dismiss ──
       const optimisticSections = hasNew
@@ -482,12 +486,25 @@ const LoreInboxPage = () => {
           .invoke("merge-entity-sections", {
             body: { existing_sections: existingSections, new_sections: sectionsToWrite },
           })
-          .then(({ data: mergeResult }) => {
-            const merged =
-              (mergeResult?.merged_sections as Record<string, string>) ?? optimisticSections;
-            return supabase.from("entities").update({ sections: merged }).eq("id", bgEntityId);
+          .then(({ data: mergeResult, error: mergeError }) => {
+            if (mergeError) {
+              console.error("[merge] edge function error:", mergeError);
+              return;
+            }
+            const merged = mergeResult?.merged_sections as Record<string, string> | undefined;
+            if (!merged) {
+              console.error("[merge] no merged_sections in response:", mergeResult);
+              return;
+            }
+            return supabase
+              .from("entities")
+              .update({ sections: merged })
+              .eq("id", bgEntityId)
+              .then(({ error: updateError }) => {
+                if (updateError) console.error("[merge] entity update error:", updateError);
+              });
           })
-          .catch((e) => console.error("Background merge failed:", e));
+          .catch((e) => console.error("[merge] background merge exception:", e));
       }
     } else {
       // ── Create path: insert new entity ───────────────────────────────────
@@ -556,7 +573,7 @@ const LoreInboxPage = () => {
       .eq("id", suggestion.id);
 
     setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
-    return { entityId, isMerge };
+    return { entityId, isMerge, noNewInfo };
   };
 
   const handleAccept = async (
@@ -566,6 +583,7 @@ const LoreInboxPage = () => {
     const result = await acceptOneSuggestion(suggestion, overrides);
     if (result) {
       setAcceptedMerged(result.isMerge);
+      setAcceptedNoNewInfo(result.noNewInfo);
       setAcceptedId(result.entityId);
     }
   };
@@ -640,7 +658,9 @@ const LoreInboxPage = () => {
         {/* Brief accepted banner */}
         {acceptedId && (
           <div className="mb-4 flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2">
-            <p className="text-[13px] text-green-300">{acceptedMerged ? "Entity merged." : "Entity created."}</p>
+            <p className="text-[13px] text-green-300">
+              {acceptedNoNewInfo ? "No new information to add." : acceptedMerged ? "Entity merged." : "Entity created."}
+            </p>
             <button
               onClick={() => navigate(`/entity/${acceptedId}`)}
               className="flex items-center gap-1 text-[12px] text-green-400 hover:text-green-300 transition-colors"

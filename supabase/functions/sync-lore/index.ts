@@ -17,6 +17,8 @@ type SuggestionType = "character" | "location" | "item" | "lore";
 interface AISuggestion {
   type: SuggestionType;
   name: string;
+  /** One sentence, ≤20 words — maps to entity.description. Always distinct from sections.Overview. */
+  short_description: string;
   source_sentence: string;
   /** Article-body content keyed by section name (Overview, Background, etc.) */
   sections: Record<string, string>;
@@ -256,10 +258,10 @@ async function syncProject(
       .map((s) => {
         const sections = s.sections ?? {};
         const at_a_glance = s.at_a_glance ?? {};
-        // Derive a short description from the most relevant section.
-        const description = (
-          sections["Overview"] ?? sections["Description"] ?? sections["Summary"] ?? ""
-        ).trim();
+        // Use the AI-supplied short_description (≤20 words, one sentence).
+        // Falls back to the first non-empty section only when the AI omits it.
+        const description = (s.short_description ?? "").trim()
+          || (sections["Overview"] ?? sections["Description"] ?? sections["Summary"] ?? "").trim();
         return {
           project_id: projectId,
           type: "new_entity" as const,
@@ -403,13 +405,14 @@ ${sceneText}
 Return a JSON array. Each element must have exactly these keys:
 - "type": one of "character", "location", "item", "lore"
   - character: named people or beings
-  - location: named places, buildings, regions
+  - location: named places, buildings, regions, streets, neighborhoods, bars, houses, or any other named place — extract any named location regardless of how mundane or informal it sounds. "The Spot", "Joe's Bar", "Elm Street", and "The Old House" are all valid location entities if they have a proper name.
   - item: named objects, artifacts, weapons
   - lore: named magic systems, factions, events, creatures, doctrines, historical periods
 - "name": the proper name, 1–5 words
+- "short_description": One sentence only. The minimum needed to identify this entity at a glance. No more than 20 words. Must be different in length and content from sections.Overview.
 - "source_sentence": the exact sentence from the scene where this entity first appears, copied verbatim
 - "sections": object with article-style content. Only include a key when the scene has clear evidence for it. Max 60 words per value.
-  - character → allowed keys: "Overview", "Background", "Personality", "Relationships"
+  - character → allowed keys: "Overview" (a full paragraph summarising this entity's role, nature, and significance — not a one-liner), "Background", "Personality", "Relationships"
   - location  → allowed keys: "Description", "History", "Notable Inhabitants", "Points of Interest"
   - item      → allowed keys: "Description", "History", "Powers", "Current Whereabouts"
   - lore      → allowed keys: "Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts"

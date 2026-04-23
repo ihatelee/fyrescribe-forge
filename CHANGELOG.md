@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Sync-lore fixes: short description, informal place names, merge error surfacing
+
+- `supabase/functions/sync-lore/index.ts` — **Fix 1 (description/overview duplication):** Added `short_description` to the `AISuggestion` interface. `buildPrompt` now requests `short_description` as an explicit top-level field (one sentence, ≤20 words, must differ in length and content from `sections.Overview`). The sections `Overview` prompt is updated to request a full paragraph. Row builder maps `short_description` → `payload.description`; `sections.Overview` is preserved as a separate full-paragraph field. Falls back to first non-empty section only when the AI omits `short_description`.
+- `supabase/functions/sync-lore/index.ts` — **Fix 2 (informal place names):** Updated the `location` bullet in `buildPrompt` to explicitly instruct the AI to extract any named location regardless of genre or formality — houses, bars, streets, neighborhoods, and buildings are all valid if they have a proper name. Added examples ("The Spot", "Joe's Bar", "Elm Street").
+- `src/pages/LoreInboxPage.tsx` — **Fix 3 (merge visibility + error logging):** `acceptOneSuggestion` now returns `noNewInfo: boolean` (true when a duplicate entity is found but the incoming suggestion has no section content to add). `handleAccept` stores this in new `acceptedNoNewInfo` state. The accepted banner now shows "No new information to add." instead of "Entity merged." in this case, so the user understands why the entity page didn't visibly change. Background merge path improved: `mergeError` from the edge function invoke is now checked and logged; missing `merged_sections` in the response is logged; entity update errors are logged separately.
+
+---
+
 ## 2026-04-18 — Universal ambiance player (placeholder)
 
 - `src/components/AmbiancePlayer.tsx` (new) — replaces `OutrunMusicPlayer`. Multi-track sequential playlist per theme; tracks loop back to track 1 after the last. `PLAYLISTS` map holds CDN mp3 URL arrays keyed by `ThemeName`. Non-Outrun themes have empty arrays — the component returns `null` for those themes so the player stays hidden until real URLs are added. Volume persisted to `fyrescribe_ambiance_volume`. No autoplay on mount or theme change.
