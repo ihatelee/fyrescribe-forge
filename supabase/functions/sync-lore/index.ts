@@ -353,6 +353,7 @@ async function syncProject(
         });
       } else {
         // Path 2: update_type === "update" → merge sections directly into entity
+        console.log(`[sync-lore] merge candidate: entity="${existingEntity.name}" ai_sections=${JSON.stringify(Object.keys(sections))} raw=${JSON.stringify(sections)}`);
         const mergedSections: Record<string, string> = { ...(existingEntity.sections ?? {}) };
         let hasNewContent = false;
         for (const [key, value] of Object.entries(sections)) {
