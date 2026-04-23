@@ -9,6 +9,31 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
 import { stripRtf, parseManuscript } from "@/lib/manuscriptParser";
 
+// Strip theme-bound color styles from manuscript HTML.
+// Browsers serialize computed color/background into pasted HTML, which then
+// "freezes" the previous theme's foreground color into the saved content.
+// Removing them lets the editor's text-foreground class control color again
+// so it always follows the active theme.
+const stripThemeColors = (html: string): string => {
+  if (!html) return html;
+  let out = html;
+  // Remove color / background / background-color declarations inside style="..."
+  out = out.replace(/style="([^"]*)"/gi, (_m, body: string) => {
+    const cleaned = body
+      .split(";")
+      .map((d) => d.trim())
+      .filter((d) => d && !/^(color|background-color|background)\s*:/i.test(d))
+      .join("; ");
+    return cleaned ? `style="${cleaned}"` : "";
+  });
+  // Remove legacy color / bgcolor attributes
+  out = out.replace(/\s(?:color|bgcolor)="[^"]*"/gi, "");
+  return out;
+};
+
+const sanitizeManuscript = (html: string): string =>
+  stripThemeColors(DOMPurify.sanitize(html));
+
 import POVSelector from "@/components/POVSelector";
 import SaveVersionPopover from "@/components/SaveVersionPopover";
 import VersionHistoryPanel, { SceneVersion } from "@/components/VersionHistoryPanel";
