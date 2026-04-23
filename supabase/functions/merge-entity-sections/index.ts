@@ -45,12 +45,25 @@ serve(async (req) => {
       });
     }
 
-    const prompt = `You are merging two sets of information about the same entity in a fantasy world.
-Combine them into a single coherent record.
-Keep all unique information from both.
-Where both have content for the same field, write a unified version that preserves all facts.
+    const prompt = `You are merging two records for the same entity. Apply these rules per field:
+
+Overview: Rewrite completely as a clean, current-state summary (max 1 paragraph, 3-5 sentences). Use all information from both records but write fresh — do not copy either version verbatim.
+
+Background: Keep existing content. Only add genuinely new pre-story facts from the new record that are not already covered. Never remove anything.
+
+Personality: Rewrite completely as a clean current assessment (max 1 paragraph, 3-5 sentences). Use the best observations from both records, do not stack them.
+
+Relationships: For each relationship, keep the best version. Add new relationships not in the existing record. Format: "[Name]: [1-2 sentences]." Never duplicate.
+
+Notable Events: Keep all existing events. Append new events not already listed. One sentence per event. Never remove.
+
+Story History: Keep all existing history. Append new story developments chronologically. Never remove. Max 2 paragraphs total — summarise if getting long.
+
+short_description: Use the new version if it is 20 words or fewer and more specific than the existing. Otherwise keep existing.
+
+For any field not listed above, keep existing content and add genuinely new information only.
 Do not infer or add anything not present in either source.
-Return ONLY a JSON object with the same field structure as the input sections. No prose, no markdown fences.
+Return ONLY a JSON object with the merged fields. No prose, no markdown fences.
 
 Existing record:
 """

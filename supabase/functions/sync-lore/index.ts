@@ -78,10 +78,18 @@ function findExistingEntity(
   }) ?? null;
 }
 
-function appendToSection(existing: string, newContent: string): string {
-  const trimmed = existing.trim();
-  if (!trimmed) return newContent.trim();
-  return `${trimmed}\n\n${newContent.trim()}`;
+// Fields where the latest version supersedes the old — rewriting is better than stacking.
+const SECTION_REPLACE_KEYS = new Set(["Overview", "Personality"]);
+
+function mergeSection(key: string, existing: string, newContent: string): string {
+  const trimmedExisting = existing.trim();
+  const trimmedNew = newContent.trim();
+  if (!trimmedExisting) return trimmedNew;
+  if (!trimmedNew) return trimmedExisting;
+  // Replace-strategy: new content reflects the latest current-state; stacking produces bloat.
+  if (SECTION_REPLACE_KEYS.has(key)) return trimmedNew;
+  // Append-strategy for Background, Notable Events, Story History, Relationships, etc.
+  return `${trimmedExisting}\n\n${trimmedNew}`;
 }
 
 function buildEntityContext(entities: ExistingEntity[]): string {
@@ -398,7 +406,7 @@ async function syncProject(
         let hasNewContent = false;
         for (const [key, value] of Object.entries(sections)) {
           if (value?.trim()) {
-            mergedSections[key] = appendToSection(mergedSections[key] ?? "", value.trim());
+            mergedSections[key] = mergeSection(key, mergedSections[key] ?? "", value.trim());
             hasNewContent = true;
           }
         }

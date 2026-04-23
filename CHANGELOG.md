@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-23 — Evaluative field-level merge strategy
+
+- `supabase/functions/merge-entity-sections/index.ts` — Replaced the generic "unify and preserve all facts" prompt with explicit per-field merge rules: Overview and Personality are rewritten clean using both records (no stacking); Background, Notable Events, and Story History are additive-only (nothing removed); Relationships are merged by name with no duplicates; short_description is replaced only if the new version is ≤20 words and more specific.
+- `supabase/functions/sync-lore/index.ts` — `appendToSection` replaced with field-aware `mergeSection(key, existing, newContent)`. Overview and Personality use replace-strategy (new content supersedes old); all other fields remain additive.
+
+---
+
 ## 2026-04-23 — Character section length limits and field separation
 
 - `supabase/functions/sync-lore/index.ts` — Replaced the single dense character sections instruction with explicit per-field constraints: Overview (present tense, max 1 paragraph, no background/history), Background (pre-story history only, max 1 paragraph, no invention), Personality (max 1 paragraph, only what the scene shows), Relationships (1–2 sentences per relationship, Name: description format), Notable Events (one sentence per event, factual, no editorializing). Non-character types (location, item, lore) also get a max 1 paragraph cap.
