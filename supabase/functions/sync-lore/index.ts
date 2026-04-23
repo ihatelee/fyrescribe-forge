@@ -198,19 +198,26 @@ async function syncProject(
     const entityContext = (existingEntities ?? [])
       .map((e: { name: string; category: string; summary?: string; sections?: Record<string, string>; aliases?: string[] | null }) => {
         const sections = e.sections ?? {};
-        const detail = (e.summary ?? Object.values(sections).find((v) => (v ?? "").trim()) ?? "").slice(0, 120);
         const aliasNote = (e.aliases ?? []).length > 0
           ? ` (also known as: ${(e.aliases ?? []).join(", ")})`
           : "";
-        const populatedSections = Object.entries(sections)
-          .filter(([, v]) => (v ?? "").trim())
-          .map(([k]) => k);
-        const sectionNote = populatedSections.length > 0
-          ? ` [documented sections: ${populatedSections.join(", ")}]`
-          : "";
-        return `- [${e.category}] ${e.name}${aliasNote}${detail ? ": " + detail : ""}${sectionNote}`;
+        const summary = (e.summary ?? "").trim();
+        const populatedSections = Object.entries(sections).filter(([, v]) => (v ?? "").trim());
+        const sectionNames = populatedSections.map(([k]) => k);
+        // Include a short snippet from each populated section (up to 3) so the
+        // AI can do a genuine content diff rather than just counting section keys.
+        const sectionSnippets = populatedSections
+          .slice(0, 3)
+          .map(([k, v]) => `    ${k}: ${v.trim().slice(0, 80)}${v.trim().length > 80 ? "…" : ""}`)
+          .join("\n");
+        return [
+          `- ${e.name}${aliasNote} [${e.category}]`,
+          summary ? `  Summary: ${summary.slice(0, 120)}` : null,
+          sectionNames.length > 0 ? `  Documented sections: ${sectionNames.join(", ")}` : null,
+          sectionSnippets ? `  Existing notes:\n${sectionSnippets}` : null,
+        ].filter(Boolean).join("\n");
       })
-      .join("\n");
+      .join("\n\n");
 
     // ── One API call per scene ───────────────────────────────────────────────
     // Each call asks for a single JSON object (or null). This keeps output
@@ -403,7 +410,7 @@ function buildPrompt(sceneTitle: string, chapterTitle: string, sceneText: string
 
 TONE: Write factually and directly. Do not sanitize, euphemize, or soften what is written in the scene. If a character says or thinks something crude, blunt, or informal — report it as such. Example: write "Owen refers to Nez as 'a little bitch' in an internal thought" not "Owen makes an unflattering remark about Nez." Use plain, direct language. Quote the source text where it adds clarity.
 
-ALREADY DOCUMENTED ENTITIES — do NOT re-suggest these unless you have substantial new information not covered by the existing summary. If all major sections for an entity are already populated, skip it entirely:
+ALREADY DOCUMENTED ENTITIES — compare what's already documented against what happens in this scene. Only suggest an entity update if the scene contains something genuinely new — a new event, relationship, reveal, or character detail not already captured. If the existing documentation already covers everything relevant in this scene, skip the entity entirely:
 ${entityContext || "(none yet)"}
 
 SCENE: ${locationLabel}

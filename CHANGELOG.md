@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Smart entity skip: AI content-diff instead of section-count heuristic
+
+- `supabase/functions/sync-lore/index.ts` — `entityContext` now emits a structured block per entity: canonical name + aliases, summary (≤120 chars), list of documented section names, and a short snippet from each populated section (first 80 chars, up to 3 sections). This gives the AI enough content to judge whether the current scene adds net-new information rather than just counting populated keys.
+- `supabase/functions/sync-lore/index.ts` — Prompt header updated from "skip if all major sections populated" to "compare what's already documented against what happens in this scene — only suggest if the scene contains something genuinely new (event, relationship, reveal, character detail). If existing documentation already covers everything relevant, skip entirely." Entities with full profiles are still surfaced when a scene adds something new.
+
+---
+
 ## 2026-04-22 — Fix Lore Inbox scroll reset / polling
 
 - `src/pages/LoreInboxPage.tsx` — Removed the 10-second `setInterval` that was calling `fetchSuggestions` on a timer. Every tick caused `setLoading(true)` + a full `setSuggestions(...)` replacement, triggering a re-render that reset scroll position. The visibility-change listener (refetch on tab focus) is retained. The inbox now only updates when the user takes an action.
