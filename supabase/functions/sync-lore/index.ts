@@ -412,10 +412,10 @@ Return a JSON array. Each element must have exactly these keys:
   - item: named objects, artifacts, weapons
   - lore: named magic systems, factions, events, creatures, doctrines, historical periods
 - "name": the proper name, 1–5 words
-- "short_description": REQUIRED. Maximum one sentence, maximum 20 words. This must be a simple identifier only — name, role, and one key trait. Example: "A young ranger who patrols the Whisperwood Forest." Do NOT copy from Overview. Do NOT exceed 20 words.
+- "short_description": REQUIRED. Maximum 2 sentences. Maximum 25 words total. Who this is and one key trait or role only. Example: "A young ranger who patrols the Whisperwood Forest. Known for her copper skin and gold eyes." Do NOT copy from Overview. Hard limit: 25 words. If you exceed 25 words you have failed this instruction.
 - "source_sentence": the exact sentence from the scene where this entity first appears, copied verbatim
 - "sections": object with article-style content. Only include a key when the scene has clear evidence for it. Max 60 words per value.
-  - character → allowed keys: "Overview" (REQUIRED. A full paragraph, 3–5 sentences minimum, summarising this entity's role, nature, and significance in the story so far. Must be substantially longer and more detailed than short_description.), "Background", "Personality", "Relationships", "Notable Events"
+  - character → allowed keys: "Overview" (REQUIRED. Minimum 3 sentences. Must include specific details from the scene text — names, actions, relationships, events. Do not write generic observations. Do not copy from short_description. If the scene only mentions this entity briefly, say what was mentioned specifically and note that further details are unknown.), "Background", "Personality", "Relationships", "Notable Events"
   - location  → allowed keys: "Description", "History", "Notable Inhabitants", "Points of Interest"
   - item      → allowed keys: "Description", "History", "Powers", "Current Whereabouts"
   - lore      → allowed keys: "Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts"

@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Strengthen short_description / Overview constraints to prevent identical output
+
+- `supabase/functions/sync-lore/index.ts` — `short_description` now capped at 2 sentences / 25 words with an explicit failure warning ("If you exceed 25 words you have failed this instruction") and a two-sentence example. `Overview` now requires a minimum of 3 sentences, must include specific scene details (names, actions, relationships, events), and must not copy from `short_description` — structural constraints that make identical output impossible to produce while complying.
+
+---
+
 ## 2026-04-22 — Factor aliases into sync-lore context and dedup
 
 - `supabase/functions/sync-lore/index.ts` — Added `aliases` to the existing-entities select. `entityContext` now emits `(also known as: Nez, Michael)` after the canonical name so the AI knows not to re-suggest an entity it already knows by a different name variant.
