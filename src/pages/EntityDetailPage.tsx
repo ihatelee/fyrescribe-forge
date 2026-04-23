@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import DOMPurify from "dompurify";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
@@ -1284,25 +1284,83 @@ const EntityDetailInner = () => {
           <div className="flex-1 min-w-0">
             <div className="space-y-0">
               {sectionList.map((section, i) => (
-                <div key={section}>
-                  {i > 0 && <div className="border-t border-border" />}
-                  <div className="py-6">
-                    <h2 className="font-display text-base text-foreground mb-3 tracking-wide">{section}</h2>
-                    <div
-                      contentEditable
-                      suppressContentEditableWarning
-                      className="font-prose text-lg leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
-                      data-placeholder={SECTION_PLACEHOLDER_TEXT[section] || "Write here…"}
-                      onInput={(e) => handleSectionInput(section, (e.target as HTMLDivElement).innerHTML)}
-                      ref={(el) => {
-                        if (el && !el.dataset.initialized) {
-                          el.innerHTML = DOMPurify.sanitize(sections[section] || "");
-                          el.dataset.initialized = "true";
-                        }
-                      }}
-                    />
+                <React.Fragment key={section}>
+                  <div>
+                    {i > 0 && <div className="border-t border-border" />}
+                    <div className="py-6">
+                      <h2 className="font-display text-base text-foreground mb-3 tracking-wide">{section}</h2>
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        className="font-prose text-lg leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none"
+                        data-placeholder={SECTION_PLACEHOLDER_TEXT[section] || "Write here…"}
+                        onInput={(e) => handleSectionInput(section, (e.target as HTMLDivElement).innerHTML)}
+                        ref={(el) => {
+                          if (el && !el.dataset.initialized) {
+                            el.innerHTML = DOMPurify.sanitize(sections[section] || "");
+                            el.dataset.initialized = "true";
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
+                  {section === "Background" && entity.category === "characters" && (
+                    <div className="border-t border-border pt-8 pb-8">
+                      <div className="flex items-center justify-between mb-4 gap-4">
+                        <div className="flex items-baseline gap-3 min-w-0">
+                          <h2 className="font-display text-base text-foreground tracking-wide">Story History</h2>
+                          <span className="text-[10px] uppercase tracking-widest text-text-dimmed">(2 paragraph maximum)</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={handleDeleteStoryHistory}
+                            disabled={generatingHistory || !((sections["Story History"] ?? "").replace(/<[^>]*>/g, "").trim().length)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-destructive bg-fyrescribe-raised border border-border rounded-lg hover:border-destructive/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Delete history"
+                          >
+                            <Trash2 size={12} />
+                            Delete History
+                          </button>
+                          <button
+                            onClick={handleUpdateStoryHistory}
+                            disabled={generatingHistory}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {generatingHistory ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Sparkles size={12} className="text-gold" />
+                            )}
+                            Update History
+                          </button>
+                        </div>
+                      </div>
+                      {(() => {
+                        const hasHistory = ((sections["Story History"] ?? "").replace(/<[^>]*>/g, "").trim().length) > 0;
+                        return hasHistory ? (
+                          <div
+                            contentEditable
+                            suppressContentEditableWarning
+                            className="font-prose text-lg leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none [&_p]:mb-4 [&_p:last-child]:mb-0"
+                            data-placeholder="No history yet."
+                            onInput={(e) => handleSectionInput("Story History", (e.target as HTMLDivElement).innerHTML)}
+                            ref={(el) => {
+                              storyHistoryRef.current = el;
+                              if (el && !el.dataset.initialized) {
+                                el.innerHTML = DOMPurify.sanitize(sections["Story History"] || "");
+                                el.dataset.initialized = "true";
+                              }
+                            }}
+                          />
+                        ) : (
+                          <p className="font-prose text-base leading-relaxed text-text-dimmed italic">
+                            No history yet. Click Update History to summarise this character's story so far.
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </React.Fragment>
               ))}
             </div>
 
@@ -1473,64 +1531,6 @@ const EntityDetailInner = () => {
                     </button>
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* ===== CHARACTER: Story History (AI-generated) ===== */}
-            {entity.category === "characters" && (
-              <div className="border-t border-border pt-8 mb-8">
-                <div className="flex items-center justify-between mb-4 gap-4">
-                  <div className="flex items-baseline gap-3 min-w-0">
-                    <h2 className="font-display text-base text-foreground tracking-wide">Story History</h2>
-                    <span className="text-[10px] uppercase tracking-widest text-text-dimmed">(2 paragraph maximum)</span>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={handleDeleteStoryHistory}
-                      disabled={generatingHistory || !((sections["Story History"] ?? "").replace(/<[^>]*>/g, "").trim().length)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-destructive bg-fyrescribe-raised border border-border rounded-lg hover:border-destructive/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      title="Delete history"
-                    >
-                      <Trash2 size={12} />
-                      Delete History
-                    </button>
-                    <button
-                      onClick={handleUpdateStoryHistory}
-                      disabled={generatingHistory}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {generatingHistory ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : (
-                        <Sparkles size={12} className="text-gold" />
-                      )}
-                      Update History
-                    </button>
-                  </div>
-                </div>
-                {(() => {
-                  const hasHistory = ((sections["Story History"] ?? "").replace(/<[^>]*>/g, "").trim().length) > 0;
-                  return hasHistory ? (
-                    <div
-                      contentEditable
-                      suppressContentEditableWarning
-                      className="font-prose text-lg leading-[1.85] text-text-secondary outline-none min-h-[3rem] focus:text-foreground transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-text-dimmed empty:before:pointer-events-none [&_p]:mb-4 [&_p:last-child]:mb-0"
-                      data-placeholder="No history yet."
-                      onInput={(e) => handleSectionInput("Story History", (e.target as HTMLDivElement).innerHTML)}
-                      ref={(el) => {
-                        storyHistoryRef.current = el;
-                        if (el && !el.dataset.initialized) {
-                          el.innerHTML = DOMPurify.sanitize(sections["Story History"] || "");
-                          el.dataset.initialized = "true";
-                        }
-                      }}
-                    />
-                  ) : (
-                    <p className="font-prose text-base leading-relaxed text-text-dimmed italic">
-                      No history yet. Click Update History to summarise this character's story so far.
-                    </p>
-                  );
-                })()}
               </div>
             )}
 

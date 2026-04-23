@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Move Story History above Relationships on character pages
+
+- `src/pages/EntityDetailPage.tsx` — Story History block moved from its standalone position (after linked entities) into the `sectionList.map()` loop, rendering as a `React.Fragment` sibling immediately after the "Background" section. Order is now: Overview → Background → Story History → Personality → Relationships → Notable Events. Added `React` default import to support `React.Fragment` with key prop. Old standalone Story History block removed.
+
+---
+
 ## 2026-04-22 — Fyrescribe persona: give sync-lore a voice
 
 - `supabase/functions/sync-lore/index.ts` — Replaced the `TONE — THIS IS A HARD RULE:` block with a `YOU ARE FYRESCRIBE.` persona block at the top of the prompt. Persona frames the AI as the author's sharp, concise research assistant who lives inside the manuscript — not a document summarizer. Keeps the WRONG/RIGHT examples (updated), adds proportional-length guidance ("two sentences if a character appeared once and said two things"), and retains the no-invention rule.
