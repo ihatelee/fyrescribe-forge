@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — sync-lore: direct tone, Notable Events specificity, skip well-documented entities
+
+- `supabase/functions/sync-lore/index.ts` — **Fix 1 (tone):** Added a `TONE` block at the top of `buildPrompt` instructing the AI to write factually and directly without sanitizing or euphemizing — crude, blunt, or informal language in the scene should be reported as-is, with source quotes where helpful.
+- `supabase/functions/sync-lore/index.ts` — **Fix 2 (Notable Events):** Added inline instructions to the `"Notable Events"` allowed key: list specific things that happen TO or are done BY this entity — accidents, actions, confrontations, discoveries. Includes the example "Nez accidentally lit his pants on fire." and explicitly says not to leave it blank if something happened.
+- `supabase/functions/sync-lore/index.ts` — **Fix 3 (unnecessary re-suggestions):** `entityContext` now emits `[documented sections: Overview, Background, ...]` alongside each entity entry. The prompt header changed from "do NOT re-suggest these" to "do NOT re-suggest unless you have substantial new information not covered by the existing summary — if all major sections are populated, skip it entirely."
+
+---
+
 ## 2026-04-22 — Strengthen short_description / Overview constraints to prevent identical output
 
 - `supabase/functions/sync-lore/index.ts` — `short_description` now capped at 2 sentences / 25 words with an explicit failure warning ("If you exceed 25 words you have failed this instruction") and a two-sentence example. `Overview` now requires a minimum of 3 sentences, must include specific scene details (names, actions, relationships, events), and must not copy from `short_description` — structural constraints that make identical output impossible to produce while complying.

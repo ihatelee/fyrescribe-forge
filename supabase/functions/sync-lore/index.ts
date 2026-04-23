@@ -198,13 +198,17 @@ async function syncProject(
     const entityContext = (existingEntities ?? [])
       .map((e: { name: string; category: string; summary?: string; sections?: Record<string, string>; aliases?: string[] | null }) => {
         const sections = e.sections ?? {};
-        const detail = e.summary
-          ?? Object.values(sections).find((v) => (v ?? "").trim())?.slice(0, 100)
-          ?? "";
+        const detail = (e.summary ?? Object.values(sections).find((v) => (v ?? "").trim()) ?? "").slice(0, 120);
         const aliasNote = (e.aliases ?? []).length > 0
           ? ` (also known as: ${(e.aliases ?? []).join(", ")})`
           : "";
-        return `[${e.category}] ${e.name}${aliasNote}${detail ? ": " + detail : ""}`;
+        const populatedSections = Object.entries(sections)
+          .filter(([, v]) => (v ?? "").trim())
+          .map(([k]) => k);
+        const sectionNote = populatedSections.length > 0
+          ? ` [documented sections: ${populatedSections.join(", ")}]`
+          : "";
+        return `- [${e.category}] ${e.name}${aliasNote}${detail ? ": " + detail : ""}${sectionNote}`;
       })
       .join("\n");
 
@@ -397,7 +401,9 @@ function buildPrompt(sceneTitle: string, chapterTitle: string, sceneText: string
   const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
   return `Extract all named entities from this scene.
 
-EXISTING ENTITIES — do NOT re-suggest these:
+TONE: Write factually and directly. Do not sanitize, euphemize, or soften what is written in the scene. If a character says or thinks something crude, blunt, or informal — report it as such. Example: write "Owen refers to Nez as 'a little bitch' in an internal thought" not "Owen makes an unflattering remark about Nez." Use plain, direct language. Quote the source text where it adds clarity.
+
+ALREADY DOCUMENTED ENTITIES — do NOT re-suggest these unless you have substantial new information not covered by the existing summary. If all major sections for an entity are already populated, skip it entirely:
 ${entityContext || "(none yet)"}
 
 SCENE: ${locationLabel}
@@ -415,7 +421,7 @@ Return a JSON array. Each element must have exactly these keys:
 - "short_description": REQUIRED. Maximum 2 sentences. Maximum 25 words total. Who this is and one key trait or role only. Example: "A young ranger who patrols the Whisperwood Forest. Known for her copper skin and gold eyes." Do NOT copy from Overview. Hard limit: 25 words. If you exceed 25 words you have failed this instruction.
 - "source_sentence": the exact sentence from the scene where this entity first appears, copied verbatim
 - "sections": object with article-style content. Only include a key when the scene has clear evidence for it. Max 60 words per value.
-  - character → allowed keys: "Overview" (REQUIRED. Minimum 3 sentences. Must include specific details from the scene text — names, actions, relationships, events. Do not write generic observations. Do not copy from short_description. If the scene only mentions this entity briefly, say what was mentioned specifically and note that further details are unknown.), "Background", "Personality", "Relationships", "Notable Events"
+  - character → allowed keys: "Overview" (REQUIRED. Minimum 3 sentences. Must include specific details from the scene text — names, actions, relationships, events. Do not write generic observations. Do not copy from short_description. If the scene only mentions this entity briefly, say what was mentioned specifically and note that further details are unknown.), "Background", "Personality", "Relationships", "Notable Events" (list specific things that happen TO or are done BY this entity in this scene — accidents, actions, confrontations, discoveries, anything plot-relevant. Example: "Nez accidentally lit his pants on fire." Do not leave blank if something happened.)
   - location  → allowed keys: "Description", "History", "Notable Inhabitants", "Points of Interest"
   - item      → allowed keys: "Description", "History", "Powers", "Current Whereabouts"
   - lore      → allowed keys: "Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts"
