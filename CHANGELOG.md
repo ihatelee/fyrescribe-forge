@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Temporary sync debug panel in Lore Inbox
+
+- `src/pages/LoreInboxPage.tsx` — Debug panel visible only when `?debug=true` is in the URL. Shows a "Sync Lore (debug)" button that calls sync-lore with `force: true` and `debug: true`. After sync, a collapsible panel displays every entity the AI processed: routing outcome (new→inbox, merged directly, contradiction→inbox, no new content), which sections were returned with raw content, and which expected sections were NOT RETURNED.
+- `supabase/functions/sync-lore/index.ts` — Accepts optional `debug: boolean` request field. When true, each routing path populates a `debug_data: DebugEntityEntry[]` array returned in the response payload. No effect on sync behaviour when `debug` is false or omitted.
+
+---
+
 ## 2026-04-22 — sync-lore: create-or-merge architecture
 
 - `supabase/functions/sync-lore/index.ts` — Replaced create-or-skip with a three-path create-or-merge flow. AI now returns `update_type` on each suggestion: `"new"` → Lore Inbox as `new_entity`; `"update"` → sections appended directly to the existing entity server-side; `"contradiction"` → Lore Inbox as `contradiction` for manual review.

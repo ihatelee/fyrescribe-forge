@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
@@ -14,6 +14,8 @@ import {
   FileText,
   Loader2,
   ExternalLink,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -52,6 +54,22 @@ interface LoreSuggestion {
   entity_id: string | null;
   project_id: string;
   reviewed_at: string | null;
+}
+
+interface DebugEntityEntry {
+  name: string;
+  entity_type: string;
+  update_type: string;
+  routed_to: "inbox_new" | "inbox_contradiction" | "direct_update" | "no_new_content";
+  ai_sections: string[];
+  raw_sections: Record<string, string>;
+}
+
+interface SyncDebugResult {
+  scenes_processed: number;
+  suggestions_created: number;
+  entities_updated: number;
+  debug_data?: DebugEntityEntry[];
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -357,11 +375,112 @@ const SuggestionCard = ({ suggestion, onAccept, onReject }: SuggestionCardProps)
   );
 };
 
+// ─── Debug Panel ─────────────────────────────────────────────────────────────
+
+const EXPECTED_SECTIONS: Record<string, string[]> = {
+  character: ["Overview", "Background", "Personality", "Relationships", "Notable Events"],
+  location: ["Description", "History", "Notable Inhabitants", "Points of Interest"],
+  item: ["Description", "History", "Powers", "Current Whereabouts"],
+  lore: ["Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts"],
+};
+
+const ROUTE_LABELS: Record<string, { label: string; color: string }> = {
+  inbox_new:            { label: "new → inbox",            color: "bg-green-500/20 text-green-300" },
+  inbox_contradiction:  { label: "contradiction → inbox",  color: "bg-orange-500/20 text-orange-300" },
+  direct_update:        { label: "merged directly",        color: "bg-blue-500/20 text-blue-300" },
+  no_new_content:       { label: "no new content",         color: "bg-muted text-text-dimmed" },
+};
+
+const DebugPanel = ({ result }: { result: SyncDebugResult }) => {
+  const [open, setOpen] = useState(false);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const entries = result.debug_data ?? [];
+
+  return (
+    <div className="mt-8 border border-amber-500/30 rounded-lg bg-amber-500/5">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="text-[11px] uppercase tracking-widest text-amber-400 font-medium">
+          DEBUG — Last sync result
+        </span>
+        <div className="flex items-center gap-3 text-text-dimmed">
+          <span className="text-[11px]">
+            {result.scenes_processed} scenes · {result.suggestions_created} to inbox · {result.entities_updated} direct updates · {entries.length} entities total
+          </span>
+          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </div>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-2 border-t border-amber-500/20 pt-3">
+          {entries.length === 0 ? (
+            <p className="text-[12px] text-text-dimmed py-2">No entities processed in this sync.</p>
+          ) : (
+            entries.map((entry, i) => {
+              const key = `${entry.name}:${i}`;
+              const expected = EXPECTED_SECTIONS[entry.entity_type] ?? [];
+              const returned = new Set(entry.ai_sections);
+              const missing = expected.filter((s) => !returned.has(s));
+              const routeConfig = ROUTE_LABELS[entry.routed_to] ?? { label: entry.routed_to, color: "bg-muted text-text-dimmed" };
+              const isExpanded = expandedKey === key;
+
+              return (
+                <div key={key} className="border border-border rounded bg-fyrescribe-raised">
+                  <button
+                    onClick={() => setExpandedKey(isExpanded ? null : key)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-left"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[12px] font-medium text-foreground truncate">{entry.name}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-fyrescribe-hover text-text-dimmed shrink-0">{entry.entity_type}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${routeConfig.color}`}>{routeConfig.label}</span>
+                    </div>
+                    {isExpanded ? <ChevronDown size={12} className="text-text-dimmed shrink-0" /> : <ChevronRight size={12} className="text-text-dimmed shrink-0" />}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-3 pb-3 border-t border-border space-y-2 pt-2">
+                      <p className="text-[10px] uppercase tracking-widest text-text-dimmed">
+                        AI returned: {entry.ai_sections.length > 0 ? entry.ai_sections.join(", ") : "(no sections)"}
+                      </p>
+                      {entry.ai_sections.map((section) => (
+                        <div key={section}>
+                          <p className="text-[11px] text-text-secondary font-medium mb-0.5">{section}</p>
+                          <pre className="text-[11px] text-text-dimmed bg-fyrescribe-hover rounded px-2 py-1.5 whitespace-pre-wrap font-mono leading-relaxed overflow-x-auto">
+                            {(entry.raw_sections[section] ?? "").trim() || "(empty string)"}
+                          </pre>
+                        </div>
+                      ))}
+                      {missing.length > 0 && (
+                        <div className="space-y-0.5 pt-1 border-t border-border">
+                          {missing.map((section) => (
+                            <p key={section} className="text-[11px] text-amber-500/70 font-mono">
+                              {section}: NOT RETURNED
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const LoreInboxPage = () => {
   const { activeProject } = useActiveProject();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isDebugMode = searchParams.get("debug") === "true";
 
   const [suggestions, setSuggestions] = useState<LoreSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -370,6 +489,8 @@ const LoreInboxPage = () => {
   const [acceptedNoNewInfo, setAcceptedNoNewInfo] = useState(false);
   const [acceptAllStatus, setAcceptAllStatus] = useState<string | null>(null);
   const [acceptingAll, setAcceptingAll] = useState(false);
+  const [lastSyncDebug, setLastSyncDebug] = useState<SyncDebugResult | null>(null);
+  const [debugSyncing, setDebugSyncing] = useState(false);
 
   const fetchSuggestions = useCallback(async () => {
     if (!activeProject) return;
@@ -610,6 +731,25 @@ const LoreInboxPage = () => {
     setTimeout(() => setAcceptAllStatus(null), 4000);
   };
 
+  const handleDebugSync = async () => {
+    if (!activeProject) return;
+    setDebugSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-lore", {
+        body: { project_id: activeProject.id, trigger: "manual", force: true, debug: true },
+      });
+      if (error) {
+        console.error("[debug sync] error:", error);
+      } else {
+        const firstResult = (data?.results?.[0] ?? null) as SyncDebugResult | null;
+        if (firstResult) setLastSyncDebug(firstResult);
+      }
+      await fetchSuggestions();
+    } finally {
+      setDebugSyncing(false);
+    }
+  };
+
   const handleReject = async (id: string) => {
     await supabase
       .from("lore_suggestions")
@@ -695,6 +835,22 @@ const LoreInboxPage = () => {
                 onReject={handleReject}
               />
             ))}
+          </div>
+        )}
+        {isDebugMode && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] uppercase tracking-widest text-amber-400">Debug Mode</span>
+              <button
+                onClick={handleDebugSync}
+                disabled={debugSyncing || !activeProject}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 disabled:opacity-50 transition-colors"
+              >
+                {debugSyncing ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                Sync Lore (debug)
+              </button>
+            </div>
+            {lastSyncDebug && <DebugPanel result={lastSyncDebug} />}
           </div>
         )}
       </div>

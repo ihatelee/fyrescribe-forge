@@ -45,6 +45,16 @@ interface ExistingEntity {
   aliases: string[] | null;
 }
 
+/** Per-entity debug snapshot returned when debug=true is passed in the request body. */
+interface DebugEntityEntry {
+  name: string;
+  entity_type: string;
+  update_type: string;
+  routed_to: "inbox_new" | "inbox_contradiction" | "direct_update" | "no_new_content";
+  ai_sections: string[];
+  raw_sections: Record<string, string>;
+}
+
 /** Maps the 4 suggestion types to the closest entity_category for UI display. */
 const TYPE_TO_CATEGORY: Record<SuggestionType, string> = {
   character: "characters",
@@ -114,10 +124,11 @@ serve(async (req) => {
     const userId = user.id;
 
     const body = await req.json().catch(() => ({}));
-    const { project_id, trigger = "manual", force = false } = body as {
+    const { project_id, trigger = "manual", force = false, debug = false } = body as {
       project_id?: string;
       trigger?: "scheduled" | "manual";
       force?: boolean;
+      debug?: boolean;
     };
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -164,7 +175,7 @@ serve(async (req) => {
 
     const results = [];
     for (const pid of projectIds) {
-      const result = await syncProject(supabase, pid, trigger as "scheduled" | "manual", anthropicKey, force);
+      const result = await syncProject(supabase, pid, trigger as "scheduled" | "manual", anthropicKey, force, debug);
       results.push(result);
     }
 
@@ -187,7 +198,8 @@ async function syncProject(
   trigger: "scheduled" | "manual",
   anthropicKey: string,
   force = false,
-): Promise<{ project_id: string; scenes_processed: number; suggestions_created: number; entities_updated: number; force: boolean }> {
+  debug = false,
+): Promise<{ project_id: string; scenes_processed: number; suggestions_created: number; entities_updated: number; force: boolean; debug_data?: DebugEntityEntry[] }> {
   // Open a sync_log entry.
   const { data: logEntry } = await supabase
     .from("sync_log")
@@ -222,7 +234,7 @@ async function syncProject(
 
     if (!scenes || scenes.length === 0) {
       await finaliseLog(supabase, logId, "completed", 0, 0);
-      return { project_id: projectId, scenes_processed: 0, suggestions_created: 0, entities_updated: 0, force };
+      return { project_id: projectId, scenes_processed: 0, suggestions_created: 0, entities_updated: 0, force, debug_data: debug ? [] : undefined };
     }
 
     // Fetch existing entities so the AI can avoid re-suggesting them.
@@ -303,6 +315,7 @@ async function syncProject(
     type InboxRow = { project_id: string; type: "new_entity" | "contradiction"; payload: Record<string, unknown>; status: "pending" };
     const inboxRows: InboxRow[] = [];
     let entitiesUpdated = 0;
+    const debugEntries: DebugEntityEntry[] = [];
 
     for (const s of validSuggestions) {
       const sections = s.sections ?? {};
@@ -314,6 +327,7 @@ async function syncProject(
 
       if (!existingEntity || s.update_type === "new") {
         // Path 1: new entity → Lore Inbox
+        if (debug) debugEntries.push({ name: s.name.trim(), entity_type: s.type, update_type: s.update_type ?? "new", routed_to: "inbox_new", ai_sections: Object.keys(sections).filter((k) => (sections[k] ?? "").trim()), raw_sections: sections });
         inboxRows.push({
           project_id: projectId,
           type: "new_entity",
@@ -334,6 +348,7 @@ async function syncProject(
         });
       } else if (s.update_type === "contradiction") {
         // Path 3: contradicts existing docs → Lore Inbox for review
+        if (debug) debugEntries.push({ name: s.name.trim(), entity_type: s.type, update_type: "contradiction", routed_to: "inbox_contradiction", ai_sections: Object.keys(sections).filter((k) => (sections[k] ?? "").trim()), raw_sections: sections });
         inboxRows.push({
           project_id: projectId,
           type: "contradiction",
@@ -362,6 +377,7 @@ async function syncProject(
             hasNewContent = true;
           }
         }
+        if (debug) debugEntries.push({ name: s.name.trim(), entity_type: s.type, update_type: "update", routed_to: hasNewContent ? "direct_update" : "no_new_content", ai_sections: Object.keys(sections).filter((k) => (sections[k] ?? "").trim()), raw_sections: sections });
         if (hasNewContent) {
           const { error: updateError } = await supabase
             .from("entities")
@@ -402,7 +418,7 @@ async function syncProject(
 
     await finaliseLog(supabase, logId, "completed", scenes.length, suggestionsCreated);
     console.log(`[sync-lore] project=${projectId} suggestions_created=${suggestionsCreated} entities_updated=${entitiesUpdated}`);
-    return { project_id: projectId, scenes_processed: scenes.length, suggestions_created: suggestionsCreated, entities_updated: entitiesUpdated, force };
+    return { project_id: projectId, scenes_processed: scenes.length, suggestions_created: suggestionsCreated, entities_updated: entitiesUpdated, force, debug_data: debug ? debugEntries : undefined };
   } catch (err) {
     await finaliseLog(supabase, logId, "failed", 0, 0);
     throw err;
