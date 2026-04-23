@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-23 — Fix paragraph enforcement to use sentence count
+
+- `src/pages/LoreInboxPage.tsx` — `enforceFieldLimits`: replaced `\n\n` split with sentence-count enforcement. Overview and Personality are now hard-capped at 5 sentences using `/[^.!?]+[.!?]+/g` matching, which works regardless of whether the AI returns single-paragraph or multi-paragraph content.
+
+---
+
 ## 2026-04-23 — Enforce paragraph limits after merge
 
 - `src/pages/LoreInboxPage.tsx` — Added `enforceFieldLimits()`. Called on the final merged sections before writing to Supabase. Overview and Personality are truncated to the first paragraph (content before the first double newline). short_description is truncated to 20 words.

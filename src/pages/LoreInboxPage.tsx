@@ -60,7 +60,10 @@ interface LoreSuggestion {
 function enforceFieldLimits(sections: Record<string, string>): Record<string, string> {
   const result = { ...sections };
   for (const field of ["Overview", "Personality"]) {
-    if (result[field]) result[field] = result[field].split(/\n\n/)[0].trim();
+    if (result[field]) {
+      const sentences = result[field].match(/[^.!?]+[.!?]+/g) ?? [];
+      if (sentences.length > 5) result[field] = sentences.slice(0, 5).join(" ").trim();
+    }
   }
   if (result["short_description"]) {
     const words = result["short_description"].split(" ");
