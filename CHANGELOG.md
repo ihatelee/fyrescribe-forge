@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Add explicit instruction for Background field in sync-lore prompt
+
+- `supabase/functions/sync-lore/index.ts` — `"Background"` character section now has inline instructions matching the treatment of `"Notable Events"`: populate with backstory, history, or origin details from the scene text only; do not invent; leave empty if nothing is known. Includes a grounded example ("Grew up in the same neighbourhood as Owen. Has a reputation for clumsiness.").
+
+---
+
 ## 2026-04-22 — Tighten short_description to 20-word hard limit
 
 - `supabase/functions/sync-lore/index.ts` — `short_description` instruction reduced from "2 sentences / 25 words" to "1 sentence / 20 words". Updated example uses the Nez character to ground the instruction in the project's actual content. "Hard limit — count the words" retained.
