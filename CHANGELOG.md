@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Tighten short_description to 20-word hard limit
+
+- `supabase/functions/sync-lore/index.ts` — `short_description` instruction reduced from "2 sentences / 25 words" to "1 sentence / 20 words". Updated example uses the Nez character to ground the instruction in the project's actual content. "Hard limit — count the words" retained.
+
+---
+
 ## 2026-04-22 — sync-lore: model upgrade to claude-sonnet-4-20250514 + TONE block moved to top
 
 - `supabase/functions/sync-lore/index.ts` — Model changed from `claude-sonnet-4-6` to `claude-sonnet-4-20250514` (matches CLAUDE.md spec for edge functions; more capable model follows nuanced tone instructions more reliably).
