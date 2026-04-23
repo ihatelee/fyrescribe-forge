@@ -29,7 +29,7 @@ interface AISuggestion {
    * "update"       → entity exists; sections contain only net-new content; merged server-side
    * "contradiction" → entity exists; content conflicts with existing docs; goes to inbox for review
    */
-  update_type?: "new" | "update" | "contradiction";
+  update_type?: "new" | "update" | "contradiction" | "no_update";
   /** Stamped server-side after the AI call — never from the client. */
   scene_id?: string;
   source_location?: string;
@@ -43,6 +43,7 @@ interface ExistingEntity {
   summary: string | null;
   sections: Record<string, string>;
   aliases: string[] | null;
+  synced_scenes: string[] | null;
 }
 
 /** Per-entity debug snapshot returned when debug=true is passed in the request body. */
@@ -50,7 +51,7 @@ interface DebugEntityEntry {
   name: string;
   entity_type: string;
   update_type: string;
-  routed_to: "inbox_new" | "inbox_contradiction" | "direct_update" | "no_new_content";
+  routed_to: "inbox_new" | "inbox_contradiction" | "direct_update" | "no_new_content" | "no_update";
   ai_sections: string[];
   raw_sections: Record<string, string>;
 }
@@ -81,6 +82,28 @@ function appendToSection(existing: string, newContent: string): string {
   const trimmed = existing.trim();
   if (!trimmed) return newContent.trim();
   return `${trimmed}\n\n${newContent.trim()}`;
+}
+
+function buildEntityContext(entities: ExistingEntity[]): string {
+  if (entities.length === 0) return "(none yet)";
+  return entities
+    .map((e) => {
+      const sections = e.sections ?? {};
+      const aliasNote = (e.aliases ?? []).length > 0
+        ? ` (also known as: ${(e.aliases ?? []).join(", ")})`
+        : "";
+      const summary = (e.summary ?? "").trim();
+      const populatedSections = Object.entries(sections).filter(([, v]) => (v ?? "").trim());
+      const sectionContent = populatedSections
+        .map(([k, v]) => `    ${k}: ${v.trim().slice(0, 300)}${v.trim().length > 300 ? "…" : ""}`)
+        .join("\n");
+      return [
+        `- ${e.name}${aliasNote} [${e.category}]`,
+        summary ? `  Summary: ${summary.slice(0, 120)}` : null,
+        sectionContent ? `  Existing content:\n${sectionContent}` : null,
+      ].filter(Boolean).join("\n");
+    })
+    .join("\n\n");
 }
 
 interface SceneRow {
@@ -237,41 +260,40 @@ async function syncProject(
       return { project_id: projectId, scenes_processed: 0, suggestions_created: 0, entities_updated: 0, force, debug_data: debug ? [] : undefined };
     }
 
-    // Fetch existing entities so the AI can avoid re-suggesting them.
+    // Fetch existing entities for diff context and synced-scene tracking.
     const { data: existingEntities } = await supabase
       .from("entities")
-      .select("id, name, category, summary, sections, aliases")
+      .select("id, name, category, summary, sections, aliases, synced_scenes")
       .eq("project_id", projectId);
 
     const existingEntityList = (existingEntities ?? []) as ExistingEntity[];
-    const entityContext = existingEntityList
-      .map((e) => {
-        const sections = e.sections ?? {};
-        const aliasNote = (e.aliases ?? []).length > 0
-          ? ` (also known as: ${(e.aliases ?? []).join(", ")})`
-          : "";
-        const summary = (e.summary ?? "").trim();
-        const populatedSections = Object.entries(sections).filter(([, v]) => (v ?? "").trim());
-        const sectionContent = populatedSections
-          .map(([k, v]) => `    ${k}: ${v.trim().slice(0, 300)}${v.trim().length > 300 ? "…" : ""}`)
-          .join("\n");
-        return [
-          `- ${e.name}${aliasNote} [${e.category}]`,
-          summary ? `  Summary: ${summary.slice(0, 120)}` : null,
-          sectionContent ? `  Existing content:\n${sectionContent}` : null,
-        ].filter(Boolean).join("\n");
-      })
-      .join("\n\n");
 
-    // ── One API call per scene ───────────────────────────────────────────────
-    // Each call asks for a single JSON object (or null). This keeps output
-    // tokens tiny (~200–400) and makes truncation impossible.
+    // ── One AI call per scene ────────────────────────────────────────────────
+    // Context is built per-scene so only entities not yet checked against this
+    // specific scene are passed to the model. force=true bypasses the filter so
+    // all entities are always included (used by debug sync).
 
     const allSuggestions: AISuggestion[] = [];
+    // Tracks entityId → sceneIds processed this run, for synced_scenes update.
+    const entitySceneMap = new Map<string, string[]>();
 
     for (const scene of scenes) {
       const sceneText = (scene.content ?? "").slice(0, SCENE_CONTENT_LIMIT).trim();
       if (!sceneText) continue;
+
+      // Only include entities that haven't been checked against this scene yet.
+      const unsyncedEntities = force
+        ? existingEntityList
+        : existingEntityList.filter((e) => !(e.synced_scenes ?? []).includes(scene.id));
+
+      // Record which entities are being passed to AI so we can mark them synced.
+      for (const e of unsyncedEntities) {
+        const list = entitySceneMap.get(e.id) ?? [];
+        list.push(scene.id);
+        entitySceneMap.set(e.id, list);
+      }
+
+      const entityContext = buildEntityContext(unsyncedEntities);
 
       const sceneSuggestions = await callAnthropicForScene(
         anthropicKey,
@@ -366,6 +388,9 @@ async function syncProject(
           },
           status: "pending",
         });
+      } else if (s.update_type === "no_update") {
+        // AI found nothing new — synced_scenes will be updated below, no DB write
+        if (debug) debugEntries.push({ name: s.name.trim(), entity_type: s.type, update_type: "no_update", routed_to: "no_update", ai_sections: [], raw_sections: {} });
       } else {
         // Path 2: update_type === "update" → merge sections directly into entity
         console.log(`[sync-lore] merge candidate: entity="${existingEntity.name}" ai_sections=${JSON.stringify(Object.keys(sections))} raw=${JSON.stringify(sections)}`);
@@ -402,6 +427,18 @@ async function syncProject(
         console.error("[sync-lore] insert error:", insertError.message);
       }
       suggestionsCreated = inserted?.length ?? 0;
+    }
+
+    // ── Update synced_scenes for every entity-scene pair passed to the AI ───
+    if (entitySceneMap.size > 0) {
+      await Promise.all(
+        Array.from(entitySceneMap.entries()).map(([entityId, newSceneIds]) => {
+          const entity = existingEntityList.find((e) => e.id === entityId);
+          const existing = entity?.synced_scenes ?? [];
+          const updated = [...new Set([...existing, ...newSceneIds])];
+          return supabase.from("entities").update({ synced_scenes: updated }).eq("id", entityId);
+        }),
+      );
     }
 
     // Clear is_dirty on processed scenes.
@@ -513,7 +550,7 @@ function buildUserPrompt(sceneTitle: string, chapterTitle: string, sceneText: st
   const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
   return `Extract all named entities from this scene.
 
-ALREADY DOCUMENTED ENTITIES — for each known entity, compare the existing content against what this scene reveals. Use update_type to classify: "update" if the scene adds net-new information not already captured; "contradiction" if the scene contradicts existing docs; omit the entity entirely if everything in this scene is already documented. For entities NOT in this list, use update_type "new". When update_type is "update", put ONLY the new content in sections — do not repeat what is already there:
+ALREADY DOCUMENTED ENTITIES — these have not yet been checked against this scene. For each that appears in this scene, compare existing content against what the scene reveals. If the entity does not appear in this scene at all, omit it. For entities NOT in this list, use update_type "new". When update_type is "update", put ONLY the new content in sections — do not repeat what is already there:
 ${entityContext || "(none yet)"}
 
 SCENE: ${locationLabel}
@@ -530,7 +567,7 @@ Return a JSON array. Each element must have exactly these keys:
 - "name": the proper name, 1–5 words
 - "short_description": REQUIRED. Maximum 20 words. Hard limit — count the words. One sentence only. Who this person is and their most memorable trait or role. Example: "A member of Owen's social circle, known by the nickname Nez. Prone to accidents." Do NOT copy from Overview. Do NOT exceed 20 words.
 - "source_sentence": the exact sentence from the scene where this entity first appears, copied verbatim
-- "update_type": Required. "new" if not in the documented list. "update" if documented and the scene adds net-new information. "contradiction" if the scene conflicts with existing docs. Omit the entity entirely if it is already documented and this scene adds nothing new.
+- "update_type": Required. "new" if not in the documented list. "update" if documented and this scene adds net-new information. "contradiction" if the scene conflicts with existing docs. "no_update" if documented, the entity appears in this scene, but existing docs already capture everything relevant.
 - "sections": object with article-style content. Only include a key when the scene has clear evidence for it. Max 60 words per value.
   - character → allowed keys: "Overview" (REQUIRED. Minimum 3 sentences. Must include specific details from the scene text — names, actions, relationships, events. Do not write generic observations. Do not copy from short_description. If the scene only mentions this entity briefly, say what was mentioned specifically and note that further details are unknown.), "Background" (any backstory, history, or origin details mentioned or implied in the scene text — where they came from, past events referenced, family or history mentioned. Do not invent — only use what is in the text. Leave empty if nothing is known.), "Personality" (specific traits, habits, or behavioral patterns revealed by actions or dialogue in the scene. Do not write generic observations. Only include what the scene actually shows.), "Relationships", "Notable Events" (list specific things that happen TO or are done BY this entity in this scene — accidents, actions, confrontations, discoveries, anything plot-relevant. Do not leave blank if something happened.)
   - location  → allowed keys: "Description", "History", "Notable Inhabitants", "Points of Interest"

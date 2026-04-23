@@ -4,6 +4,16 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-23 — Smart skip: scene-level synced_scenes tracking
+
+- `supabase/migrations/20260423000000_add_synced_scenes_to_entities.sql` — New `synced_scenes uuid[]` column on entities; tracks which scene IDs have already been processed for each entity.
+- `supabase/functions/sync-lore/index.ts` — Entity context is now built per-scene rather than once for all scenes. Only entities not yet in `synced_scenes` for the current scene are passed to the AI (`force=true` bypasses the filter). After all scenes, `synced_scenes` is batch-updated for every entity-scene pair passed to the AI.
+- `supabase/functions/sync-lore/index.ts` — Extracted `buildEntityContext()` as a standalone function.
+- `supabase/functions/sync-lore/index.ts` — Prompt: replaced "omit if nothing new" with `update_type: "no_update"`. Routing skips `no_update` entries without any DB write; `synced_scenes` is still recorded.
+- `src/pages/LoreInboxPage.tsx` — Debug panel updated to display `"no_update"` route label.
+
+---
+
 ## 2026-04-22 — Temporary sync debug panel in Lore Inbox
 
 - `src/pages/LoreInboxPage.tsx` — Debug panel visible only when `?debug=true` is in the URL. Shows a "Sync Lore (debug)" button that calls sync-lore with `force: true` and `debug: true`. After sync, a collapsible panel displays every entity the AI processed: routing outcome (new→inbox, merged directly, contradiction→inbox, no new content), which sections were returned with raw content, and which expected sections were NOT RETURNED.

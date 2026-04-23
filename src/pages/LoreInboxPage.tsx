@@ -60,7 +60,7 @@ interface DebugEntityEntry {
   name: string;
   entity_type: string;
   update_type: string;
-  routed_to: "inbox_new" | "inbox_contradiction" | "direct_update" | "no_new_content";
+  routed_to: "inbox_new" | "inbox_contradiction" | "direct_update" | "no_new_content" | "no_update";
   ai_sections: string[];
   raw_sections: Record<string, string>;
 }
@@ -389,6 +389,7 @@ const ROUTE_LABELS: Record<string, { label: string; color: string }> = {
   inbox_contradiction:  { label: "contradiction → inbox",  color: "bg-orange-500/20 text-orange-300" },
   direct_update:        { label: "merged directly",        color: "bg-blue-500/20 text-blue-300" },
   no_new_content:       { label: "no new content",         color: "bg-muted text-text-dimmed" },
+  no_update:            { label: "no update",              color: "bg-muted text-text-dimmed" },
 };
 
 const DebugPanel = ({ result }: { result: SyncDebugResult }) => {
