@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-23 — Character section length limits and field separation
+
+- `supabase/functions/sync-lore/index.ts` — Replaced the single dense character sections instruction with explicit per-field constraints: Overview (present tense, max 1 paragraph, no background/history), Background (pre-story history only, max 1 paragraph, no invention), Personality (max 1 paragraph, only what the scene shows), Relationships (1–2 sentences per relationship, Name: description format), Notable Events (one sentence per event, factual, no editorializing). Non-character types (location, item, lore) also get a max 1 paragraph cap.
+
+---
+
 ## 2026-04-23 — Smart skip: scene-level synced_scenes tracking
 
 - `supabase/migrations/20260423000000_add_synced_scenes_to_entities.sql` — New `synced_scenes uuid[]` column on entities; tracks which scene IDs have already been processed for each entity.
