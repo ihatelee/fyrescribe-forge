@@ -691,7 +691,7 @@ const ManuscriptPage = () => {
 
       const editor = focusMode ? focusEditorRef.current : editorRef.current;
       if (editor) {
-        editor.innerHTML = DOMPurify.sanitize(v.content);
+        editor.innerHTML = sanitizeManuscript(v.content);
         // Re-apply highlights after DOM swap.
         requestAnimationFrame(() => {
           if (editor) applyEntityHighlights(editor, entityNamesRef.current);
@@ -710,7 +710,9 @@ const ManuscriptPage = () => {
       if (!activeSceneId) return;
       const raw = (e.target as HTMLDivElement).innerHTML;
       // Strip display-only entity spans before persisting — they must never reach the DB
-      const content = raw.replace(/<span\b[^>]*\bdata-entity-id="[^"]*"[^>]*>([\s\S]*?)<\/span>/g, "$1");
+      const withoutEntities = raw.replace(/<span\b[^>]*\bdata-entity-id="[^"]*"[^>]*>([\s\S]*?)<\/span>/g, "$1");
+      // Strip baked-in theme colors so saved content stays theme-agnostic
+      const content = stripThemeColors(withoutEntities);
       contentCache.current.set(activeSceneId, content);
       setWordCount(countWords(content));
       saveScene(activeSceneId, content);
@@ -984,7 +986,7 @@ const ManuscriptPage = () => {
     (el: HTMLDivElement | null) => {
       (ref as React.MutableRefObject<HTMLDivElement | null>).current = el;
       if (el && !el.dataset.initialized && activeScene) {
-        el.innerHTML = DOMPurify.sanitize(getInitialContent(activeScene));
+        el.innerHTML = sanitizeManuscript(getInitialContent(activeScene));
         el.dataset.initialized = "true";
         if (pendingAutoFocus.current) {
           el.focus();
