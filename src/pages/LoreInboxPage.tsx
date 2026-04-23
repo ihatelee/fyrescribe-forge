@@ -490,9 +490,14 @@ const LoreInboxPage = () => {
       // ── Background AI merge — fire and forget ──────────────────────────
       if (hasExisting && hasNew) {
         const bgEntityId = entityId;
+        const capturedExisting = existingSections;
+        console.error(
+          "[merge] BEFORE — overview:", (capturedExisting["Overview"] ?? "").slice(0, 120),
+          "| personality:", (capturedExisting["Personality"] ?? "").slice(0, 120),
+        );
         supabase.functions
           .invoke("merge-entity-sections", {
-            body: { existing_sections: existingSections, new_sections: sectionsToWrite },
+            body: { existing_sections: capturedExisting, new_sections: sectionsToWrite },
           })
           .then(({ data: mergeResult, error: mergeError }) => {
             if (mergeError) {
@@ -504,9 +509,17 @@ const LoreInboxPage = () => {
               console.error("[merge] no merged_sections in response:", mergeResult);
               return;
             }
+            console.error(
+              "[merge] AFTER (AI) — overview:", (merged["Overview"] ?? "").slice(0, 120),
+              "| personality:", (merged["Personality"] ?? "").slice(0, 120),
+            );
+            // Spread existing first so fields the AI didn't return are preserved,
+            // then spread merged so AI-returned fields (including rewritten Overview /
+            // Personality) always win over the existing record.
+            const finalSections = { ...capturedExisting, ...merged };
             return supabase
               .from("entities")
-              .update({ sections: merged })
+              .update({ sections: finalSections })
               .eq("id", bgEntityId)
               .then(({ error: updateError }) => {
                 if (updateError) console.error("[merge] entity update error:", updateError);

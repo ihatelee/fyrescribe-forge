@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-23 — Fix replace strategy not applying in background merge
+
+- `src/pages/LoreInboxPage.tsx` — Background AI merge write changed from `{ sections: merged }` to `{ sections: { ...capturedExisting, ...merged } }`. Previously, if the AI returned an incomplete `merged` (fields it didn't need to rewrite), those missing fields were silently dropped from the entity. With the spread, fields the AI didn't return are preserved from the existing record, while AI-returned fields (including the clean-rewritten Overview and Personality) always win.
+- `src/pages/LoreInboxPage.tsx` — Added `console.error` logging showing Overview and Personality before the merge invoke and after the AI result is received, to make it possible to confirm the rewrite is happening correctly in the browser console.
+
+---
+
 ## 2026-04-23 — Evaluative field-level merge strategy
 
 - `supabase/functions/merge-entity-sections/index.ts` — Replaced the generic "unify and preserve all facts" prompt with explicit per-field merge rules: Overview and Personality are rewritten clean using both records (no stacking); Background, Notable Events, and Story History are additive-only (nothing removed); Relationships are merged by name with no duplicates; short_description is replaced only if the new version is ≤20 words and more specific.
