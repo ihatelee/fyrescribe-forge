@@ -55,7 +55,7 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
 
   return (
     <div className="fixed top-0 left-0 right-0 h-20 bg-fyrescribe-base border-b border-border flex items-center justify-between px-3 lg:px-4 z-50">
-      <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+      <div className="flex items-center gap-2 lg:gap-3 min-w-0 relative z-10">
         {showSidebarToggle && (
           <button
             onClick={toggleMobileNav}
