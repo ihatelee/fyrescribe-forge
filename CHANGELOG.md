@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-23 — Enforce paragraph limits after merge
+
+- `src/pages/LoreInboxPage.tsx` — Added `enforceFieldLimits()`. Called on the final merged sections before writing to Supabase. Overview and Personality are truncated to the first paragraph (content before the first double newline). short_description is truncated to 20 words.
+
+---
+
 ## 2026-04-23 — Fix replace strategy not applying in background merge
 
 - `src/pages/LoreInboxPage.tsx` — Background AI merge write changed from `{ sections: merged }` to `{ sections: { ...capturedExisting, ...merged } }`. Previously, if the AI returned an incomplete `merged` (fields it didn't need to rewrite), those missing fields were silently dropped from the entity. With the spread, fields the AI didn't return are preserved from the existing record, while AI-returned fields (including the clean-rewritten Overview and Personality) always win.

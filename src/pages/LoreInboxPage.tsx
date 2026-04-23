@@ -55,6 +55,20 @@ interface LoreSuggestion {
 }
 
 
+// ─── Field limit enforcement ─────────────────────────────────────────────────
+
+function enforceFieldLimits(sections: Record<string, string>): Record<string, string> {
+  const result = { ...sections };
+  for (const field of ["Overview", "Personality"]) {
+    if (result[field]) result[field] = result[field].split(/\n\n/)[0].trim();
+  }
+  if (result["short_description"]) {
+    const words = result["short_description"].split(" ");
+    if (words.length > 20) result["short_description"] = words.slice(0, 20).join(" ");
+  }
+  return result;
+}
+
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const TYPE_CONFIG: Record<
@@ -516,7 +530,7 @@ const LoreInboxPage = () => {
             // Spread existing first so fields the AI didn't return are preserved,
             // then spread merged so AI-returned fields (including rewritten Overview /
             // Personality) always win over the existing record.
-            const finalSections = { ...capturedExisting, ...merged };
+            const finalSections = enforceFieldLimits({ ...capturedExisting, ...merged });
             return supabase
               .from("entities")
               .update({ sections: finalSections })
