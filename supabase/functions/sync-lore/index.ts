@@ -349,7 +349,7 @@ async function callAnthropicForScene(
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model: "claude-sonnet-4-20250514",
         max_tokens: 4000,
         messages: [{ role: "user", content: buildPrompt(sceneTitle, chapterTitle, sceneText, entityContext) }],
       }),
@@ -406,14 +406,14 @@ async function finaliseLog(supabase: any, logId: string | undefined, status: str
 
 function buildPrompt(sceneTitle: string, chapterTitle: string, sceneText: string, entityContext: string): string {
   const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
-  return `Extract all named entities from this scene.
-
-TONE — THIS IS A HARD RULE:
+  return `TONE — THIS IS A HARD RULE:
 Describe what happens in the scene accurately and faithfully. Do not substitute neutral or clinical language for language that has a specific tone or meaning.
 WRONG: "Owen refers to Nez with a derogatory label in an internal thought"
 WRONG: "Owen finds Nez occasionally weak or irritating"
 RIGHT: "Owen privately thinks Nez is 'a little bitch' sometimes, but considers him 'a pretty awesome dude' most of the time"
 The goal is faithful description of what the author wrote — not a sanitized summary. Replacing specific, meaningful language with vague neutral language is an error.
+
+Extract all named entities from this scene.
 
 ALREADY DOCUMENTED ENTITIES — compare what's already documented against what happens in this scene. Only suggest an entity update if the scene contains something genuinely new — a new event, relationship, reveal, or character detail not already captured. If the existing documentation already covers everything relevant in this scene, skip the entity entirely:
 ${entityContext || "(none yet)"}

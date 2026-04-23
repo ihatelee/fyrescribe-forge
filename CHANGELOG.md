@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — sync-lore: model upgrade to claude-sonnet-4-20250514 + TONE block moved to top
+
+- `supabase/functions/sync-lore/index.ts` — Model changed from `claude-sonnet-4-6` to `claude-sonnet-4-20250514` (matches CLAUDE.md spec for edge functions; more capable model follows nuanced tone instructions more reliably).
+- `supabase/functions/sync-lore/index.ts` — TONE block moved to the very first line of the prompt, before all task instructions. Previously it appeared after "Extract all named entities" and was being deprioritized; first-position placement gives it maximum weight.
+
+---
+
 ## 2026-04-22 — Accurate tone in lore descriptions: no sanitizing
 
 - `supabase/functions/sync-lore/index.ts` — Replaced the `TONE:` line with a `TONE — THIS IS A HARD RULE:` block. Added explicit WRONG/RIGHT examples showing that substituting vague neutral language ("derogatory label", "unflattering remark") for specific authored language is an error. RIGHT example quotes both the negative and positive registers of Owen's internal thought about Nez directly.
