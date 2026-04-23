@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Fix Lore Inbox scroll reset / polling
+
+- `src/pages/LoreInboxPage.tsx` — Removed the 10-second `setInterval` that was calling `fetchSuggestions` on a timer. Every tick caused `setLoading(true)` + a full `setSuggestions(...)` replacement, triggering a re-render that reset scroll position. The visibility-change listener (refetch on tab focus) is retained. The inbox now only updates when the user takes an action.
+
+---
+
 ## 2026-04-22 — sync-lore: direct tone, Notable Events specificity, skip well-documented entities
 
 - `supabase/functions/sync-lore/index.ts` — **Fix 1 (tone):** Added a `TONE` block at the top of `buildPrompt` instructing the AI to write factually and directly without sanitizing or euphemizing — crude, blunt, or informal language in the scene should be reported as-is, with source quotes where helpful.

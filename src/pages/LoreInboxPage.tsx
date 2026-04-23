@@ -627,12 +627,6 @@ const LoreInboxPage = () => {
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [fetchSuggestions]);
 
-  // Refetch periodically while page is open (every 10s)
-  useEffect(() => {
-    const interval = setInterval(fetchSuggestions, 10000);
-    return () => clearInterval(interval);
-  }, [fetchSuggestions]);
-
   return (
     <AppLayout>
       <div className="p-6 max-w-2xl mx-auto">
