@@ -55,7 +55,7 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
 
   return (
     <div className="fixed top-0 left-0 right-0 h-20 bg-fyrescribe-base border-b border-border flex items-center justify-between px-3 lg:px-4 z-50">
-      <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+      <div className="flex items-center gap-2 lg:gap-3 min-w-0 relative z-10">
         {showSidebarToggle && (
           <button
             onClick={toggleMobileNav}
@@ -76,7 +76,7 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
       </div>
 
       {activeProject && (
-        <div data-tour="project-title" className="hidden lg:flex items-center gap-1.5 group">
+        <div data-tour="project-title" className="hidden lg:flex items-center gap-1.5 group absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none">
           {editing ? (
             <input
               autoFocus
@@ -87,14 +87,14 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
                 if (e.key === "Enter") saveEdit();
                 if (e.key === "Escape") setEditing(false);
               }}
-              className="text-sm text-foreground bg-transparent border-b border-gold/50 outline-none px-1"
+              className="text-sm text-foreground bg-transparent border-b border-gold/50 outline-none px-1 pointer-events-auto"
             />
           ) : (
             <>
-              <span className="text-text-secondary text-sm">{activeProject.title}</span>
+              <span className="text-text-secondary text-sm pointer-events-auto">{activeProject.title}</span>
               <button
                 onClick={startEdit}
-                className="text-text-dimmed hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                className="text-text-dimmed hover:text-foreground transition-colors opacity-0 group-hover:opacity-100 pointer-events-auto"
               >
                 <Pencil size={12} />
               </button>
@@ -103,7 +103,7 @@ const Titlebar = ({ showSidebarToggle = true }: TitlebarProps) => {
         </div>
       )}
 
-      <div className="flex items-center gap-2 lg:gap-4">
+      <div className="flex items-center gap-2 lg:gap-4 relative z-10">
         <AmbiancePlayer />
         <div className="flex flex-col items-center gap-0.5">
           <AccessibilityPanel />
