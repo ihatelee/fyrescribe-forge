@@ -351,7 +351,8 @@ async function callAnthropicForScene(
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 4000,
-        messages: [{ role: "user", content: buildPrompt(sceneTitle, chapterTitle, sceneText, entityContext) }],
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: buildUserPrompt(sceneTitle, chapterTitle, sceneText, entityContext) }],
       }),
     });
   } catch (err) {
@@ -404,16 +405,16 @@ async function finaliseLog(supabase: any, logId: string | undefined, status: str
     .eq("id", logId);
 }
 
-function buildPrompt(sceneTitle: string, chapterTitle: string, sceneText: string, entityContext: string): string {
-  const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
-  return `YOU ARE FYRESCRIBE.
+const SYSTEM_PROMPT = `YOU ARE FYRESCRIBE.
 You are the author's research assistant — you live inside the manuscript and report back on what's there. You write lore entries directly to the author in a consistent voice: sharp, informed, concise, and occasionally wry. You do not pad, euphemize, or sanitize. You trust the author to handle their own material.
 Your entries should read like notes from someone who has actually read the book — not a bot summarizing a document.
-WRONG: "Nez is referenced briefly by Owen in an unfiltered private thought expressing frustration or low opinion in a particular moment."
-RIGHT: "Owen thinks Nez is a little bitch sometimes — his words — but mostly considers him a pretty awesome dude. Close friendship, candid internal register."
-Keep entries tight. If a character appeared once and said two things, the entry is two sentences. Do not invent detail that isn't in the scene.
+WRONG: "Character A is referenced briefly in an unfiltered private thought expressing frustration or low opinion."
+RIGHT: "Character A thinks Character B is [exact words from text] sometimes — but mostly [exact words]. Close friendship, candid internal register."
+Keep entries tight. If a character appeared once and said two things, the entry is two sentences. Do not invent detail that isn't in the scene.`;
 
-Extract all named entities from this scene.
+function buildUserPrompt(sceneTitle: string, chapterTitle: string, sceneText: string, entityContext: string): string {
+  const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
+  return `Extract all named entities from this scene.
 
 ALREADY DOCUMENTED ENTITIES — compare what's already documented against what happens in this scene. Only suggest an entity update if the scene contains something genuinely new — a new event, relationship, reveal, or character detail not already captured. If the existing documentation already covers everything relevant in this scene, skip the entity entirely:
 ${entityContext || "(none yet)"}
@@ -433,7 +434,7 @@ Return a JSON array. Each element must have exactly these keys:
 - "short_description": REQUIRED. Maximum 20 words. Hard limit — count the words. One sentence only. Who this person is and their most memorable trait or role. Example: "A member of Owen's social circle, known by the nickname Nez. Prone to accidents." Do NOT copy from Overview. Do NOT exceed 20 words.
 - "source_sentence": the exact sentence from the scene where this entity first appears, copied verbatim
 - "sections": object with article-style content. Only include a key when the scene has clear evidence for it. Max 60 words per value.
-  - character → allowed keys: "Overview" (REQUIRED. Minimum 3 sentences. Must include specific details from the scene text — names, actions, relationships, events. Do not write generic observations. Do not copy from short_description. If the scene only mentions this entity briefly, say what was mentioned specifically and note that further details are unknown.), "Background" (any backstory, history, or origin details mentioned or implied in the scene text — where they came from, past events referenced, family or history mentioned. Do not invent — only use what is in the text. Example: "Grew up in the same neighbourhood as Owen. Has a reputation for clumsiness." Leave empty if nothing is known.), "Personality", "Relationships", "Notable Events" (list specific things that happen TO or are done BY this entity in this scene — accidents, actions, confrontations, discoveries, anything plot-relevant. Example: "Nez accidentally lit his pants on fire." Do not leave blank if something happened.)
+  - character → allowed keys: "Overview" (REQUIRED. Minimum 3 sentences. Must include specific details from the scene text — names, actions, relationships, events. Do not write generic observations. Do not copy from short_description. If the scene only mentions this entity briefly, say what was mentioned specifically and note that further details are unknown.), "Background" (any backstory, history, or origin details mentioned or implied in the scene text — where they came from, past events referenced, family or history mentioned. Do not invent — only use what is in the text. Leave empty if nothing is known.), "Personality" (specific traits, habits, or behavioral patterns revealed by actions or dialogue in the scene. Do not write generic observations. Only include what the scene actually shows.), "Relationships", "Notable Events" (list specific things that happen TO or are done BY this entity in this scene — accidents, actions, confrontations, discoveries, anything plot-relevant. Do not leave blank if something happened.)
   - location  → allowed keys: "Description", "History", "Notable Inhabitants", "Points of Interest"
   - item      → allowed keys: "Description", "History", "Powers", "Current Whereabouts"
   - lore      → allowed keys: "Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts"

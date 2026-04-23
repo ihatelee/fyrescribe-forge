@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Fix prompt architecture: system field, generic persona, Personality instruction
+
+- `supabase/functions/sync-lore/index.ts` — Fyrescribe persona extracted into a top-level `SYSTEM_PROMPT` constant and moved into the `system` parameter of the API call. The entity context, scene, and JSON instructions now live in `buildUserPrompt()` (renamed from `buildPrompt`). System-field persona has persistent authority the model cannot override with task-framing instincts.
+- `supabase/functions/sync-lore/index.ts` — WRONG/RIGHT examples in the persona genericised: "Nez" and "Owen" replaced with "Character A" / "Character B" / `[exact words from text]` placeholders so the examples work for any manuscript.
+- `supabase/functions/sync-lore/index.ts` — `"Personality"` character section now has inline instructions matching the quality of other sections: specific traits, habits, or behavioral patterns revealed by actions or dialogue; no generic observations; only what the scene actually shows.
+
+---
+
 ## 2026-04-22 — Move Story History above Relationships on character pages
 
 - `src/pages/EntityDetailPage.tsx` — Story History block moved from its standalone position (after linked entities) into the `sectionList.map()` loop, rendering as a `React.Fragment` sibling immediately after the "Background" section. Order is now: Overview → Background → Story History → Personality → Relationships → Notable Events. Added `React` default import to support `React.Fragment` with key prop. Old standalone Story History block removed.
