@@ -445,8 +445,8 @@ const LoreInboxPage = () => {
 
     const nameLower = name.toLowerCase();
     const existing = (categoryEntities ?? []).find((e) => {
-      const eLower = e.name.toLowerCase();
-      return eLower === nameLower || eLower.includes(nameLower) || nameLower.includes(eLower);
+      const allNames = [e.name, ...((e.aliases as string[] | null) ?? [])].map((n) => n.toLowerCase());
+      return allNames.some((n) => n === nameLower || n.includes(nameLower) || nameLower.includes(n));
     }) ?? null;
 
     let entityId: string;

@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Factor aliases into sync-lore context and dedup
+
+- `supabase/functions/sync-lore/index.ts` — Added `aliases` to the existing-entities select. `entityContext` now emits `(also known as: Nez, Michael)` after the canonical name so the AI knows not to re-suggest an entity it already knows by a different name variant.
+- `src/pages/LoreInboxPage.tsx` — Updated the fuzzy duplicate `find` to check all name variants: `[e.name, ...e.aliases]`. A suggestion for "Nez" now correctly merges into the existing "Michael 'Nez' Martinez" entity instead of creating a duplicate.
+- `supabase/functions/sync-mentions/index.ts` — Already handles aliases correctly (added in a prior session): `allTerms` is built from both `e.name` and each `e.aliases` entry, so alias occurrences already roll up to the canonical entity ID in the Appearance Log. No changes needed.
+
+---
+
 ## 2026-04-22 — Sync-lore fixes: Notable Events, short description strengthening, fuzzy name dedup
 
 - `supabase/functions/sync-lore/index.ts` — **Fix 1 (Notable Events / Background):** Added `"Notable Events"` to the character sections allowed keys in `buildPrompt`, matching `CATEGORY_SECTIONS["characters"]` in `EntityDetailPage`. All five character section keys are now present: Overview, Background, Personality, Relationships, Notable Events.
