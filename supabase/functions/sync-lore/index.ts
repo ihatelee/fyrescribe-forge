@@ -24,9 +24,25 @@ interface AISuggestion {
   sections: Record<string, string>;
   /** At-a-Glance key/value pairs (Eye Color, Region, Type, etc.) */
   at_a_glance: Record<string, string>;
+  /**
+   * "new"          → entity not yet in DB; goes to Lore Inbox as new_entity suggestion
+   * "update"       → entity exists; sections contain only net-new content; merged server-side
+   * "contradiction" → entity exists; content conflicts with existing docs; goes to inbox for review
+   */
+  update_type?: "new" | "update" | "contradiction";
   /** Stamped server-side after the AI call — never from the client. */
   scene_id?: string;
   source_location?: string;
+}
+
+/** Existing entity row fetched for diff context. */
+interface ExistingEntity {
+  id: string;
+  name: string;
+  category: string;
+  summary: string | null;
+  sections: Record<string, string>;
+  aliases: string[] | null;
 }
 
 /** Maps the 4 suggestion types to the closest entity_category for UI display. */
@@ -36,6 +52,26 @@ const TYPE_TO_CATEGORY: Record<SuggestionType, string> = {
   item: "artifacts",
   lore: "magic",
 };
+
+function findExistingEntity(
+  entities: ExistingEntity[],
+  name: string,
+  type: SuggestionType,
+): ExistingEntity | null {
+  const category = TYPE_TO_CATEGORY[type];
+  const nameLower = name.trim().toLowerCase();
+  return entities.find((e) => {
+    if (e.category !== category) return false;
+    const allNames = [e.name, ...(e.aliases ?? [])].map((n) => n.toLowerCase());
+    return allNames.some((n) => n === nameLower || n.includes(nameLower) || nameLower.includes(n));
+  }) ?? null;
+}
+
+function appendToSection(existing: string, newContent: string): string {
+  const trimmed = existing.trim();
+  if (!trimmed) return newContent.trim();
+  return `${trimmed}\n\n${newContent.trim()}`;
+}
 
 interface SceneRow {
   id: string;
@@ -151,7 +187,7 @@ async function syncProject(
   trigger: "scheduled" | "manual",
   anthropicKey: string,
   force = false,
-): Promise<{ project_id: string; scenes_processed: number; suggestions_created: number; force: boolean }> {
+): Promise<{ project_id: string; scenes_processed: number; suggestions_created: number; entities_updated: number; force: boolean }> {
   // Open a sync_log entry.
   const { data: logEntry } = await supabase
     .from("sync_log")
@@ -186,35 +222,31 @@ async function syncProject(
 
     if (!scenes || scenes.length === 0) {
       await finaliseLog(supabase, logId, "completed", 0, 0);
-      return { project_id: projectId, scenes_processed: 0, suggestions_created: 0, force };
+      return { project_id: projectId, scenes_processed: 0, suggestions_created: 0, entities_updated: 0, force };
     }
 
     // Fetch existing entities so the AI can avoid re-suggesting them.
     const { data: existingEntities } = await supabase
       .from("entities")
-      .select("name, category, summary, sections, aliases")
+      .select("id, name, category, summary, sections, aliases")
       .eq("project_id", projectId);
 
-    const entityContext = (existingEntities ?? [])
-      .map((e: { name: string; category: string; summary?: string; sections?: Record<string, string>; aliases?: string[] | null }) => {
+    const existingEntityList = (existingEntities ?? []) as ExistingEntity[];
+    const entityContext = existingEntityList
+      .map((e) => {
         const sections = e.sections ?? {};
         const aliasNote = (e.aliases ?? []).length > 0
           ? ` (also known as: ${(e.aliases ?? []).join(", ")})`
           : "";
         const summary = (e.summary ?? "").trim();
         const populatedSections = Object.entries(sections).filter(([, v]) => (v ?? "").trim());
-        const sectionNames = populatedSections.map(([k]) => k);
-        // Include a short snippet from each populated section (up to 3) so the
-        // AI can do a genuine content diff rather than just counting section keys.
-        const sectionSnippets = populatedSections
-          .slice(0, 3)
-          .map(([k, v]) => `    ${k}: ${v.trim().slice(0, 80)}${v.trim().length > 80 ? "…" : ""}`)
+        const sectionContent = populatedSections
+          .map(([k, v]) => `    ${k}: ${v.trim().slice(0, 300)}${v.trim().length > 300 ? "…" : ""}`)
           .join("\n");
         return [
           `- ${e.name}${aliasNote} [${e.category}]`,
           summary ? `  Summary: ${summary.slice(0, 120)}` : null,
-          sectionNames.length > 0 ? `  Documented sections: ${sectionNames.join(", ")}` : null,
-          sectionSnippets ? `  Existing notes:\n${sectionSnippets}` : null,
+          sectionContent ? `  Existing content:\n${sectionContent}` : null,
         ].filter(Boolean).join("\n");
       })
       .join("\n\n");
@@ -264,21 +296,27 @@ async function syncProject(
     }
     console.log(`[sync-lore] after dedup: ${suggestions.length} unique suggestions`);
 
-    // ── Map to lore_suggestions rows ─────────────────────────────────────────
+    // ── Route suggestions: new → inbox, update → direct patch, contradiction → inbox ──
     const validTypes = new Set<string>(["character", "location", "item", "lore"]);
+    const validSuggestions = suggestions.filter((s) => s.name?.trim() && validTypes.has(s.type));
 
-    const rows = suggestions
-      .filter((s) => s.name?.trim() && validTypes.has(s.type))
-      .map((s) => {
-        const sections = s.sections ?? {};
-        const at_a_glance = s.at_a_glance ?? {};
-        // Use the AI-supplied short_description (≤20 words, one sentence).
-        // Falls back to the first non-empty section only when the AI omits it.
-        const description = (s.short_description ?? "").trim()
-          || (sections["Overview"] ?? sections["Description"] ?? sections["Summary"] ?? "").trim();
-        return {
+    type InboxRow = { project_id: string; type: "new_entity" | "contradiction"; payload: Record<string, unknown>; status: "pending" };
+    const inboxRows: InboxRow[] = [];
+    let entitiesUpdated = 0;
+
+    for (const s of validSuggestions) {
+      const sections = s.sections ?? {};
+      const at_a_glance = s.at_a_glance ?? {};
+      const description = (s.short_description ?? "").trim()
+        || (sections["Overview"] ?? sections["Description"] ?? sections["Summary"] ?? "").trim();
+
+      const existingEntity = findExistingEntity(existingEntityList, s.name, s.type);
+
+      if (!existingEntity || s.update_type === "new") {
+        // Path 1: new entity → Lore Inbox
+        inboxRows.push({
           project_id: projectId,
-          type: "new_entity" as const,
+          type: "new_entity",
           payload: {
             type: s.type,
             name: s.name.trim(),
@@ -292,15 +330,56 @@ async function syncProject(
             first_mentioned: s.source_sentence?.trim() ?? null,
             first_appearance: s.scene_id ?? null,
           },
-          status: "pending" as const,
-        };
-      });
+          status: "pending",
+        });
+      } else if (s.update_type === "contradiction") {
+        // Path 3: contradicts existing docs → Lore Inbox for review
+        inboxRows.push({
+          project_id: projectId,
+          type: "contradiction",
+          payload: {
+            entity_id: existingEntity.id,
+            type: s.type,
+            name: s.name.trim(),
+            category: TYPE_TO_CATEGORY[s.type] ?? "magic",
+            description,
+            source_sentence: s.source_sentence?.trim() ?? null,
+            source_location: s.source_location?.trim() ?? null,
+            scene_id: s.scene_id ?? null,
+            sections,
+            at_a_glance,
+          },
+          status: "pending",
+        });
+      } else {
+        // Path 2: update_type === "update" → merge sections directly into entity
+        const mergedSections: Record<string, string> = { ...(existingEntity.sections ?? {}) };
+        let hasNewContent = false;
+        for (const [key, value] of Object.entries(sections)) {
+          if (value?.trim()) {
+            mergedSections[key] = appendToSection(mergedSections[key] ?? "", value.trim());
+            hasNewContent = true;
+          }
+        }
+        if (hasNewContent) {
+          const { error: updateError } = await supabase
+            .from("entities")
+            .update({ sections: mergedSections })
+            .eq("id", existingEntity.id);
+          if (updateError) {
+            console.error(`[sync-lore] entity update failed for ${existingEntity.id}:`, updateError.message);
+          } else {
+            entitiesUpdated++;
+          }
+        }
+      }
+    }
 
     let suggestionsCreated = 0;
-    if (rows.length > 0) {
+    if (inboxRows.length > 0) {
       const { data: inserted, error: insertError } = await supabase
         .from("lore_suggestions")
-        .insert(rows)
+        .insert(inboxRows)
         .select("id");
       if (insertError) {
         console.error("[sync-lore] insert error:", insertError.message);
@@ -321,7 +400,8 @@ async function syncProject(
       .eq("id", projectId);
 
     await finaliseLog(supabase, logId, "completed", scenes.length, suggestionsCreated);
-    return { project_id: projectId, scenes_processed: scenes.length, suggestions_created: suggestionsCreated, force };
+    console.log(`[sync-lore] project=${projectId} suggestions_created=${suggestionsCreated} entities_updated=${entitiesUpdated}`);
+    return { project_id: projectId, scenes_processed: scenes.length, suggestions_created: suggestionsCreated, entities_updated: entitiesUpdated, force };
   } catch (err) {
     await finaliseLog(supabase, logId, "failed", 0, 0);
     throw err;
@@ -416,7 +496,7 @@ function buildUserPrompt(sceneTitle: string, chapterTitle: string, sceneText: st
   const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
   return `Extract all named entities from this scene.
 
-ALREADY DOCUMENTED ENTITIES — compare what's already documented against what happens in this scene. Only suggest an entity update if the scene contains something genuinely new — a new event, relationship, reveal, or character detail not already captured. If the existing documentation already covers everything relevant in this scene, skip the entity entirely:
+ALREADY DOCUMENTED ENTITIES — for each known entity, compare the existing content against what this scene reveals. Use update_type to classify: "update" if the scene adds net-new information not already captured; "contradiction" if the scene contradicts existing docs; omit the entity entirely if everything in this scene is already documented. For entities NOT in this list, use update_type "new". When update_type is "update", put ONLY the new content in sections — do not repeat what is already there:
 ${entityContext || "(none yet)"}
 
 SCENE: ${locationLabel}
@@ -433,6 +513,7 @@ Return a JSON array. Each element must have exactly these keys:
 - "name": the proper name, 1–5 words
 - "short_description": REQUIRED. Maximum 20 words. Hard limit — count the words. One sentence only. Who this person is and their most memorable trait or role. Example: "A member of Owen's social circle, known by the nickname Nez. Prone to accidents." Do NOT copy from Overview. Do NOT exceed 20 words.
 - "source_sentence": the exact sentence from the scene where this entity first appears, copied verbatim
+- "update_type": Required. "new" if not in the documented list. "update" if documented and the scene adds net-new information. "contradiction" if the scene conflicts with existing docs. Omit the entity entirely if it is already documented and this scene adds nothing new.
 - "sections": object with article-style content. Only include a key when the scene has clear evidence for it. Max 60 words per value.
   - character → allowed keys: "Overview" (REQUIRED. Minimum 3 sentences. Must include specific details from the scene text — names, actions, relationships, events. Do not write generic observations. Do not copy from short_description. If the scene only mentions this entity briefly, say what was mentioned specifically and note that further details are unknown.), "Background" (any backstory, history, or origin details mentioned or implied in the scene text — where they came from, past events referenced, family or history mentioned. Do not invent — only use what is in the text. Leave empty if nothing is known.), "Personality" (specific traits, habits, or behavioral patterns revealed by actions or dialogue in the scene. Do not write generic observations. Only include what the scene actually shows.), "Relationships", "Notable Events" (list specific things that happen TO or are done BY this entity in this scene — accidents, actions, confrontations, discoveries, anything plot-relevant. Do not leave blank if something happened.)
   - location  → allowed keys: "Description", "History", "Notable Inhabitants", "Points of Interest"

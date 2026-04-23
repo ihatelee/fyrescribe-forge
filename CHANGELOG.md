@@ -4,6 +4,16 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — sync-lore: create-or-merge architecture
+
+- `supabase/functions/sync-lore/index.ts` — Replaced create-or-skip with a three-path create-or-merge flow. AI now returns `update_type` on each suggestion: `"new"` → Lore Inbox as `new_entity`; `"update"` → sections appended directly to the existing entity server-side; `"contradiction"` → Lore Inbox as `contradiction` for manual review.
+- `supabase/functions/sync-lore/index.ts` — Added `findExistingEntity()` (fuzzy name + alias match, category-scoped) and `appendToSection()` helpers.
+- `supabase/functions/sync-lore/index.ts` — Entity select now includes `id`; existing entities typed as `ExistingEntity[]`.
+- `supabase/functions/sync-lore/index.ts` — Entity context expanded: all sections shown at 300 chars each (was first 3 at 80 chars) so the AI can do a genuine content diff.
+- `supabase/functions/sync-lore/index.ts` — `syncProject` return type gains `entities_updated` count.
+
+---
+
 ## 2026-04-22 — Fix prompt architecture: system field, generic persona, Personality instruction
 
 - `supabase/functions/sync-lore/index.ts` — Fyrescribe persona extracted into a top-level `SYSTEM_PROMPT` constant and moved into the `system` parameter of the API call. The entity context, scene, and JSON instructions now live in `buildUserPrompt()` (renamed from `buildPrompt`). System-field persona has persistent authority the model cannot override with task-framing instincts.
