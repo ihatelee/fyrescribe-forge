@@ -408,7 +408,12 @@ function buildPrompt(sceneTitle: string, chapterTitle: string, sceneText: string
   const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
   return `Extract all named entities from this scene.
 
-TONE: Write factually and directly. Do not sanitize, euphemize, or soften what is written in the scene. If a character says or thinks something crude, blunt, or informal — report it as such. Example: write "Owen refers to Nez as 'a little bitch' in an internal thought" not "Owen makes an unflattering remark about Nez." Use plain, direct language. Quote the source text where it adds clarity.
+TONE — THIS IS A HARD RULE:
+Describe what happens in the scene accurately and faithfully. Do not substitute neutral or clinical language for language that has a specific tone or meaning.
+WRONG: "Owen refers to Nez with a derogatory label in an internal thought"
+WRONG: "Owen finds Nez occasionally weak or irritating"
+RIGHT: "Owen privately thinks Nez is 'a little bitch' sometimes, but considers him 'a pretty awesome dude' most of the time"
+The goal is faithful description of what the author wrote — not a sanitized summary. Replacing specific, meaningful language with vague neutral language is an error.
 
 ALREADY DOCUMENTED ENTITIES — compare what's already documented against what happens in this scene. Only suggest an entity update if the scene contains something genuinely new — a new event, relationship, reveal, or character detail not already captured. If the existing documentation already covers everything relevant in this scene, skip the entity entirely:
 ${entityContext || "(none yet)"}

@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-22 — Accurate tone in lore descriptions: no sanitizing
+
+- `supabase/functions/sync-lore/index.ts` — Replaced the `TONE:` line with a `TONE — THIS IS A HARD RULE:` block. Added explicit WRONG/RIGHT examples showing that substituting vague neutral language ("derogatory label", "unflattering remark") for specific authored language is an error. RIGHT example quotes both the negative and positive registers of Owen's internal thought about Nez directly.
+
+---
+
 ## 2026-04-22 — Smart entity skip: AI content-diff instead of section-count heuristic
 
 - `supabase/functions/sync-lore/index.ts` — `entityContext` now emits a structured block per entity: canonical name + aliases, summary (≤120 chars), list of documented section names, and a short snippet from each populated section (first 80 chars, up to 3 sections). This gives the AI enough content to judge whether the current scene adds net-new information rather than just counting populated keys.
