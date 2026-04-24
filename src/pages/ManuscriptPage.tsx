@@ -1379,7 +1379,7 @@ const ManuscriptPage = () => {
                         Check Continuity
                       </button>
                       <button
-                        onClick={() => handleDeleteChapter(chapter.id)}
+                        onClick={() => requestDeleteChapter(chapter.id)}
                         className="w-full flex items-center gap-2 px-3 py-2 text-xs text-destructive hover:bg-fyrescribe-hover transition-colors"
                       >
                         <Trash2 size={12} />
