@@ -1368,7 +1368,7 @@ const ManuscriptPage = () => {
                         onDragStart={(e) => { e.stopPropagation(); setDragSceneId(scene.id); }}
                         onDragEnd={() => { setDragSceneId(null); setDragOverChapterId(null); }}
                         onClick={() => selectScene(scene)}
-                        className={`w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm cursor-pointer transition-colors ${
+                        className={`group w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm cursor-pointer transition-colors ${
                           activeSceneId === scene.id
                             ? "text-gold-bright bg-gold-glow"
                             : dragSceneId === scene.id
@@ -1392,16 +1392,25 @@ const ManuscriptPage = () => {
                             className="flex-1 min-w-0 bg-transparent outline-none border-b border-gold/50 text-[12px] text-foreground"
                           />
                         ) : (
-                          <span
-                            className="truncate flex-1 cursor-text"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              selectScene(scene);
-                              startEditing(scene.id, scene.title, e);
-                            }}
-                          >
-                            {scene.title}
-                          </span>
+                          <>
+                            <span
+                              className="truncate flex-1 cursor-text"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectScene(scene);
+                                startEditing(scene.id, scene.title, e);
+                              }}
+                            >
+                              {scene.title}
+                            </span>
+                            <button
+                              onClick={(e) => handleDeleteScene(scene.id, e)}
+                              title="Delete scene"
+                              className="flex-shrink-0 p-0.5 rounded text-text-dimmed hover:text-destructive hover:bg-fyrescribe-hover transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </>
                         )}
                       </div>
                     ))}
