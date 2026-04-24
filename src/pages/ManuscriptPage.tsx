@@ -1399,7 +1399,7 @@ const ManuscriptPage = () => {
                         onDragStart={(e) => { e.stopPropagation(); setDragSceneId(scene.id); }}
                         onDragEnd={() => { setDragSceneId(null); setDragOverChapterId(null); }}
                         onClick={() => selectScene(scene)}
-                        className={`group w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm cursor-pointer transition-colors ${
+                        className={`group relative w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm cursor-pointer transition-colors ${
                           activeSceneId === scene.id
                             ? "text-gold-bright bg-gold-glow"
                             : dragSceneId === scene.id
@@ -1435,12 +1435,29 @@ const ManuscriptPage = () => {
                               {scene.title}
                             </span>
                             <button
-                              onClick={(e) => handleDeleteScene(scene.id, e)}
-                              title="Delete scene"
-                              className="flex-shrink-0 p-0.5 rounded text-text-dimmed hover:text-destructive hover:bg-fyrescribe-hover transition-all opacity-0 group-hover:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSceneMenuOpenId(sceneMenuOpenId === scene.id ? null : scene.id);
+                              }}
+                              className="flex-shrink-0 p-0.5 rounded text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-all opacity-0 group-hover:opacity-100 data-[open=true]:opacity-100"
+                              data-open={sceneMenuOpenId === scene.id}
                             >
-                              <Trash2 size={11} />
+                              <MoreVertical size={11} />
                             </button>
+                            {sceneMenuOpenId === scene.id && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setSceneMenuOpenId(null); }} />
+                                <div className="absolute left-0 right-0 top-full z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl py-1 mt-0.5">
+                                  <button
+                                    onClick={(e) => requestDeleteScene(scene.id, e)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-destructive hover:bg-fyrescribe-hover transition-colors"
+                                  >
+                                    <Trash2 size={12} />
+                                    Delete scene
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
