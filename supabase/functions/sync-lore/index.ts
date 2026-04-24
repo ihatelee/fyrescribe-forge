@@ -9,6 +9,21 @@ const corsHeaders = {
 // Maximum characters of scene content to send to the AI per scene.
 const SCENE_CONTENT_LIMIT = 4000;
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 // Prose section keys that sync-lore must never write — stripped from any AI
 // response before it touches the DB, regardless of what the model emits.
 const PROSE_SECTION_KEYS = new Set([
@@ -320,7 +335,7 @@ async function syncProject(
     const entitySceneMap = new Map<string, string[]>();
 
     for (const scene of scenes) {
-      const sceneText = (scene.content ?? "").slice(0, SCENE_CONTENT_LIMIT).trim();
+      const sceneText = stripHtml(scene.content ?? "").slice(0, SCENE_CONTENT_LIMIT).trim();
       if (!sceneText) continue;
 
       const unsyncedEntities = force
