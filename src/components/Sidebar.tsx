@@ -335,24 +335,15 @@ const Sidebar = () => {
         )}
 
         <div data-tour="sync-buttons" className="space-y-1">
-        {/* Sync Lore + Full Sync */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => handleSync(false)}
-            className="flex-1 flex items-center justify-start text-left gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover"
-          >
-            <SyncIcon size={12} weight="duotone" className={syncing ? "animate-spin" : ""} />
-            {syncing ? "Syncing…" : "Sync Lore Entries"}
-          </button>
-          <button
-            onClick={() => handleSync(true)}
-            disabled={syncing}
-            title="Full Sync — ignores is_dirty, processes all scenes"
-            className="px-2 py-1.5 text-[10px] rounded-md transition-colors text-text-dimmed hover:text-gold hover:bg-fyrescribe-hover disabled:opacity-40"
-          >
-            Full Sync
-          </button>
-        </div>
+        {/* Sync Lore Entries */}
+        <button
+          onClick={() => handleSync(false)}
+          disabled={syncing}
+          className="w-full flex items-center justify-start text-left gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
+        >
+          <SyncIcon size={12} weight="duotone" className={syncing ? "animate-spin" : ""} />
+          {syncing ? "Syncing…" : "Sync Lore Entries"}
+        </button>
         {syncMessage && (
           <p className="px-3 text-[10px] text-text-dimmed">{syncMessage}</p>
         )}
@@ -395,6 +386,20 @@ const Sidebar = () => {
         {tagsMessage && (
           <p className="px-3 text-[10px] text-text-dimmed">{tagsMessage}</p>
         )}
+
+        {/* Divider before Full Sync */}
+        <div className="h-px bg-border my-1" />
+
+        {/* Full Sync */}
+        <button
+          onClick={() => handleSync(true)}
+          disabled={syncing}
+          title="Full Sync — ignores is_dirty, processes all scenes"
+          className="w-full flex items-center justify-start text-left gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
+        >
+          <SyncIcon size={12} weight="duotone" className={syncing ? "animate-spin" : ""} />
+          Full Sync
+        </button>
         </div>
 
         {/* Visual divider between sync controls and Lore Inbox */}
