@@ -430,6 +430,8 @@ async function syncProject(
 
       const existingEntity = findExistingEntity(existingEntityList, s.name, s.type);
 
+      console.log(`[sync-lore] entity="${s.name}" update_type="${s.update_type}" at_a_glance=${JSON.stringify(at_a_glance)} keys=${Object.keys(at_a_glance).length}`);
+
       if (!existingEntity || s.update_type === "new") {
         // ── Path 1: new entity → Lore Inbox ───────────────────────────
         if (debug) debugEntries.push({ name: s.name.trim(), update_type: "new", routed_to: "inbox_new" });
