@@ -809,7 +809,61 @@ const ManuscriptPage = () => {
     setWordCount(0);
   };
 
-  // ─── Inline rename ──────────────────────────────────────────────────
+  // ─── Delete chapter / scene ─────────────────────────────────────────
+
+  const handleDeleteScene = async (sceneId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene) return;
+    const ok = window.confirm(
+      `Delete scene "${scene.title}"? This cannot be undone.`,
+    );
+    if (!ok) return;
+
+    // Best-effort cleanup of dependent rows that lack FK cascade.
+    await supabase.from("scene_versions").delete().eq("scene_id", sceneId);
+    await supabase.from("entity_mentions").delete().eq("scene_id", sceneId);
+
+    const { error } = await supabase.from("scenes").delete().eq("id", sceneId);
+    if (error) { console.error("Failed to delete scene:", error); return; }
+
+    contentCache.current.delete(sceneId);
+    setScenes((prev) => prev.filter((s) => s.id !== sceneId));
+    if (activeSceneId === sceneId) {
+      setActiveSceneId(null);
+      setWordCount(0);
+    }
+  };
+
+  const handleDeleteChapter = async (chapterId: string) => {
+    setChapterMenuOpenId(null);
+    const chapter = chapters.find((c) => c.id === chapterId);
+    if (!chapter) return;
+    const sceneIds = scenes.filter((s) => s.chapter_id === chapterId).map((s) => s.id);
+    const ok = window.confirm(
+      `Delete chapter "${chapter.title}"${sceneIds.length ? ` and its ${sceneIds.length} scene${sceneIds.length === 1 ? "" : "s"}` : ""}? This cannot be undone.`,
+    );
+    if (!ok) return;
+
+    if (sceneIds.length) {
+      await supabase.from("scene_versions").delete().in("scene_id", sceneIds);
+      await supabase.from("entity_mentions").delete().in("scene_id", sceneIds);
+      await supabase.from("scenes").delete().in("id", sceneIds);
+    }
+
+    const { error } = await supabase.from("chapters").delete().eq("id", chapterId);
+    if (error) { console.error("Failed to delete chapter:", error); return; }
+
+    sceneIds.forEach((id) => contentCache.current.delete(id));
+    setScenes((prev) => prev.filter((s) => !sceneIds.includes(s.id)));
+    setChapters((prev) => prev.filter((c) => c.id !== chapterId));
+    setExpandedChapters((prev) => prev.filter((id) => id !== chapterId));
+    if (activeChapterId === chapterId) setActiveChapterId(null);
+    if (activeSceneId && sceneIds.includes(activeSceneId)) {
+      setActiveSceneId(null);
+      setWordCount(0);
+    }
+  };
 
   const startEditing = (id: string, currentTitle: string, e: React.MouseEvent) => {
     e.stopPropagation();
