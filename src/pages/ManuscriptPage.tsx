@@ -54,6 +54,7 @@ import {
   MoreHorizontal,
   MoreVertical,
   ScanSearch,
+  Trash2,
 } from "lucide-react";
 import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
 
