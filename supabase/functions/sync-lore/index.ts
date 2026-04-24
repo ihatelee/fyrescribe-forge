@@ -456,7 +456,6 @@ async function syncProject(
           status: "pending",
         });
       } else if (
-        s.update_type === "update" &&
         Object.keys(at_a_glance).length > 0 &&
         hasNewAtAGlanceFacts(existingEntity.fields, at_a_glance)
       ) {
