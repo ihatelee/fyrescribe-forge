@@ -1306,7 +1306,7 @@ const EntityDetailInner = () => {
                     }
                   }}
                   onBlur={handleAddAlias}
-                  placeholder="Add moniker"
+                  placeholder="Add alias"
                   className="text-xs px-2.5 py-0.5 rounded-full border border-dashed border-border bg-transparent text-text-secondary placeholder:text-text-dimmed outline-none focus:border-gold/40 transition-colors min-w-[10rem]"
                 />
               </div>
