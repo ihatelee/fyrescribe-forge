@@ -347,6 +347,8 @@ async function syncProject(
             (e) => !(e.synced_scenes ?? []).includes(scene.id),
           );
 
+      console.log(`[sync-lore] scene_id=${scene.id} total_entities=${existingEntityList.length} unsynced=${unsyncedEntities.length} sample_synced_scenes=${JSON.stringify(existingEntityList[0]?.synced_scenes)}`);
+
       for (const e of unsyncedEntities) {
         const list = entitySceneMap.get(e.id) ?? [];
         list.push(scene.id);
