@@ -36,6 +36,13 @@ const PROSE_SECTION_KEYS = new Set([
   "Known Users", "Imbued Weapons & Artifacts", "Powers", "Current Whereabouts",
 ]);
 
+const ALLOWED_AT_A_GLANCE_KEYS: Record<string, Set<string>> = {
+  character: new Set(["Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance"]),
+  location: new Set(["Region", "Climate", "Population", "Government", "Notable Landmarks"]),
+  item: new Set(["Type", "Origin", "Current Owner", "Powers"]),
+  lore: new Set(["Type", "Regional Origin", "Rarity"]),
+};
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type SuggestionType = "character" | "location" | "item" | "lore";
@@ -421,9 +428,10 @@ async function syncProject(
 
       // ── Strip any prose sections the AI emitted despite instructions ───
       const UNKNOWN_VALUES = new Set(["unknown", "n/a", "none", "unclear", "unspecified", "not specified", "not mentioned"]);
+      const allowedKeys = ALLOWED_AT_A_GLANCE_KEYS[s.type] ?? new Set();
       const at_a_glance: Record<string, string> = {};
       for (const [key, value] of Object.entries(s.at_a_glance ?? {})) {
-        if (!PROSE_SECTION_KEYS.has(key) && (value ?? "").trim()) {
+        if (allowedKeys.has(key) && (value ?? "").trim()) {
           const v = value.trim().split(/\s+/).slice(0, 8).join(" ");
           if (!UNKNOWN_VALUES.has(v.toLowerCase())) {
             at_a_glance[key] = v;
