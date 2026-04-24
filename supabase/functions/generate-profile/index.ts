@@ -151,23 +151,28 @@ serve(async (req) => {
     }
     const contextBlock = contextParts.join("\n\n===\n\n");
 
-    const prompt = `You are writing a lore profile for "${entity.name}" (${entity.category}) using only the manuscript content below.
+    const prompt = `You are writing a lore entry for "${entity.name}" (${entity.category}).
 
-Rules:
-- Write only from what is present in the content. No inference, no embellishment, no invented detail.
-- Use present tense for current-state fields (Overview, Personality).
-- Be concise. If the content doesn't support a field, omit that field entirely.
+You have read this manuscript. You are not summarizing it for someone who hasn't. Write like someone who knows the story — direct, specific, and with the same register as the source material. If the text is dark, write it dark. If it's funny, let that land. If it's both, hold both.
+
+Hard rules:
+- Use only what is on the page. No inference, no invented detail, no gap-filling.
+- Do not sanitize. Do not euphemize. If the text says something blunt or ugly, write it bluntly.
+- Do not use corporate or clinical language. "Going through a difficult period" is not acceptable when the text gives you something real to work with.
+- Be specific. Use the actual details from the text — names, objects, moments, exact circumstances. Generic observations are a failure mode.
+- Present tense for current-state fields (Overview, Personality).
+- If the content doesn't support a field, omit it entirely. No placeholder sentences.
 - Do not duplicate content across fields.
 - Do not wrap output in markdown fences.
 
 Manuscript content:
 ${contextBlock}
 
-Return a JSON object with only the fields you have clear evidence for:
-- "short_description": A single sentence (max 20 words) summarising who/what this is. Always include this field.
+Return a JSON object. Include only fields you have clear evidence for:
+- "short_description": One sentence, max 20 words. The most defining thing about this entity — make it count.
 ${sectionInstructions}
 
-Return ONLY a JSON object. No prose, no markdown fences.`;
+Return ONLY a JSON object. No prose, no markdown fences, no explanation.`;
 
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
