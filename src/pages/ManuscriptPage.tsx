@@ -54,6 +54,7 @@ import {
   MoreHorizontal,
   MoreVertical,
   ScanSearch,
+  Trash2,
 } from "lucide-react";
 import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
 
@@ -808,7 +809,61 @@ const ManuscriptPage = () => {
     setWordCount(0);
   };
 
-  // ─── Inline rename ──────────────────────────────────────────────────
+  // ─── Delete chapter / scene ─────────────────────────────────────────
+
+  const handleDeleteScene = async (sceneId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene) return;
+    const ok = window.confirm(
+      `Delete scene "${scene.title}"? This cannot be undone.`,
+    );
+    if (!ok) return;
+
+    // Best-effort cleanup of dependent rows that lack FK cascade.
+    await supabase.from("scene_versions").delete().eq("scene_id", sceneId);
+    await supabase.from("entity_mentions").delete().eq("scene_id", sceneId);
+
+    const { error } = await supabase.from("scenes").delete().eq("id", sceneId);
+    if (error) { console.error("Failed to delete scene:", error); return; }
+
+    contentCache.current.delete(sceneId);
+    setScenes((prev) => prev.filter((s) => s.id !== sceneId));
+    if (activeSceneId === sceneId) {
+      setActiveSceneId(null);
+      setWordCount(0);
+    }
+  };
+
+  const handleDeleteChapter = async (chapterId: string) => {
+    setChapterMenuOpenId(null);
+    const chapter = chapters.find((c) => c.id === chapterId);
+    if (!chapter) return;
+    const sceneIds = scenes.filter((s) => s.chapter_id === chapterId).map((s) => s.id);
+    const ok = window.confirm(
+      `Delete chapter "${chapter.title}"${sceneIds.length ? ` and its ${sceneIds.length} scene${sceneIds.length === 1 ? "" : "s"}` : ""}? This cannot be undone.`,
+    );
+    if (!ok) return;
+
+    if (sceneIds.length) {
+      await supabase.from("scene_versions").delete().in("scene_id", sceneIds);
+      await supabase.from("entity_mentions").delete().in("scene_id", sceneIds);
+      await supabase.from("scenes").delete().in("id", sceneIds);
+    }
+
+    const { error } = await supabase.from("chapters").delete().eq("id", chapterId);
+    if (error) { console.error("Failed to delete chapter:", error); return; }
+
+    sceneIds.forEach((id) => contentCache.current.delete(id));
+    setScenes((prev) => prev.filter((s) => !sceneIds.includes(s.id)));
+    setChapters((prev) => prev.filter((c) => c.id !== chapterId));
+    setExpandedChapters((prev) => prev.filter((id) => id !== chapterId));
+    if (activeChapterId === chapterId) setActiveChapterId(null);
+    if (activeSceneId && sceneIds.includes(activeSceneId)) {
+      setActiveSceneId(null);
+      setWordCount(0);
+    }
+  };
 
   const startEditing = (id: string, currentTitle: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1292,6 +1347,13 @@ const ManuscriptPage = () => {
                         <ScanSearch size={12} />
                         Check Continuity
                       </button>
+                      <button
+                        onClick={() => handleDeleteChapter(chapter.id)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-destructive hover:bg-fyrescribe-hover transition-colors"
+                      >
+                        <Trash2 size={12} />
+                        Delete chapter
+                      </button>
                     </div>
                   </>
                 )}
@@ -1306,7 +1368,7 @@ const ManuscriptPage = () => {
                         onDragStart={(e) => { e.stopPropagation(); setDragSceneId(scene.id); }}
                         onDragEnd={() => { setDragSceneId(null); setDragOverChapterId(null); }}
                         onClick={() => selectScene(scene)}
-                        className={`w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm cursor-pointer transition-colors ${
+                        className={`group w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm cursor-pointer transition-colors ${
                           activeSceneId === scene.id
                             ? "text-gold-bright bg-gold-glow"
                             : dragSceneId === scene.id
@@ -1330,16 +1392,25 @@ const ManuscriptPage = () => {
                             className="flex-1 min-w-0 bg-transparent outline-none border-b border-gold/50 text-[12px] text-foreground"
                           />
                         ) : (
-                          <span
-                            className="truncate flex-1 cursor-text"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              selectScene(scene);
-                              startEditing(scene.id, scene.title, e);
-                            }}
-                          >
-                            {scene.title}
-                          </span>
+                          <>
+                            <span
+                              className="truncate flex-1 cursor-text"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectScene(scene);
+                                startEditing(scene.id, scene.title, e);
+                              }}
+                            >
+                              {scene.title}
+                            </span>
+                            <button
+                              onClick={(e) => handleDeleteScene(scene.id, e)}
+                              title="Delete scene"
+                              className="flex-shrink-0 p-0.5 rounded text-text-dimmed hover:text-destructive hover:bg-fyrescribe-hover transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </>
                         )}
                       </div>
                     ))}
