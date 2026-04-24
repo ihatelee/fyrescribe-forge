@@ -828,15 +828,25 @@ const ManuscriptPage = () => {
 
   // ─── Delete chapter / scene ─────────────────────────────────────────
 
-  const handleDeleteScene = async (sceneId: string, e?: React.MouseEvent) => {
+  const requestDeleteScene = (sceneId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    setSceneMenuOpenId(null);
     const scene = scenes.find((s) => s.id === sceneId);
     if (!scene) return;
-    const ok = window.confirm(
-      `Delete scene "${scene.title}"? This cannot be undone.`,
-    );
-    if (!ok) return;
+    setDeleteConfirmText("");
+    setDeleteTarget({ kind: "scene", id: sceneId, title: scene.title });
+  };
 
+  const requestDeleteChapter = (chapterId: string) => {
+    setChapterMenuOpenId(null);
+    const chapter = chapters.find((c) => c.id === chapterId);
+    if (!chapter) return;
+    const sceneCount = scenes.filter((s) => s.chapter_id === chapterId).length;
+    setDeleteConfirmText("");
+    setDeleteTarget({ kind: "chapter", id: chapterId, title: chapter.title, sceneCount });
+  };
+
+  const performDeleteScene = async (sceneId: string) => {
     // Best-effort cleanup of dependent rows that lack FK cascade.
     await supabase.from("scene_versions").delete().eq("scene_id", sceneId);
     await supabase.from("entity_mentions").delete().eq("scene_id", sceneId);
@@ -852,15 +862,8 @@ const ManuscriptPage = () => {
     }
   };
 
-  const handleDeleteChapter = async (chapterId: string) => {
-    setChapterMenuOpenId(null);
-    const chapter = chapters.find((c) => c.id === chapterId);
-    if (!chapter) return;
+  const performDeleteChapter = async (chapterId: string) => {
     const sceneIds = scenes.filter((s) => s.chapter_id === chapterId).map((s) => s.id);
-    const ok = window.confirm(
-      `Delete chapter "${chapter.title}"${sceneIds.length ? ` and its ${sceneIds.length} scene${sceneIds.length === 1 ? "" : "s"}` : ""}? This cannot be undone.`,
-    );
-    if (!ok) return;
 
     if (sceneIds.length) {
       await supabase.from("scene_versions").delete().in("scene_id", sceneIds);
@@ -880,6 +883,17 @@ const ManuscriptPage = () => {
       setActiveSceneId(null);
       setWordCount(0);
     }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.kind === "scene") {
+      await performDeleteScene(deleteTarget.id);
+    } else {
+      await performDeleteChapter(deleteTarget.id);
+    }
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
   };
 
   const startEditing = (id: string, currentTitle: string, e: React.MouseEvent) => {
