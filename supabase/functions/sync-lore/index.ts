@@ -63,7 +63,7 @@ interface ExistingEntity {
   id: string;
   name: string;
   category: string;
-  description: string | null;
+  summary: string | null;
   /** at_a_glance facts are stored inside the fields jsonb column, not a dedicated column. */
   fields: Record<string, unknown> | null;
   aliases: string[] | null;
@@ -124,7 +124,7 @@ function buildEntityContext(entities: ExistingEntity[]): string {
       const aliasNote = (e.aliases ?? []).length > 0
         ? ` (also known as: ${(e.aliases ?? []).join(", ")})`
         : "";
-      const desc = (e.description ?? "").trim();
+      const desc = (e.summary ?? "").trim();
       // at_a_glance facts are stored inside the fields jsonb column
       const glance = (e.fields ?? {}) as Record<string, string>;
       const glanceLines = Object.entries(glance)
