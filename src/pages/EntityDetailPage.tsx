@@ -1673,6 +1673,20 @@ const EntityDetailInner = () => {
                       ? linkedEntities.find((e) => e.relationship === key)
                       : undefined;
 
+                    // FIRST MENTIONED — derived plain text, no edit, no link
+                    if (key === "First Mentioned") {
+                      return (
+                        <div key={key} className="px-4 py-2.5">
+                          <div className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1">{key}</div>
+                          {firstMentionLabel ? (
+                            <div className="text-sm text-foreground">{firstMentionLabel}</div>
+                          ) : (
+                            <div className="text-sm text-text-dimmed">—</div>
+                          )}
+                        </div>
+                      );
+                    }
+
                     return (
                       <div key={key} className="px-4 py-2.5">
                         <div className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1">{key}</div>
