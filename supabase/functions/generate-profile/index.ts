@@ -90,7 +90,7 @@ serve(async (req) => {
 
     const { data: entity, error: entityError } = await userClient
       .from("entities")
-      .select("id, name, category, summary, sections, fields")
+      .select("id, name, category, summary, sections, fields, is_pov_character, project_id")
       .eq("id", entity_id)
       .single();
 
@@ -111,26 +111,57 @@ serve(async (req) => {
       .map((m: { context: string | null }) => m.context?.trim())
       .filter(Boolean) as string[];
 
-    if (mentionContexts.length === 0) {
+    // For POV characters, fetch the full content of all scenes they narrate.
+    const POV_SCENE_CONTENT_LIMIT = 3000;
+    type PovScene = { content: string | null; title: string; chapters: { title: string } | null };
+    let povScenes: PovScene[] = [];
+    if (entity.is_pov_character && entity.project_id) {
+      const { data: povData } = await userClient
+        .from("scenes")
+        .select("content, title, chapters(title)")
+        .eq("pov_character_id", entity_id)
+        .eq("project_id", entity.project_id)
+        .limit(15);
+      povScenes = (povData ?? []) as PovScene[];
+    }
+
+    if (mentionContexts.length === 0 && povScenes.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No manuscript mentions found for this entity. Run Sync Lore first." }),
+        JSON.stringify({ error: "No manuscript content found for this entity. Run Sync Lore first." }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const sectionInstructions = buildSectionInstructions(entity.category);
 
-    const prompt = `You are writing a lore profile for "${entity.name}" (${entity.category}) using only the manuscript excerpts below.
+    // Build context block: mention snippets first, then full POV scenes.
+    const contextParts: string[] = [];
+    if (mentionContexts.length > 0) {
+      contextParts.push(
+        `MENTION SNIPPETS (name appears in these passages):\n${mentionContexts.map((c, i) => `[${i + 1}] ${c}`).join("\n\n")}`,
+      );
+    }
+    if (povScenes.length > 0) {
+      const sceneBlocks = povScenes.map((s) => {
+        const chapterLabel = s.chapters?.title ? `${s.chapters.title} › ` : "";
+        const trimmed = (s.content ?? "").trim().slice(0, POV_SCENE_CONTENT_LIMIT);
+        return `[Scene: ${chapterLabel}${s.title}]\n${trimmed}${(s.content ?? "").trim().length > POV_SCENE_CONTENT_LIMIT ? "…" : ""}`;
+      });
+      contextParts.push(`POV SCENES (${entity.name} is the point-of-view narrator):\n${sceneBlocks.join("\n\n---\n\n")}`);
+    }
+    const contextBlock = contextParts.join("\n\n===\n\n");
+
+    const prompt = `You are writing a lore profile for "${entity.name}" (${entity.category}) using only the manuscript content below.
 
 Rules:
-- Write only from what is present in the excerpts. No inference, no embellishment, no invented detail.
+- Write only from what is present in the content. No inference, no embellishment, no invented detail.
 - Use present tense for current-state fields (Overview, Personality).
-- Be concise. If the excerpts don't support a field, omit that field entirely.
+- Be concise. If the content doesn't support a field, omit that field entirely.
 - Do not duplicate content across fields.
 - Do not wrap output in markdown fences.
 
-Manuscript excerpts:
-${mentionContexts.map((c, i) => `[${i + 1}] ${c}`).join("\n\n")}
+Manuscript content:
+${contextBlock}
 
 Return a JSON object with only the fields you have clear evidence for:
 ${sectionInstructions}
@@ -146,7 +177,7 @@ Return ONLY a JSON object. No prose, no markdown fences.`;
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
+        max_tokens: povScenes.length > 0 ? 4096 : 2048,
         messages: [{ role: "user", content: prompt }],
       }),
     });

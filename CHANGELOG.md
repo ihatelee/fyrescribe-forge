@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-04-24 — Generate Profile POV fix + short description cap
+
+- `supabase/functions/generate-profile/index.ts` — POV character support: when `is_pov_character = true`, fetches up to 15 full scenes where `pov_character_id = entity.id` (trimmed to 3 000 chars each) and appends them to the prompt as a dedicated POV SCENES block. Mention snippets are still included when present. The 422 "no mentions" error is now suppressed for POV characters that have scenes. `max_tokens` bumped to 4 096 when POV scenes are present.
+- `supabase/functions/sync-lore/index.ts` — Hard 20-word cap applied to `description` in code (after it is derived from `short_description` or fallback section text) before writing to any inbox payload. Prompt-only enforcement was insufficient.
+
+---
+
 ## 2026-04-23 — Fix paragraph enforcement to use sentence count
 
 - `src/pages/LoreInboxPage.tsx` — `enforceFieldLimits`: replaced `\n\n` split with sentence-count enforcement. Overview and Personality are now hard-capped at 5 sentences using `/[^.!?]+[.!?]+/g` matching, which works regardless of whether the AI returns single-paragraph or multi-paragraph content.

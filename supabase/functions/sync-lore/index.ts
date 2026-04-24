@@ -350,8 +350,11 @@ async function syncProject(
     for (const s of validSuggestions) {
       const sections = s.sections ?? {};
       const at_a_glance = s.at_a_glance ?? {};
-      const description = (s.short_description ?? "").trim()
-        || (sections["Overview"] ?? sections["Description"] ?? sections["Summary"] ?? "").trim();
+      const rawDescription = ((s.short_description ?? "").trim()
+        || (sections["Overview"] ?? sections["Description"] ?? sections["Summary"] ?? "").trim());
+      const description = rawDescription
+        ? rawDescription.split(/\s+/).slice(0, 20).join(" ")
+        : rawDescription;
 
       const existingEntity = findExistingEntity(existingEntityList, s.name, s.type);
 
