@@ -36,33 +36,31 @@ const SyncMentionsModal = ({ projectId, mentions, onClose }: SyncMentionsModalPr
       // 1. Mark the suggestion rejected (drops it from inbox count)
       // 2. Persist a long-term rejection so future syncs don't resurface it
       // 3. Remove the live mention so it stops counting toward the entity
-      const ops: Promise<unknown>[] = [
-        supabase.from("rejected_mentions").upsert(
-          {
-            project_id: projectId,
-            entity_id: m.entity_id,
-            scene_id: m.scene_id,
-            context: m.context,
-          },
-          { onConflict: "project_id,entity_id,scene_id,context" },
-        ),
-        supabase
-          .from("entity_mentions")
-          .delete()
-          .eq("project_id", projectId)
-          .eq("entity_id", m.entity_id)
-          .eq("scene_id", m.scene_id)
-          .eq("context", m.context),
-      ];
-      if (m.id) {
-        ops.push(
-          supabase
+      const rejectionUpsert = supabase.from("rejected_mentions").upsert(
+        {
+          project_id: projectId,
+          entity_id: m.entity_id,
+          scene_id: m.scene_id,
+          context: m.context,
+        },
+        { onConflict: "project_id,entity_id,scene_id,context" },
+      );
+      const liveDelete = supabase
+        .from("entity_mentions")
+        .delete()
+        .eq("project_id", projectId)
+        .eq("entity_id", m.entity_id)
+        .eq("scene_id", m.scene_id)
+        .eq("context", m.context);
+      const suggestionUpdate = m.id
+        ? supabase
             .from("mention_suggestions")
             .update({ status: "rejected", reviewed_at: new Date().toISOString() })
-            .eq("id", m.id),
-        );
-      }
-      await Promise.all(ops);
+            .eq("id", m.id)
+        : null;
+      await rejectionUpsert;
+      await liveDelete;
+      if (suggestionUpdate) await suggestionUpdate;
       setItems((prev) =>
         prev.filter(
           (x) =>

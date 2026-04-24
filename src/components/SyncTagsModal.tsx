@@ -96,17 +96,13 @@ const SyncTagsModal = ({ suggestions, onClose }: SyncTagsModalProps) => {
         relationship: s.field_key,
       }));
       const ids = items.map((s) => s.id).filter((v): v is string => Boolean(v));
-      const ops: Promise<unknown>[] = [supabase.from("entity_links").insert(rows)];
+      const { error: insertErr } = await supabase.from("entity_links").insert(rows);
       if (ids.length > 0) {
-        ops.push(
-          supabase
-            .from("tag_suggestions")
-            .update({ status: "accepted", reviewed_at: new Date().toISOString() })
-            .in("id", ids),
-        );
+        await supabase
+          .from("tag_suggestions")
+          .update({ status: "accepted", reviewed_at: new Date().toISOString() })
+          .in("id", ids);
       }
-      const [insertResult] = await Promise.all(ops);
-      const insertErr = (insertResult as { error: unknown } | undefined)?.error;
       if (insertErr) {
         console.error("Failed to bulk-accept tag suggestions:", insertErr);
       } else {
