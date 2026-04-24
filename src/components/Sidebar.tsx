@@ -77,12 +77,35 @@ const Sidebar = () => {
       setPendingCount(0);
       return;
     }
-    const { count } = await supabase
-      .from("lore_suggestions")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", activeProject.id)
-      .eq("status", "pending");
-    setPendingCount(count ?? 0);
+    const projectId = activeProject.id;
+    const [loreRes, linksRes, mentionsRes, tagsRes] = await Promise.all([
+      supabase
+        .from("lore_suggestions")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "pending"),
+      supabase
+        .from("lore_link_suggestions")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "pending"),
+      supabase
+        .from("mention_suggestions")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "pending"),
+      supabase
+        .from("tag_suggestions")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "pending"),
+    ]);
+    const total =
+      (loreRes.count ?? 0) +
+      (linksRes.count ?? 0) +
+      (mentionsRes.count ?? 0) +
+      (tagsRes.count ?? 0);
+    setPendingCount(total);
   }, [activeProject]);
 
   useEffect(() => {
