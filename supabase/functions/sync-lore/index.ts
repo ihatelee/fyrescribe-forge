@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Maximum characters of scene content to send to the AI per scene.
-const SCENE_CONTENT_LIMIT = 1200;
+const SCENE_CONTENT_LIMIT = 4000;
 
 // Prose section keys that sync-lore must never write — stripped from any AI
 // response before it touches the DB, regardless of what the model emits.
