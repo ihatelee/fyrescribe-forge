@@ -250,19 +250,51 @@ serve(async (req) => {
       .eq("project_id", project_id);
     for (const s of sceneTitleRows ?? []) sceneTitleById.set(s.id, s.title);
 
-    const newMentions = rows
-      .filter((r) => {
-        const k = `${r.entity_id}:${r.scene_id}:${r.context}`;
-        return !previousKeys.has(k) && !rejectedKeys.has(k);
-      })
-      .map((r) => ({
+    const newMentionRows = rows.filter((r) => {
+      const k = `${r.entity_id}:${r.scene_id}:${r.context}`;
+      return !previousKeys.has(k) && !rejectedKeys.has(k);
+    });
+
+    // ── Persist new mentions as pending suggestions ─────────────────────
+    // Upsert so re-runs don't duplicate; existing pending rows stay pending.
+    if (newMentionRows.length > 0) {
+      const suggestionRows = newMentionRows.map((r) => ({
+        project_id,
         entity_id: r.entity_id,
-        entity_name: entityNameById.get(r.entity_id) ?? "Unknown",
         scene_id: r.scene_id,
-        scene_title: sceneTitleById.get(r.scene_id) ?? "Untitled scene",
         context: r.context,
         position: r.position,
+        status: "pending" as const,
       }));
+      const CHUNK = 500;
+      for (let i = 0; i < suggestionRows.length; i += CHUNK) {
+        const { error: upsertErr } = await supabase
+          .from("mention_suggestions")
+          .upsert(suggestionRows.slice(i, i + CHUNK), {
+            onConflict: "project_id,entity_id,scene_id,context",
+            ignoreDuplicates: true,
+          });
+        if (upsertErr) console.error("mention_suggestions upsert error:", upsertErr);
+      }
+    }
+
+    // Return ALL currently-pending mention_suggestions for this project so
+    // the modal stays consistent across sessions (not just the freshly-found ones).
+    const { data: pendingRows } = await supabase
+      .from("mention_suggestions")
+      .select("id, entity_id, scene_id, context, position")
+      .eq("project_id", project_id)
+      .eq("status", "pending");
+
+    const newMentions = (pendingRows ?? []).map((r) => ({
+      id: r.id,
+      entity_id: r.entity_id,
+      entity_name: entityNameById.get(r.entity_id) ?? "Unknown",
+      scene_id: r.scene_id,
+      scene_title: sceneTitleById.get(r.scene_id) ?? "Untitled scene",
+      context: r.context,
+      position: r.position ?? 0,
+    }));
 
     return new Response(
       JSON.stringify({ mentions_found: rows.length, new_mentions: newMentions }),
