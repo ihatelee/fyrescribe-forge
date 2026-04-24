@@ -39,7 +39,7 @@ const CATEGORY_SECTIONS: Record<string, string[]> = {
 
 // Standard At a Glance fields per category — seeded on first load if entity has no fields
 const CATEGORY_FIELDS: Record<string, string[]> = {
-  characters: ["Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance", "First Appearance", "First Mentioned"],
+  characters: ["Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance", "First Mentioned"],
   places: ["Region", "Climate", "Population", "Government", "Notable Landmarks", "First Mentioned"],
   events: ["Date/Era", "Location", "Key Participants", "Outcome", "First Mentioned"],
   artifacts: ["Type", "Origin", "Current Owner", "Powers", "First Mentioned"],
@@ -1014,10 +1014,12 @@ const EntityDetailInner = () => {
 
   // Build ordered field key list: standard fields first, then custom
   const stdFieldKeys = CATEGORY_FIELDS[entity?.category] || [];
+  // Hide deprecated keys that were previously populated with raw scene UUIDs.
+  const HIDDEN_FIELD_KEYS = new Set(["First Appearance"]);
   const allFieldKeys = [
     ...stdFieldKeys,
     ...Object.keys(fields).filter((k) => !stdFieldKeys.includes(k)),
-  ];
+  ].filter((k) => !HIDDEN_FIELD_KEYS.has(k));
 
   // Set / clear an entity-picker At a Glance field. Stores the link in entity_links
   // (relationship = field key) and mirrors the entity name into the fields jsonb.
