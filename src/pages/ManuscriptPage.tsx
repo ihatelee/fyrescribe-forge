@@ -1278,7 +1278,7 @@ const ManuscriptPage = () => {
   // ─── Main layout ─────────────────────────────────────────────────────
 
   const chapterSidebar = (
-    <div data-tour="chapter-panel" className="w-[240px] bg-fyrescribe-base border-l border-border overflow-hidden flex-shrink-0 flex flex-col">
+    <div data-tour="chapter-panel" className="w-[215px] bg-fyrescribe-base border-l border-border overflow-hidden flex-shrink-0 flex flex-col">
       <div className="p-3 flex-1 overflow-y-auto min-h-0">
         <div className="text-[10px] font-medium uppercase tracking-widest text-text-dimmed mb-3 px-2" style={labelStyle}>
           Chapters

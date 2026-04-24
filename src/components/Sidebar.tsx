@@ -265,7 +265,7 @@ const Sidebar = () => {
 
   return (
     <>
-    <div className="w-[190px] h-full bg-fyrescribe-base border-r border-border flex flex-col">
+    <div className="w-[215px] h-full bg-fyrescribe-base border-r border-border flex flex-col">
       <div className="flex-1 overflow-y-auto py-4 px-2 space-y-6">
         <div>
           <div className="px-3 mb-2 text-[10px] font-medium uppercase tracking-widest text-text-dimmed">
@@ -342,7 +342,7 @@ const Sidebar = () => {
             className="flex-1 flex items-center justify-start text-left gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover"
           >
             <SyncIcon size={12} weight="duotone" className={syncing ? "animate-spin" : ""} />
-            {syncing ? "Syncing…" : "Sync Lore"}
+            {syncing ? "Syncing…" : "Sync Lore Entries"}
           </button>
           <button
             onClick={() => handleSync(true)}
