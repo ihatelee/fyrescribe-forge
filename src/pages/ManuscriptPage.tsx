@@ -324,8 +324,15 @@ const ManuscriptPage = () => {
   const [dragOverChapterId, setDragOverChapterId] = useState<string | null>(null);
 
   const [chapterMenuOpenId, setChapterMenuOpenId] = useState<string | null>(null);
+  const [sceneMenuOpenId, setSceneMenuOpenId] = useState<string | null>(null);
   const [continuityCheckingId, setContinuityCheckingId] = useState<string | null>(null);
   const [continuityPanel, setContinuityPanel] = useState<{ chapterTitle: string; issues: ContinuityIssue[] } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<
+    | { kind: "scene"; id: string; title: string }
+    | { kind: "chapter"; id: string; title: string; sceneCount: number }
+    | null
+  >(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   type TextSize = "small" | "medium" | "large" | "xl";
   const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
