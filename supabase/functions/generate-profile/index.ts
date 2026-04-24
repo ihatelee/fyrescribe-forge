@@ -164,6 +164,7 @@ Manuscript content:
 ${contextBlock}
 
 Return a JSON object with only the fields you have clear evidence for:
+- "short_description": A single sentence (max 20 words) summarising who/what this is. Always include this field.
 ${sectionInstructions}
 
 Return ONLY a JSON object. No prose, no markdown fences.`;
@@ -215,13 +216,34 @@ Return ONLY a JSON object. No prose, no markdown fences.`;
       });
     }
 
+    // Pull short_description out of the sections payload — it's stored on entities.summary, not in sections JSON.
+    const rawShort = typeof generatedSections.short_description === "string"
+      ? generatedSections.short_description.trim()
+      : "";
+    delete generatedSections.short_description;
+
+    // Cap to 20 words, preserving trailing punctuation on the last kept word.
+    const capWords = (text: string, max: number): string => {
+      const words = text.split(/\s+/).filter(Boolean);
+      if (words.length <= max) return text.trim();
+      return words.slice(0, max).join(" ").replace(/[,;:–—-]+$/, "") + "…";
+    };
+    const shortDescription = rawShort ? capWords(rawShort, 20) : "";
+
     // Generated fields win over existing; non-profile fields (Story History, etc.) are preserved.
     const existingSections = (entity.sections ?? {}) as Record<string, string>;
     const mergedSections = { ...existingSections, ...generatedSections };
 
+    const updatePayload: { sections: Record<string, string>; summary?: string } = {
+      sections: mergedSections,
+    };
+    if (shortDescription) {
+      updatePayload.summary = shortDescription;
+    }
+
     const { error: updateError } = await userClient
       .from("entities")
-      .update({ sections: mergedSections })
+      .update(updatePayload)
       .eq("id", entity_id);
 
     if (updateError) {
@@ -232,7 +254,7 @@ Return ONLY a JSON object. No prose, no markdown fences.`;
       });
     }
 
-    return new Response(JSON.stringify({ sections: mergedSections }), {
+    return new Response(JSON.stringify({ sections: mergedSections, summary: shortDescription || entity.summary || "" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

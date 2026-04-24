@@ -830,7 +830,8 @@ const EntityDetailInner = () => {
         console.error("Profile generation failed:", error);
         return;
       }
-      const newSections = (data as { sections?: Record<string, string> } | null)?.sections ?? {};
+      const payload = data as { sections?: Record<string, string>; summary?: string } | null;
+      const newSections = payload?.sections ?? {};
       if (!Object.keys(newSections).length) {
         setProfileNotice("Not enough manuscript content to generate. Try syncing mentions first.");
         return;
@@ -842,6 +843,9 @@ const EntityDetailInner = () => {
           el.innerHTML = DOMPurify.sanitize(newSections[key] || "");
           el.dataset.initialized = "true";
         }
+      }
+      if (typeof payload?.summary === "string" && payload.summary) {
+        setSummary(payload.summary);
       }
       setProfileDone(true);
       setTimeout(() => setProfileDone(false), 3000);
