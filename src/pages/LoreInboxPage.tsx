@@ -73,6 +73,7 @@ const TYPE_CONFIG: Record<
   { icon: typeof Sparkles; label: string; color: string }
 > = {
   new_entity: { icon: Sparkles, label: "New Entity", color: "bg-green-500/20 text-green-300" },
+  update: { icon: FileText, label: "Update", color: "bg-blue-500/20 text-blue-300" },
   field_update: { icon: FileText, label: "Field Update", color: "bg-blue-500/20 text-blue-300" },
   contradiction: {
     icon: AlertTriangle,

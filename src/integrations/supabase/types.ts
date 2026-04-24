@@ -744,6 +744,7 @@ export type Database = {
         | "field_update"
         | "contradiction"
         | "new_tag"
+        | "update"
       sync_status: "running" | "completed" | "failed"
       sync_trigger: "scheduled" | "manual"
       timeline_event_type: "world_history" | "story_event"
@@ -891,6 +892,7 @@ export const Constants = {
         "field_update",
         "contradiction",
         "new_tag",
+        "update",
       ],
       sync_status: ["running", "completed", "failed"],
       sync_trigger: ["scheduled", "manual"],
