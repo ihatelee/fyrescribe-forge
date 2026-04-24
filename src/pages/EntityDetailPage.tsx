@@ -678,6 +678,7 @@ const EntityDetailInner = () => {
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
   const [aliases, setAliases] = useState<string[]>([]);
   const [aliasDraft, setAliasDraft] = useState("");
+  const [firstMentionLabel, setFirstMentionLabel] = useState<string>("");
   const storyHistoryRef = useRef<HTMLDivElement>(null);
   const sectionElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
