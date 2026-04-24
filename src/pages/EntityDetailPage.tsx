@@ -673,9 +673,12 @@ const EntityDetailInner = () => {
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
   const [generatingHistory, setGeneratingHistory] = useState(false);
+  const [generatingProfile, setGeneratingProfile] = useState(false);
+  const [profileDone, setProfileDone] = useState(false);
   const [aliases, setAliases] = useState<string[]>([]);
   const [aliasDraft, setAliasDraft] = useState("");
   const storyHistoryRef = useRef<HTMLDivElement>(null);
+  const sectionElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const sectionsRef = useRef<EntitySections>({});
   const sectionList = CATEGORY_SECTIONS[entity?.category || "characters"] || [];
@@ -803,6 +806,39 @@ const EntityDetailInner = () => {
       .from("entities").update({ sections: updated as Json }).eq("id", id);
     if (error) console.error("Failed to delete story history:", error);
   }, [id]);
+
+  // ─── Generate Profile (AI, from entity_mentions) ─────────────────
+
+  const handleGenerateProfile = useCallback(async () => {
+    if (!id || generatingProfile) return;
+    setGeneratingProfile(true);
+    setProfileDone(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-profile", {
+        body: { entity_id: id },
+      });
+      if (error) {
+        console.error("Profile generation failed:", error);
+        return;
+      }
+      const newSections = (data as { sections?: Record<string, string> } | null)?.sections ?? {};
+      if (!Object.keys(newSections).length) return;
+      sectionsRef.current = newSections;
+      setSections(newSections);
+      for (const [key, el] of sectionElRefs.current.entries()) {
+        if (newSections[key] !== undefined) {
+          el.innerHTML = DOMPurify.sanitize(newSections[key] || "");
+          el.dataset.initialized = "true";
+        }
+      }
+      setProfileDone(true);
+      setTimeout(() => setProfileDone(false), 3000);
+    } catch (e) {
+      console.error("Profile generation error:", e);
+    } finally {
+      setGeneratingProfile(false);
+    }
+  }, [id, generatingProfile]);
 
   // ─── Save summary / fields ───────────────────────────────────────
 
@@ -1282,6 +1318,24 @@ const EntityDetailInner = () => {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Left: Article body */}
           <div className="flex-1 min-w-0">
+            {/* Generate Profile */}
+            <div className="flex items-center justify-end mb-4 gap-2">
+              {profileDone && (
+                <span className="text-[11px] text-green-400">Profile generated.</span>
+              )}
+              <button
+                onClick={handleGenerateProfile}
+                disabled={generatingProfile}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {generatingProfile ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Sparkles size={12} className="text-gold" />
+                )}
+                Generate Profile
+              </button>
+            </div>
             <div className="space-y-0">
               {sectionList.map((section, i) => (
                 <React.Fragment key={section}>
@@ -1296,9 +1350,12 @@ const EntityDetailInner = () => {
                         data-placeholder={SECTION_PLACEHOLDER_TEXT[section] || "Write here…"}
                         onInput={(e) => handleSectionInput(section, (e.target as HTMLDivElement).innerHTML)}
                         ref={(el) => {
-                          if (el && !el.dataset.initialized) {
-                            el.innerHTML = DOMPurify.sanitize(sections[section] || "");
-                            el.dataset.initialized = "true";
+                          if (el) {
+                            sectionElRefs.current.set(section, el);
+                            if (!el.dataset.initialized) {
+                              el.innerHTML = DOMPurify.sanitize(sections[section] || "");
+                              el.dataset.initialized = "true";
+                            }
                           }
                         }}
                       />
@@ -1375,9 +1432,12 @@ const EntityDetailInner = () => {
                   data-placeholder={SECTION_PLACEHOLDER_TEXT["Magic & Abilities"]}
                   onInput={(e) => handleSectionInput("Magic & Abilities", (e.target as HTMLDivElement).innerHTML)}
                   ref={(el) => {
-                    if (el && !el.dataset.initialized) {
-                      el.innerHTML = DOMPurify.sanitize(sections["Magic & Abilities"] || "");
-                      el.dataset.initialized = "true";
+                    if (el) {
+                      sectionElRefs.current.set("Magic & Abilities", el);
+                      if (!el.dataset.initialized) {
+                        el.innerHTML = DOMPurify.sanitize(sections["Magic & Abilities"] || "");
+                        el.dataset.initialized = "true";
+                      }
                     }
                   }}
                 />

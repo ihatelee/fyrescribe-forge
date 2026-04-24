@@ -17,11 +17,11 @@ type SuggestionType = "character" | "location" | "item" | "lore";
 interface AISuggestion {
   type: SuggestionType;
   name: string;
-  /** One sentence, ≤20 words — maps to entity.description. Always distinct from sections.Overview. */
+  /** One sentence, ≤20 words — maps to entity.description. */
   short_description: string;
   source_sentence: string;
-  /** Article-body content keyed by section name (Overview, Background, etc.) */
-  sections: Record<string, string>;
+  /** Article-body sections — no longer emitted by sync-lore; kept for backward compat. */
+  sections?: Record<string, string>;
   /** At-a-Glance key/value pairs (Eye Color, Region, Type, etc.) */
   at_a_glance: Record<string, string>;
   /**
@@ -556,9 +556,9 @@ Keep entries tight. If a character appeared once and said two things, the entry 
 
 function buildUserPrompt(sceneTitle: string, chapterTitle: string, sceneText: string, entityContext: string): string {
   const locationLabel = chapterTitle ? `${chapterTitle} › ${sceneTitle}` : sceneTitle;
-  return `Extract all named entities from this scene.
+  return `Extract named entities from this scene. Include only clearly named, significant entities — not background/incidental mentions, unnamed references, or entities that appear only in passing with no meaningful role.
 
-ALREADY DOCUMENTED ENTITIES — these have not yet been checked against this scene. For each that appears in this scene, compare existing content against what the scene reveals. If the entity does not appear in this scene at all, omit it. For entities NOT in this list, use update_type "new". When update_type is "update", put ONLY the new content in sections — do not repeat what is already there:
+ALREADY DOCUMENTED ENTITIES — these have not yet been checked against this scene. For each that appears in this scene, compare existing content against what the scene reveals. If the entity does not appear in this scene at all, omit it entirely. For entities NOT in this list, use update_type "new". When update_type is "update", at_a_glance should contain ONLY new facts not already captured:
 ${entityContext || "(none yet)"}
 
 SCENE: ${locationLabel}
@@ -568,30 +568,20 @@ ${sceneText}
 
 Return a JSON array. Each element must have exactly these keys:
 - "type": one of "character", "location", "item", "lore"
-  - character: named people or beings
-  - location: named places, buildings, regions, streets, neighborhoods, bars, houses, or any other named place — extract any named location regardless of how mundane or informal it sounds. "The Spot", "Joe's Bar", "Elm Street", and "The Old House" are all valid location entities if they have a proper name.
+  - character: named people or beings with a speaking/acting role or clear narrative significance
+  - location: named places, buildings, regions, streets, neighborhoods, bars, houses, or any other named place — extract any named location regardless of how mundane it sounds. "The Spot", "Joe's Bar", "Elm Street" are valid if they have a proper name.
   - item: named objects, artifacts, weapons
   - lore: named magic systems, factions, events, creatures, doctrines, historical periods
 - "name": the proper name, 1–5 words
-- "short_description": REQUIRED. Maximum 20 words. Hard limit — count the words. One sentence only. Who this person is and their most memorable trait or role. Example: "A member of Owen's social circle, known by the nickname Nez. Prone to accidents." Do NOT copy from Overview. Do NOT exceed 20 words.
+- "short_description": REQUIRED. Maximum 20 words. Hard limit — count the words. One sentence only. Who this entity is and their most memorable trait or role. Do NOT exceed 20 words.
 - "source_sentence": the exact sentence from the scene where this entity first appears, copied verbatim
-- "update_type": Required. "new" if not in the documented list. "update" if documented and this scene adds net-new information. "contradiction" if the scene conflicts with existing docs. "no_update" if documented, the entity appears in this scene, but existing docs already capture everything relevant.
-- "sections": object with article-style content. Only include a key when the scene has clear evidence for it.
-  - character → allowed keys:
-      "Overview": REQUIRED. Who this character IS right now — current role, status, and significance. Present tense. Maximum 1 paragraph (3–5 sentences). Do not repeat background or story history here. Do not copy from short_description. Example: "A member of Owen's inner circle, viewed with frustration by Owen."
-      "Background": Fixed history BEFORE the story began — origin, upbringing, past events that shaped them. Does not change as the story progresses. Maximum 1 paragraph (3–5 sentences). Do not invent. Only include what is implied or stated in the scene text. Example: "Grew up in the same neighbourhood as Owen."
-      "Personality": Observable traits, quirks, and behavioural patterns based on what is shown in the scene. Maximum 1 paragraph (3–5 sentences). Do not invent traits not shown in the text.
-      "Relationships": For each relationship mentioned, write 1–2 sentences only. Format: "[Name]: [relationship description]." Example: "Owen: A childhood acquaintance who currently holds a low opinion of Nez." Do not write more than 2 sentences per relationship.
-      "Notable Events": List specific things that happen TO or are done BY this character in this scene. Include accidents, actions, confrontations, discoveries — anything plot-relevant. One sentence per event. Do not editorialize. Example: "Nez accidentally lit his pants on fire." Leave empty if nothing notable happens.
-  - location  → allowed keys: "Description", "History", "Notable Inhabitants", "Points of Interest" — Max 1 paragraph each.
-  - item      → allowed keys: "Description", "History", "Powers", "Current Whereabouts" — Max 1 paragraph each.
-  - lore      → allowed keys: "Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts" — Max 1 paragraph each.
+- "update_type": Required. "new" if not in the documented list. "update" if documented and this scene adds net-new at_a_glance facts not already captured. "contradiction" if the scene conflicts with existing docs. "no_update" if documented and the entity appears in this scene but existing docs already capture everything relevant.
 - "at_a_glance": object with short factual fields. Only include a key when the scene has clear evidence. Values must be 1–8 words.
   - character → allowed keys: "Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance"
   - location  → allowed keys: "Region", "Climate", "Population", "Government", "Notable Landmarks"
   - item      → allowed keys: "Type", "Origin", "Current Owner", "Powers"
   - lore      → allowed keys: "Type", "Regional Origin", "Rarity"
 
-Include every named entity. Return [] if the scene has no named entities.
+Return [] if the scene has no clearly named, significant entities.
 Output only the JSON array. No prose, no markdown fences.`;
 }
