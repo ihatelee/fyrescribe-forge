@@ -186,6 +186,7 @@ const Sidebar = () => {
       );
       setNewMentions(fresh);
       setMentionsModalOpen(true);
+      await fetchPendingCount();
     } catch {
       setMentionsMessage("Sync failed");
     } finally {
@@ -223,6 +224,7 @@ const Sidebar = () => {
       );
       setTagSuggestions(suggestions);
       setTagsModalOpen(true);
+      await fetchPendingCount();
     } catch {
       setTagsMessage("Sync failed");
     } finally {
@@ -241,6 +243,7 @@ const Sidebar = () => {
         created != null ? `Found ${created} suggested link${created !== 1 ? "s" : ""}` : "Done",
       );
       setLinkLoreModalOpen(true);
+      await fetchPendingCount();
     } catch {
       setLinkLoreMessage("Sync Connections failed");
     } finally {
