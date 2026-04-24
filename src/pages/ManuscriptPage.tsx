@@ -1793,6 +1793,64 @@ const ManuscriptPage = () => {
           </>
         )}
       </div>
+
+      {/* Delete confirmation dialog (chapters & scenes) */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            setDeleteConfirmText("");
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">
+              {deleteTarget?.kind === "chapter" ? "Delete chapter" : "Delete scene"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-text-secondary">
+              {deleteTarget?.kind === "chapter" ? (
+                <>
+                  This will permanently delete <span className="text-foreground">"{deleteTarget.title}"</span>
+                  {deleteTarget.sceneCount > 0 && (
+                    <> and its {deleteTarget.sceneCount} scene{deleteTarget.sceneCount === 1 ? "" : "s"}</>
+                  )}
+                  . This action cannot be undone. Type{" "}
+                  <span className="font-mono text-destructive font-semibold">PERMANENTLY DELETE</span>{" "}
+                  to confirm.
+                </>
+              ) : deleteTarget ? (
+                <>
+                  This will permanently delete <span className="text-foreground">"{deleteTarget.title}"</span>.
+                  This action cannot be undone. Type{" "}
+                  <span className="font-mono text-destructive font-semibold">PERMANENTLY DELETE</span>{" "}
+                  to confirm.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <input
+            type="text"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="Type PERMANENTLY DELETE"
+            className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-foreground text-sm placeholder:text-text-dimmed focus:outline-none focus:ring-1 focus:ring-destructive"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-fyrescribe-raised border-border text-foreground hover:bg-fyrescribe-base">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteConfirmText !== "PERMANENTLY DELETE"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
