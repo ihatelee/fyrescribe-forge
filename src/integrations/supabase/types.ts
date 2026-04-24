@@ -80,6 +80,7 @@ export type Database = {
           project_id: string
           sections: Json | null
           summary: string | null
+          synced_scenes: string[] | null
           updated_at: string
         }
         Insert: {
@@ -97,6 +98,7 @@ export type Database = {
           project_id: string
           sections?: Json | null
           summary?: string | null
+          synced_scenes?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -114,6 +116,7 @@ export type Database = {
           project_id?: string
           sections?: Json | null
           summary?: string | null
+          synced_scenes?: string[] | null
           updated_at?: string
         }
         Relationships: [
