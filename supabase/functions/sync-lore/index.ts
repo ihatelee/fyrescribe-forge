@@ -37,7 +37,7 @@ const PROSE_SECTION_KEYS = new Set([
 ]);
 
 const ALLOWED_AT_A_GLANCE_KEYS: Record<string, Set<string>> = {
-  character: new Set(["Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance"]),
+  character: new Set(["Place of Birth", "Eye Color", "Hair Color", "Height", "Allegiance"]),
   location: new Set(["Region", "Climate", "Population", "Government", "Notable Landmarks"]),
   item: new Set(["Type", "Origin", "Current Owner", "Powers"]),
   lore: new Set(["Type", "Regional Origin", "Rarity"]),
@@ -686,8 +686,7 @@ Return a JSON array. Each element must have exactly these fields:
 
 - "at_a_glance": structured facts only. Omit any key the scene doesn't support. Values: 1–8 words max.
   - Never emit "Unknown", "N/A", "None", or any placeholder value — if the scene doesn't have clear specific evidence for a key, omit it entirely.
-  - character  → "Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance"
-    - "Currently Residing" must be a named place (city, region, town, district) — never a scene description, workplace, or temporary location. Only include if the text explicitly states where the character lives.
+  - character  → "Place of Birth", "Eye Color", "Hair Color", "Height", "Allegiance"
   - location   → "Region", "Climate", "Population", "Government", "Notable Landmarks"
   - item       → "Type", "Origin", "Current Owner", "Powers"
   - lore       → "Type", "Regional Origin", "Rarity"
