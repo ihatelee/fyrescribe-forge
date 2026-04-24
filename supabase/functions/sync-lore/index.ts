@@ -687,6 +687,7 @@ Return a JSON array. Each element must have exactly these fields:
 - "at_a_glance": structured facts only. Omit any key the scene doesn't support. Values: 1–8 words max.
   - Never emit "Unknown", "N/A", "None", or any placeholder value — if the scene doesn't have clear specific evidence for a key, omit it entirely.
   - character  → "Place of Birth", "Eye Color", "Hair Color", "Height", "Allegiance"
+    - "Allegiance" must be a named faction, group, organisation, or side in a conflict — never a relationship or person. E.g. "The Crown", "Thieves Guild", "House Voss". Omit if no clear factional loyalty is shown.
   - location   → "Region", "Climate", "Population", "Government", "Notable Landmarks"
   - item       → "Type", "Origin", "Current Owner", "Powers"
   - lore       → "Type", "Regional Origin", "Rarity"
