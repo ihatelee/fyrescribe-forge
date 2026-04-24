@@ -420,11 +420,14 @@ async function syncProject(
         : shortDesc;
 
       // ── Strip any prose sections the AI emitted despite instructions ───
+      const UNKNOWN_VALUES = new Set(["unknown", "n/a", "none", "unclear", "unspecified", "not specified", "not mentioned"]);
       const at_a_glance: Record<string, string> = {};
       for (const [key, value] of Object.entries(s.at_a_glance ?? {})) {
         if (!PROSE_SECTION_KEYS.has(key) && (value ?? "").trim()) {
-          // Cap each at-a-glance value at 8 words
-          at_a_glance[key] = value.trim().split(/\s+/).slice(0, 8).join(" ");
+          const v = value.trim().split(/\s+/).slice(0, 8).join(" ");
+          if (!UNKNOWN_VALUES.has(v.toLowerCase())) {
+            at_a_glance[key] = v;
+          }
         }
       }
 
@@ -675,6 +678,7 @@ Return a JSON array. Each element must have exactly these fields:
   - "no_update" — in the list, nothing new to add
 
 - "at_a_glance": structured facts only. Omit any key the scene doesn't support. Values: 1–8 words max.
+  - Never emit "Unknown", "N/A", "None", or any placeholder value — if the scene doesn't have clear specific evidence for a key, omit it entirely.
   - character  → "Place of Birth", "Currently Residing", "Eye Color", "Hair Color", "Height", "Allegiance"
   - location   → "Region", "Climate", "Population", "Government", "Notable Landmarks"
   - item       → "Type", "Origin", "Current Owner", "Powers"
