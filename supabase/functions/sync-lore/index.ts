@@ -225,6 +225,7 @@ serve(async (req) => {
     for (const pid of projectIds) {
       const result = await syncProject(
         supabase,
+        userClient,
         pid,
         trigger as "scheduled" | "manual",
         anthropicKey,
@@ -251,6 +252,8 @@ serve(async (req) => {
 async function syncProject(
   // deno-lint-ignore no-explicit-any
   supabase: any,
+  // deno-lint-ignore no-explicit-any
+  userClient: any,
   projectId: string,
   trigger: "scheduled" | "manual",
   anthropicKey: string,
@@ -490,7 +493,7 @@ async function syncProject(
           const entity = existingEntityList.find((e) => e.id === entityId);
           const existing = entity?.synced_scenes ?? [];
           const updated = [...new Set([...existing, ...newSceneIds])];
-          return supabase.from("entities").update({ synced_scenes: updated }).eq("id", entityId);
+          return userClient.from("entities").update({ synced_scenes: updated }).eq("id", entityId);
         }),
       );
     }
