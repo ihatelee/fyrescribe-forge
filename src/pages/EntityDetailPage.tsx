@@ -678,6 +678,7 @@ const EntityDetailInner = () => {
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
   const [aliases, setAliases] = useState<string[]>([]);
   const [aliasDraft, setAliasDraft] = useState("");
+  const [firstMentionLabel, setFirstMentionLabel] = useState<string>("");
   const storyHistoryRef = useRef<HTMLDivElement>(null);
   const sectionElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -806,6 +807,37 @@ const EntityDetailInner = () => {
     const { error } = await supabase
       .from("entities").update({ sections: updated as Json }).eq("id", id);
     if (error) console.error("Failed to delete story history:", error);
+  }, [id]);
+
+  // ─── First Mentioned label (derived from earliest entity_mentions row) ─
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("entity_mentions")
+        .select("position, scenes!inner(title, order, chapters!inner(title, order))")
+        .eq("entity_id", id);
+      if (cancelled) return;
+      if (error || !data || data.length === 0) {
+        setFirstMentionLabel("");
+        return;
+      }
+      const sorted = [...data].sort((a: any, b: any) => {
+        const ca = a.scenes?.chapters?.order ?? 0;
+        const cb = b.scenes?.chapters?.order ?? 0;
+        if (ca !== cb) return ca - cb;
+        const sa = a.scenes?.order ?? 0;
+        const sb = b.scenes?.order ?? 0;
+        if (sa !== sb) return sa - sb;
+        return (a.position ?? 0) - (b.position ?? 0);
+      });
+      const first: any = sorted[0];
+      const chapter = first?.scenes?.chapters?.title ?? "Untitled chapter";
+      const scene = first?.scenes?.title ?? "Untitled scene";
+      setFirstMentionLabel(`${chapter} · ${scene}`);
+    })();
+    return () => { cancelled = true; };
   }, [id]);
 
   // ─── Generate Profile (AI, from entity_mentions) ─────────────────
@@ -1671,6 +1703,20 @@ const EntityDetailInner = () => {
                     const linkedForField = targetCategory
                       ? linkedEntities.find((e) => e.relationship === key)
                       : undefined;
+
+                    // FIRST MENTIONED — derived plain text, no edit, no link
+                    if (key === "First Mentioned") {
+                      return (
+                        <div key={key} className="px-4 py-2.5">
+                          <div className="text-[10px] uppercase tracking-widest text-text-dimmed mb-1">{key}</div>
+                          {firstMentionLabel ? (
+                            <div className="text-sm text-foreground">{firstMentionLabel}</div>
+                          ) : (
+                            <div className="text-sm text-text-dimmed">—</div>
+                          )}
+                        </div>
+                      );
+                    }
 
                     return (
                       <div key={key} className="px-4 py-2.5">
