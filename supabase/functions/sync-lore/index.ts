@@ -355,7 +355,7 @@ async function syncProject(
         entitySceneMap.set(e.id, list);
       }
 
-      const entityContext = buildEntityContext(unsyncedEntities);
+      const entityContext = buildEntityContext(existingEntityList);
       const povCharacterName = scenePovNameMap.get(scene.id) ?? null;
 
       const sceneSuggestions = await callAnthropicForScene(
