@@ -675,6 +675,7 @@ const EntityDetailInner = () => {
   const [generatingHistory, setGeneratingHistory] = useState(false);
   const [generatingProfile, setGeneratingProfile] = useState(false);
   const [profileDone, setProfileDone] = useState(false);
+  const [profileNotice, setProfileNotice] = useState<string | null>(null);
   const [aliases, setAliases] = useState<string[]>([]);
   const [aliasDraft, setAliasDraft] = useState("");
   const storyHistoryRef = useRef<HTMLDivElement>(null);
@@ -813,16 +814,27 @@ const EntityDetailInner = () => {
     if (!id || generatingProfile) return;
     setGeneratingProfile(true);
     setProfileDone(false);
+    setProfileNotice(null);
     try {
       const { data, error } = await supabase.functions.invoke("generate-profile", {
         body: { entity_id: id },
       });
       if (error) {
+        // supabase-js returns FunctionsHttpError for non-2xx; the original Response is in error.context
+        const ctx = (error as { context?: Response }).context;
+        if (ctx && ctx.status === 422) {
+          setProfileNotice("Not enough manuscript content to generate. Try syncing mentions first.");
+        } else {
+          setProfileNotice("Profile generation failed. Please try again.");
+        }
         console.error("Profile generation failed:", error);
         return;
       }
       const newSections = (data as { sections?: Record<string, string> } | null)?.sections ?? {};
-      if (!Object.keys(newSections).length) return;
+      if (!Object.keys(newSections).length) {
+        setProfileNotice("Not enough manuscript content to generate. Try syncing mentions first.");
+        return;
+      }
       sectionsRef.current = newSections;
       setSections(newSections);
       for (const [key, el] of sectionElRefs.current.entries()) {
@@ -835,6 +847,7 @@ const EntityDetailInner = () => {
       setTimeout(() => setProfileDone(false), 3000);
     } catch (e) {
       console.error("Profile generation error:", e);
+      setProfileNotice("Profile generation failed. Please try again.");
     } finally {
       setGeneratingProfile(false);
     }
@@ -1318,23 +1331,30 @@ const EntityDetailInner = () => {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Left: Article body */}
           <div className="flex-1 min-w-0">
-            {/* Generate Profile */}
-            <div className="flex items-center justify-end mb-4 gap-2">
-              {profileDone && (
-                <span className="text-[11px] text-green-400">Profile generated.</span>
-              )}
-              <button
-                onClick={handleGenerateProfile}
-                disabled={generatingProfile}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {generatingProfile ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : (
-                  <Sparkles size={12} className="text-gold" />
+            {/* Sync Lore Info */}
+            <div className="flex flex-col items-end mb-4 gap-1.5">
+              <div className="flex items-center gap-2">
+                {profileDone && (
+                  <span className="text-[11px] text-green-400">Profile generated.</span>
                 )}
-                Generate Profile
-              </button>
+                <button
+                  onClick={handleGenerateProfile}
+                  disabled={generatingProfile}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {generatingProfile ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={12} className="text-gold" />
+                  )}
+                  Sync Lore Info
+                </button>
+              </div>
+              {profileNotice && (
+                <span className="text-[11px] text-text-dimmed max-w-xs text-right">
+                  {profileNotice}
+                </span>
+              )}
             </div>
             <div className="space-y-0">
               {sectionList.map((section, i) => (
