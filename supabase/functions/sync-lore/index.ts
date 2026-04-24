@@ -315,7 +315,7 @@ async function syncProject(
     // ── Fetch existing entities (for dedup + at-a-glance diff) ───────────
     const { data: existingEntities } = await supabase
       .from("entities")
-      .select("id, name, category, description, fields, aliases, synced_scenes")
+      .select("id, name, category, summary, fields, aliases, synced_scenes")
       .eq("project_id", projectId);
 
     const existingEntityList = (existingEntities ?? []) as ExistingEntity[];
