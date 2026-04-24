@@ -809,6 +809,37 @@ const EntityDetailInner = () => {
     if (error) console.error("Failed to delete story history:", error);
   }, [id]);
 
+  // ─── First Mentioned label (derived from earliest entity_mentions row) ─
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("entity_mentions")
+        .select("position, scenes!inner(title, order, chapters!inner(title, order))")
+        .eq("entity_id", id);
+      if (cancelled) return;
+      if (error || !data || data.length === 0) {
+        setFirstMentionLabel("");
+        return;
+      }
+      const sorted = [...data].sort((a: any, b: any) => {
+        const ca = a.scenes?.chapters?.order ?? 0;
+        const cb = b.scenes?.chapters?.order ?? 0;
+        if (ca !== cb) return ca - cb;
+        const sa = a.scenes?.order ?? 0;
+        const sb = b.scenes?.order ?? 0;
+        if (sa !== sb) return sa - sb;
+        return (a.position ?? 0) - (b.position ?? 0);
+      });
+      const first: any = sorted[0];
+      const chapter = first?.scenes?.chapters?.title ?? "Untitled chapter";
+      const scene = first?.scenes?.title ?? "Untitled scene";
+      setFirstMentionLabel(`${chapter} · ${scene}`);
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
   // ─── Generate Profile (AI, from entity_mentions) ─────────────────
 
   const handleGenerateProfile = useCallback(async () => {
