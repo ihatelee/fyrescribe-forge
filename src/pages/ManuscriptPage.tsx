@@ -57,6 +57,16 @@ import {
   Trash2,
 } from "lucide-react";
 import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // ─── Utilities ────────────────────────────────────────────────────────
 
