@@ -458,20 +458,29 @@ const Sidebar = () => {
     {linkLoreModalOpen && activeProject && (
       <LinkLoreModal
         projectId={activeProject.id}
-        onClose={() => setLinkLoreModalOpen(false)}
+        onClose={() => {
+          setLinkLoreModalOpen(false);
+          fetchPendingCount();
+        }}
       />
     )}
     {mentionsModalOpen && activeProject && (
       <SyncMentionsModal
         projectId={activeProject.id}
         mentions={newMentions}
-        onClose={() => setMentionsModalOpen(false)}
+        onClose={() => {
+          setMentionsModalOpen(false);
+          fetchPendingCount();
+        }}
       />
     )}
     {tagsModalOpen && (
       <SyncTagsModal
         suggestions={tagSuggestions}
-        onClose={() => setTagsModalOpen(false)}
+        onClose={() => {
+          setTagsModalOpen(false);
+          fetchPendingCount();
+        }}
       />
     )}
     </>
