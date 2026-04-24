@@ -94,7 +94,62 @@ serve(async (req) => {
 
     const suggestions = await runFieldTaggingPass(admin, project_id, anthropicKey);
 
-    return new Response(JSON.stringify({ suggestions }), {
+    // Persist newly-found suggestions as pending (idempotent upsert).
+    if (suggestions.length > 0) {
+      const rows = suggestions.map((s) => ({
+        project_id,
+        entity_id: s.entity_id,
+        entity_category: s.entity_category,
+        field_key: s.field_key,
+        target_entity_id: s.target_entity_id,
+        target_entity_category: s.target_entity_category,
+        status: "pending" as const,
+      }));
+      const { error: upsertErr } = await admin
+        .from("tag_suggestions")
+        .upsert(rows, {
+          onConflict: "project_id,entity_id,field_key,target_entity_id",
+          ignoreDuplicates: true,
+        });
+      if (upsertErr) console.error("tag_suggestions upsert error:", upsertErr);
+    }
+
+    // Return ALL currently-pending tag_suggestions so the modal reflects
+    // outstanding items across sessions, not just freshly-found ones.
+    const { data: pendingRows } = await admin
+      .from("tag_suggestions")
+      .select(
+        "id, entity_id, entity_category, field_key, target_entity_id, target_entity_category",
+      )
+      .eq("project_id", project_id)
+      .eq("status", "pending");
+
+    // Hydrate names from entities table
+    const allIds = new Set<string>();
+    (pendingRows ?? []).forEach((r: any) => {
+      allIds.add(r.entity_id);
+      allIds.add(r.target_entity_id);
+    });
+    const { data: nameRows } = await admin
+      .from("entities")
+      .select("id, name")
+      .in("id", [...allIds]);
+    const nameById = new Map<string, string>(
+      (nameRows ?? []).map((e: any) => [e.id, e.name]),
+    );
+
+    const responseSuggestions = (pendingRows ?? []).map((r: any) => ({
+      id: r.id,
+      entity_id: r.entity_id,
+      entity_name: nameById.get(r.entity_id) ?? "Unknown",
+      entity_category: r.entity_category,
+      field_key: r.field_key,
+      target_entity_id: r.target_entity_id,
+      target_entity_name: nameById.get(r.target_entity_id) ?? "Unknown",
+      target_entity_category: r.target_entity_category,
+    }));
+
+    return new Response(JSON.stringify({ suggestions: responseSuggestions }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
