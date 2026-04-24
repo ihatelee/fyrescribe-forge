@@ -57,6 +57,16 @@ import {
   Trash2,
 } from "lucide-react";
 import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // ─── Utilities ────────────────────────────────────────────────────────
 
@@ -314,8 +324,15 @@ const ManuscriptPage = () => {
   const [dragOverChapterId, setDragOverChapterId] = useState<string | null>(null);
 
   const [chapterMenuOpenId, setChapterMenuOpenId] = useState<string | null>(null);
+  const [sceneMenuOpenId, setSceneMenuOpenId] = useState<string | null>(null);
   const [continuityCheckingId, setContinuityCheckingId] = useState<string | null>(null);
   const [continuityPanel, setContinuityPanel] = useState<{ chapterTitle: string; issues: ContinuityIssue[] } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<
+    | { kind: "scene"; id: string; title: string }
+    | { kind: "chapter"; id: string; title: string; sceneCount: number }
+    | null
+  >(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   type TextSize = "small" | "medium" | "large" | "xl";
   const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
@@ -811,15 +828,25 @@ const ManuscriptPage = () => {
 
   // ─── Delete chapter / scene ─────────────────────────────────────────
 
-  const handleDeleteScene = async (sceneId: string, e?: React.MouseEvent) => {
+  const requestDeleteScene = (sceneId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    setSceneMenuOpenId(null);
     const scene = scenes.find((s) => s.id === sceneId);
     if (!scene) return;
-    const ok = window.confirm(
-      `Delete scene "${scene.title}"? This cannot be undone.`,
-    );
-    if (!ok) return;
+    setDeleteConfirmText("");
+    setDeleteTarget({ kind: "scene", id: sceneId, title: scene.title });
+  };
 
+  const requestDeleteChapter = (chapterId: string) => {
+    setChapterMenuOpenId(null);
+    const chapter = chapters.find((c) => c.id === chapterId);
+    if (!chapter) return;
+    const sceneCount = scenes.filter((s) => s.chapter_id === chapterId).length;
+    setDeleteConfirmText("");
+    setDeleteTarget({ kind: "chapter", id: chapterId, title: chapter.title, sceneCount });
+  };
+
+  const performDeleteScene = async (sceneId: string) => {
     // Best-effort cleanup of dependent rows that lack FK cascade.
     await supabase.from("scene_versions").delete().eq("scene_id", sceneId);
     await supabase.from("entity_mentions").delete().eq("scene_id", sceneId);
@@ -835,15 +862,8 @@ const ManuscriptPage = () => {
     }
   };
 
-  const handleDeleteChapter = async (chapterId: string) => {
-    setChapterMenuOpenId(null);
-    const chapter = chapters.find((c) => c.id === chapterId);
-    if (!chapter) return;
+  const performDeleteChapter = async (chapterId: string) => {
     const sceneIds = scenes.filter((s) => s.chapter_id === chapterId).map((s) => s.id);
-    const ok = window.confirm(
-      `Delete chapter "${chapter.title}"${sceneIds.length ? ` and its ${sceneIds.length} scene${sceneIds.length === 1 ? "" : "s"}` : ""}? This cannot be undone.`,
-    );
-    if (!ok) return;
 
     if (sceneIds.length) {
       await supabase.from("scene_versions").delete().in("scene_id", sceneIds);
@@ -863,6 +883,17 @@ const ManuscriptPage = () => {
       setActiveSceneId(null);
       setWordCount(0);
     }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.kind === "scene") {
+      await performDeleteScene(deleteTarget.id);
+    } else {
+      await performDeleteChapter(deleteTarget.id);
+    }
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
   };
 
   const startEditing = (id: string, currentTitle: string, e: React.MouseEvent) => {
@@ -1348,7 +1379,7 @@ const ManuscriptPage = () => {
                         Check Continuity
                       </button>
                       <button
-                        onClick={() => handleDeleteChapter(chapter.id)}
+                        onClick={() => requestDeleteChapter(chapter.id)}
                         className="w-full flex items-center gap-2 px-3 py-2 text-xs text-destructive hover:bg-fyrescribe-hover transition-colors"
                       >
                         <Trash2 size={12} />
@@ -1368,7 +1399,7 @@ const ManuscriptPage = () => {
                         onDragStart={(e) => { e.stopPropagation(); setDragSceneId(scene.id); }}
                         onDragEnd={() => { setDragSceneId(null); setDragOverChapterId(null); }}
                         onClick={() => selectScene(scene)}
-                        className={`group w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm cursor-pointer transition-colors ${
+                        className={`group relative w-full flex items-center gap-2 px-2 py-1 text-[12px] rounded-sm cursor-pointer transition-colors ${
                           activeSceneId === scene.id
                             ? "text-gold-bright bg-gold-glow"
                             : dragSceneId === scene.id
@@ -1404,12 +1435,29 @@ const ManuscriptPage = () => {
                               {scene.title}
                             </span>
                             <button
-                              onClick={(e) => handleDeleteScene(scene.id, e)}
-                              title="Delete scene"
-                              className="flex-shrink-0 p-0.5 rounded text-text-dimmed hover:text-destructive hover:bg-fyrescribe-hover transition-all opacity-0 group-hover:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSceneMenuOpenId(sceneMenuOpenId === scene.id ? null : scene.id);
+                              }}
+                              className="flex-shrink-0 p-0.5 rounded text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-all opacity-0 group-hover:opacity-100 data-[open=true]:opacity-100"
+                              data-open={sceneMenuOpenId === scene.id}
                             >
-                              <Trash2 size={11} />
+                              <MoreVertical size={11} />
                             </button>
+                            {sceneMenuOpenId === scene.id && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setSceneMenuOpenId(null); }} />
+                                <div className="absolute left-0 right-0 top-full z-50 bg-fyrescribe-base border border-border rounded-md shadow-xl py-1 mt-0.5">
+                                  <button
+                                    onClick={(e) => requestDeleteScene(scene.id, e)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-destructive hover:bg-fyrescribe-hover transition-colors"
+                                  >
+                                    <Trash2 size={12} />
+                                    Delete scene
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
@@ -1745,6 +1793,64 @@ const ManuscriptPage = () => {
           </>
         )}
       </div>
+
+      {/* Delete confirmation dialog (chapters & scenes) */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            setDeleteConfirmText("");
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">
+              {deleteTarget?.kind === "chapter" ? "Delete chapter" : "Delete scene"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-text-secondary">
+              {deleteTarget?.kind === "chapter" ? (
+                <>
+                  This will permanently delete <span className="text-foreground">"{deleteTarget.title}"</span>
+                  {deleteTarget.sceneCount > 0 && (
+                    <> and its {deleteTarget.sceneCount} scene{deleteTarget.sceneCount === 1 ? "" : "s"}</>
+                  )}
+                  . This action cannot be undone. Type{" "}
+                  <span className="font-mono text-destructive font-semibold">PERMANENTLY DELETE</span>{" "}
+                  to confirm.
+                </>
+              ) : deleteTarget ? (
+                <>
+                  This will permanently delete <span className="text-foreground">"{deleteTarget.title}"</span>.
+                  This action cannot be undone. Type{" "}
+                  <span className="font-mono text-destructive font-semibold">PERMANENTLY DELETE</span>{" "}
+                  to confirm.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <input
+            type="text"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="Type PERMANENTLY DELETE"
+            className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-foreground text-sm placeholder:text-text-dimmed focus:outline-none focus:ring-1 focus:ring-destructive"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-fyrescribe-raised border-border text-foreground hover:bg-fyrescribe-base">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteConfirmText !== "PERMANENTLY DELETE"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
