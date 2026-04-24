@@ -4,6 +4,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TagSuggestion {
+  /** tag_suggestions.id (when persisted) */
+  id?: string;
   entity_id: string;
   entity_name: string;
   entity_category: string;
@@ -40,7 +42,7 @@ const SyncTagsModal = ({ suggestions, onClose }: SyncTagsModalProps) => {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
 
-  const keyOf = (s: TagSuggestion) => `${s.entity_id}:${s.field_key}`;
+  const keyOf = (s: TagSuggestion) => `${s.entity_id}:${s.field_key}:${s.target_entity_id}`;
 
   const remove = (s: TagSuggestion) =>
     setItems((prev) => prev.filter((x) => keyOf(x) !== keyOf(s)));
@@ -56,6 +58,12 @@ const SyncTagsModal = ({ suggestions, onClose }: SyncTagsModalProps) => {
       if (error) {
         console.error("Failed to accept tag suggestion:", error);
       } else {
+        if (s.id) {
+          await supabase
+            .from("tag_suggestions")
+            .update({ status: "accepted", reviewed_at: new Date().toISOString() })
+            .eq("id", s.id);
+        }
         remove(s);
       }
     } finally {
@@ -63,10 +71,19 @@ const SyncTagsModal = ({ suggestions, onClose }: SyncTagsModalProps) => {
     }
   };
 
-  const handleReject = (s: TagSuggestion) => {
-    // Tag suggestions are stateless — rejecting just removes locally.
-    // If the user runs Sync Tags again the AI may resurface it.
-    remove(s);
+  const handleReject = async (s: TagSuggestion) => {
+    setBusyKey(keyOf(s));
+    try {
+      if (s.id) {
+        await supabase
+          .from("tag_suggestions")
+          .update({ status: "rejected", reviewed_at: new Date().toISOString() })
+          .eq("id", s.id);
+      }
+      remove(s);
+    } finally {
+      setBusyKey(null);
+    }
   };
 
   const handleAcceptAll = async () => {
@@ -78,9 +95,20 @@ const SyncTagsModal = ({ suggestions, onClose }: SyncTagsModalProps) => {
         entity_b_id: s.target_entity_id,
         relationship: s.field_key,
       }));
-      const { error } = await supabase.from("entity_links").insert(rows);
-      if (error) {
-        console.error("Failed to bulk-accept tag suggestions:", error);
+      const ids = items.map((s) => s.id).filter((v): v is string => Boolean(v));
+      const ops: Promise<unknown>[] = [supabase.from("entity_links").insert(rows)];
+      if (ids.length > 0) {
+        ops.push(
+          supabase
+            .from("tag_suggestions")
+            .update({ status: "accepted", reviewed_at: new Date().toISOString() })
+            .in("id", ids),
+        );
+      }
+      const [insertResult] = await Promise.all(ops);
+      const insertErr = (insertResult as { error: unknown } | undefined)?.error;
+      if (insertErr) {
+        console.error("Failed to bulk-accept tag suggestions:", insertErr);
       } else {
         setItems([]);
       }
