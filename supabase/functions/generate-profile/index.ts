@@ -122,7 +122,7 @@ serve(async (req) => {
         .eq("pov_character_id", entity_id)
         .eq("project_id", entity.project_id)
         .limit(15);
-      povScenes = (povData ?? []) as PovScene[];
+      povScenes = (povData ?? []) as unknown as PovScene[];
     }
 
     if (mentionContexts.length === 0 && povScenes.length === 0) {
