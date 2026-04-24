@@ -350,6 +350,42 @@ export type Database = {
           },
         ]
       }
+      mention_suggestions: {
+        Row: {
+          context: string
+          created_at: string
+          entity_id: string
+          id: string
+          position: number | null
+          project_id: string
+          reviewed_at: string | null
+          scene_id: string
+          status: string
+        }
+        Insert: {
+          context: string
+          created_at?: string
+          entity_id: string
+          id?: string
+          position?: number | null
+          project_id: string
+          reviewed_at?: string | null
+          scene_id: string
+          status?: string
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          entity_id?: string
+          id?: string
+          position?: number | null
+          project_id?: string
+          reviewed_at?: string | null
+          scene_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       notes: {
         Row: {
           content: string
@@ -600,6 +636,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tag_suggestions: {
+        Row: {
+          created_at: string
+          entity_category: string
+          entity_id: string
+          field_key: string
+          id: string
+          project_id: string
+          reviewed_at: string | null
+          status: string
+          target_entity_category: string
+          target_entity_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_category: string
+          entity_id: string
+          field_key: string
+          id?: string
+          project_id: string
+          reviewed_at?: string | null
+          status?: string
+          target_entity_category: string
+          target_entity_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_category?: string
+          entity_id?: string
+          field_key?: string
+          id?: string
+          project_id?: string
+          reviewed_at?: string | null
+          status?: string
+          target_entity_category?: string
+          target_entity_id?: string
+        }
+        Relationships: []
       }
       tags: {
         Row: {

@@ -4,6 +4,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface NewMention {
+  /** mention_suggestions.id (when persisted) */
+  id?: string;
   entity_id: string;
   entity_name: string;
   scene_id: string;
@@ -25,33 +27,40 @@ const SyncMentionsModal = ({ projectId, mentions, onClose }: SyncMentionsModalPr
   // Local state so rejecting a mention immediately removes it from the list.
   const [items, setItems] = useState<NewMention[]>(mentions);
   const [rejecting, setRejecting] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
 
   const handleReject = async (m: NewMention) => {
     const key = `${m.entity_id}:${m.scene_id}:${m.context}`;
     setRejecting(key);
     try {
-      // Remove the live mention so it doesn't keep counting toward this entity
-      // and persist a rejection so future syncs don't surface it again.
-      const [{ error: rejectErr }, { error: deleteErr }] = await Promise.all([
-        supabase.from("rejected_mentions").upsert(
-          {
-            project_id: projectId,
-            entity_id: m.entity_id,
-            scene_id: m.scene_id,
-            context: m.context,
-          },
-          { onConflict: "project_id,entity_id,scene_id,context" },
-        ),
-        supabase
-          .from("entity_mentions")
-          .delete()
-          .eq("project_id", projectId)
-          .eq("entity_id", m.entity_id)
-          .eq("scene_id", m.scene_id)
-          .eq("context", m.context),
-      ]);
-      if (rejectErr) console.error("Failed to reject mention:", rejectErr);
-      if (deleteErr) console.error("Failed to delete mention:", deleteErr);
+      // 1. Mark the suggestion rejected (drops it from inbox count)
+      // 2. Persist a long-term rejection so future syncs don't resurface it
+      // 3. Remove the live mention so it stops counting toward the entity
+      const rejectionUpsert = supabase.from("rejected_mentions").upsert(
+        {
+          project_id: projectId,
+          entity_id: m.entity_id,
+          scene_id: m.scene_id,
+          context: m.context,
+        },
+        { onConflict: "project_id,entity_id,scene_id,context" },
+      );
+      const liveDelete = supabase
+        .from("entity_mentions")
+        .delete()
+        .eq("project_id", projectId)
+        .eq("entity_id", m.entity_id)
+        .eq("scene_id", m.scene_id)
+        .eq("context", m.context);
+      const suggestionUpdate = m.id
+        ? supabase
+            .from("mention_suggestions")
+            .update({ status: "rejected", reviewed_at: new Date().toISOString() })
+            .eq("id", m.id)
+        : null;
+      await rejectionUpsert;
+      await liveDelete;
+      if (suggestionUpdate) await suggestionUpdate;
       setItems((prev) =>
         prev.filter(
           (x) =>
@@ -67,6 +76,24 @@ const SyncMentionsModal = ({ projectId, mentions, onClose }: SyncMentionsModalPr
     }
   };
 
+  // Closing the modal accepts all remaining (matches existing UX).
+  const handleClose = async () => {
+    if (closing) return;
+    const ids = items.map((m) => m.id).filter((v): v is string => Boolean(v));
+    if (ids.length > 0) {
+      setClosing(true);
+      try {
+        await supabase
+          .from("mention_suggestions")
+          .update({ status: "accepted", reviewed_at: new Date().toISOString() })
+          .in("id", ids);
+      } finally {
+        setClosing(false);
+      }
+    }
+    onClose();
+  };
+
   // Group by entity name
   const grouped = items.reduce<Record<string, NewMention[]>>((acc, m) => {
     (acc[m.entity_name] ??= []).push(m);
@@ -78,7 +105,7 @@ const SyncMentionsModal = ({ projectId, mentions, onClose }: SyncMentionsModalPr
   return (
     <div
       className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -96,7 +123,7 @@ const SyncMentionsModal = ({ projectId, mentions, onClose }: SyncMentionsModalPr
           <div className="flex items-center gap-1">
             {items.length > 1 && (
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 title="Accept all mentions and close"
                 className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md bg-gold/15 text-gold hover:bg-gold/25 transition-colors"
               >
@@ -105,7 +132,7 @@ const SyncMentionsModal = ({ projectId, mentions, onClose }: SyncMentionsModalPr
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-md text-text-dimmed hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
             >
               <X size={14} />

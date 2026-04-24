@@ -77,12 +77,35 @@ const Sidebar = () => {
       setPendingCount(0);
       return;
     }
-    const { count } = await supabase
-      .from("lore_suggestions")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", activeProject.id)
-      .eq("status", "pending");
-    setPendingCount(count ?? 0);
+    const projectId = activeProject.id;
+    const [loreRes, linksRes, mentionsRes, tagsRes] = await Promise.all([
+      supabase
+        .from("lore_suggestions")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "pending"),
+      supabase
+        .from("lore_link_suggestions")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "pending"),
+      supabase
+        .from("mention_suggestions")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "pending"),
+      supabase
+        .from("tag_suggestions")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "pending"),
+    ]);
+    const total =
+      (loreRes.count ?? 0) +
+      (linksRes.count ?? 0) +
+      (mentionsRes.count ?? 0) +
+      (tagsRes.count ?? 0);
+    setPendingCount(total);
   }, [activeProject]);
 
   useEffect(() => {
@@ -163,6 +186,7 @@ const Sidebar = () => {
       );
       setNewMentions(fresh);
       setMentionsModalOpen(true);
+      await fetchPendingCount();
     } catch {
       setMentionsMessage("Sync failed");
     } finally {
@@ -200,6 +224,7 @@ const Sidebar = () => {
       );
       setTagSuggestions(suggestions);
       setTagsModalOpen(true);
+      await fetchPendingCount();
     } catch {
       setTagsMessage("Sync failed");
     } finally {
@@ -218,6 +243,7 @@ const Sidebar = () => {
         created != null ? `Found ${created} suggested link${created !== 1 ? "s" : ""}` : "Done",
       );
       setLinkLoreModalOpen(true);
+      await fetchPendingCount();
     } catch {
       setLinkLoreMessage("Sync Connections failed");
     } finally {
@@ -432,20 +458,29 @@ const Sidebar = () => {
     {linkLoreModalOpen && activeProject && (
       <LinkLoreModal
         projectId={activeProject.id}
-        onClose={() => setLinkLoreModalOpen(false)}
+        onClose={() => {
+          setLinkLoreModalOpen(false);
+          fetchPendingCount();
+        }}
       />
     )}
     {mentionsModalOpen && activeProject && (
       <SyncMentionsModal
         projectId={activeProject.id}
         mentions={newMentions}
-        onClose={() => setMentionsModalOpen(false)}
+        onClose={() => {
+          setMentionsModalOpen(false);
+          fetchPendingCount();
+        }}
       />
     )}
     {tagsModalOpen && (
       <SyncTagsModal
         suggestions={tagSuggestions}
-        onClose={() => setTagsModalOpen(false)}
+        onClose={() => {
+          setTagsModalOpen(false);
+          fetchPendingCount();
+        }}
       />
     )}
     </>
