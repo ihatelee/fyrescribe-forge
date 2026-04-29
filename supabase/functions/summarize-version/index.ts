@@ -1,5 +1,5 @@
 // Generate a one-line summary of the changes between a previous scene version
-// and the just-saved version. Uses Lovable AI (google/gemini-2.5-flash) for speed.
+// and the just-saved version.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -18,8 +18,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -109,21 +109,23 @@ ${newText}
 
 One-sentence summary:`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 256,
         messages: [{ role: "user", content: prompt }],
       }),
     });
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
-      console.error("AI gateway error:", aiResp.status, errText);
+      console.error("Anthropic API error:", aiResp.status, errText);
       return new Response(JSON.stringify({ error: "AI failed", detail: errText }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -132,7 +134,7 @@ One-sentence summary:`;
 
     const aiJson = await aiResp.json();
     const summary: string =
-      aiJson?.choices?.[0]?.message?.content?.trim().replace(/^["']|["']$/g, "") ?? "";
+      aiJson?.content?.[0]?.text?.trim().replace(/^["']|["']$/g, "") ?? "";
 
     if (summary) {
       const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

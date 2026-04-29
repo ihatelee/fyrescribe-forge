@@ -1,5 +1,6 @@
 // Generate or refine a 2-paragraph "Story History" narrative for a character.
 // Additive: builds on existing history rather than replacing it.
+// Uses Anthropic Claude directly (migrated from Lovable AI gateway).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -15,8 +16,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -130,23 +131,20 @@ New mention contexts (manuscript order):
 
 If there is existing history, build on it additively — preserve what is already there and extend it with new information only. If there is no existing history, write from scratch based strictly on the mention contexts above. Return only the Story History prose (max 2 paragraphs).`;
 
-    const aiRes = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-        }),
+    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
+      }),
+    });
 
     if (!aiRes.ok) {
       if (aiRes.status === 429) {
@@ -155,15 +153,9 @@ If there is existing history, build on it additively — preserve what is alread
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      if (aiRes.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Add credits in Workspace settings." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
       const text = await aiRes.text();
-      console.error("AI gateway error:", aiRes.status, text);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+      console.error("Anthropic API error:", aiRes.status, text);
+      return new Response(JSON.stringify({ error: "AI error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -171,7 +163,7 @@ If there is existing history, build on it additively — preserve what is alread
 
     const aiJson = await aiRes.json();
     const generated: string =
-      aiJson?.choices?.[0]?.message?.content?.trim() ?? "";
+      aiJson?.content?.[0]?.text?.trim() ?? "";
 
     if (!generated) {
       return new Response(JSON.stringify({ error: "Empty AI response" }), {

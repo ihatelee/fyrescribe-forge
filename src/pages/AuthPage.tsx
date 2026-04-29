@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import logoSrc from "@/assets/fyrescribe_logo_white.svg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,13 +133,11 @@ const AuthPage = () => {
               setError(null);
               setGoogleLoading(true);
               try {
-                const result = await lovable.auth.signInWithOAuth("google", {
-                  redirect_uri: window.location.origin,
+                const { error } = await supabase.auth.signInWithOAuth({
+                  provider: "google",
+                  options: { redirectTo: window.location.origin },
                 });
-                if (result.error) {
-                  setError(result.error.message || "Google sign-in failed");
-                }
-                if (result.redirected) return;
+                if (error) setError(error.message || "Google sign-in failed");
               } catch (err: any) {
                 setError(err.message);
               } finally {
