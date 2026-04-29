@@ -25,12 +25,13 @@ interface Note {
   id: string;
   project_id: string;
   user_id: string;
-  title: string;
-  content: string;
+  title: string | null;
+  content: string | null;
   updated_at: string;
 }
 
-const snippetOf = (html: string): string => {
+const snippetOf = (html: string | null | undefined): string => {
+  if (!html) return "";
   const text = html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
   return text.slice(0, 80);
 };
@@ -474,7 +475,7 @@ const NotesPage = () => {
                   <textarea
                     ref={titleInputRef}
                     key={`title-${activeNote.id}`}
-                    value={activeNote.title}
+                    value={activeNote.title ?? ""}
                     onChange={(e) => {
                       handleTitleChange(e.target.value);
                       const t = e.currentTarget;
