@@ -57,7 +57,9 @@ const Sidebar = () => {
 
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [fullSyncing, setFullSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [fullSyncMessage, setFullSyncMessage] = useState<string | null>(null);
   const [fullSyncNote, setFullSyncNote] = useState(false);
   const [syncingMentions, setSyncingMentions] = useState(false);
   const [mentionsMessage, setMentionsMessage] = useState<string | null>(null);
