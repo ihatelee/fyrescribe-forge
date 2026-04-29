@@ -57,7 +57,9 @@ const Sidebar = () => {
 
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [fullSyncing, setFullSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [fullSyncMessage, setFullSyncMessage] = useState<string | null>(null);
   const [fullSyncNote, setFullSyncNote] = useState(false);
   const [syncingMentions, setSyncingMentions] = useState(false);
   const [mentionsMessage, setMentionsMessage] = useState<string | null>(null);
@@ -124,9 +126,12 @@ const Sidebar = () => {
   }, []);
 
   const handleSync = async (force = false) => {
-    if (!activeProject || syncing) return;
-    setSyncing(true);
-    setSyncMessage(null);
+    if (!activeProject) return;
+    if (force ? fullSyncing : syncing) return;
+    const setBusy = force ? setFullSyncing : setSyncing;
+    const setMsg = force ? setFullSyncMessage : setSyncMessage;
+    setBusy(true);
+    setMsg(null);
     if (force) setFullSyncNote(true);
     try {
       const { data, error } = await supabase.functions.invoke("sync-lore", {
@@ -140,11 +145,11 @@ const Sidebar = () => {
       const created = results.reduce((s, r) => s + (r.suggestions_created ?? 0), 0);
 
       if (scenesProcessed === 0) {
-        setSyncMessage("No edited scenes");
+        setMsg("No edited scenes");
       } else if (created > 0) {
-        setSyncMessage(`${created} new suggestion${created !== 1 ? "s" : ""}`);
+        setMsg(`${created} new suggestion${created !== 1 ? "s" : ""}`);
       } else {
-        setSyncMessage(`${scenesProcessed} scene${scenesProcessed !== 1 ? "s" : ""} processed, 0 suggestions`);
+        setMsg(`${scenesProcessed} scene${scenesProcessed !== 1 ? "s" : ""} processed, 0 suggestions`);
       }
       await fetchPendingCount();
 
@@ -153,13 +158,14 @@ const Sidebar = () => {
         await handleSyncMentionsInner();
         await handleLinkLoreInner();
         await handleSyncTagsInner();
+        await fetchPendingCount();
       }
     } catch {
-      setSyncMessage("Sync failed");
+      setMsg(force ? "Full Sync failed" : "Sync failed");
     } finally {
-      setSyncing(false);
+      setBusy(false);
       setFullSyncNote(false);
-      setTimeout(() => setSyncMessage(null), 4000);
+      setTimeout(() => setMsg(null), 4000);
     }
   };
 
@@ -419,13 +425,16 @@ const Sidebar = () => {
         {/* Full Sync */}
         <button
           onClick={() => handleSync(true)}
-          disabled={syncing}
+          disabled={fullSyncing}
           title="Full Sync — ignores is_dirty, processes all scenes"
           className="w-full flex items-center justify-start text-left gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
         >
-          <SyncIcon size={12} weight="duotone" className={syncing ? "animate-spin" : ""} />
-          Full Sync
+          <SyncIcon size={12} weight="duotone" className={fullSyncing ? "animate-spin" : ""} />
+          {fullSyncing ? "Full syncing…" : "Full Sync"}
         </button>
+        {fullSyncMessage && (
+          <p className="px-3 text-[10px] text-text-dimmed">{fullSyncMessage}</p>
+        )}
         </div>
 
         {/* Visual divider between sync controls and Lore Inbox */}
