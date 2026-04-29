@@ -126,9 +126,12 @@ const Sidebar = () => {
   }, []);
 
   const handleSync = async (force = false) => {
-    if (!activeProject || syncing) return;
-    setSyncing(true);
-    setSyncMessage(null);
+    if (!activeProject) return;
+    if (force ? fullSyncing : syncing) return;
+    const setBusy = force ? setFullSyncing : setSyncing;
+    const setMsg = force ? setFullSyncMessage : setSyncMessage;
+    setBusy(true);
+    setMsg(null);
     if (force) setFullSyncNote(true);
     try {
       const { data, error } = await supabase.functions.invoke("sync-lore", {
@@ -142,11 +145,11 @@ const Sidebar = () => {
       const created = results.reduce((s, r) => s + (r.suggestions_created ?? 0), 0);
 
       if (scenesProcessed === 0) {
-        setSyncMessage("No edited scenes");
+        setMsg("No edited scenes");
       } else if (created > 0) {
-        setSyncMessage(`${created} new suggestion${created !== 1 ? "s" : ""}`);
+        setMsg(`${created} new suggestion${created !== 1 ? "s" : ""}`);
       } else {
-        setSyncMessage(`${scenesProcessed} scene${scenesProcessed !== 1 ? "s" : ""} processed, 0 suggestions`);
+        setMsg(`${scenesProcessed} scene${scenesProcessed !== 1 ? "s" : ""} processed, 0 suggestions`);
       }
       await fetchPendingCount();
 
@@ -155,13 +158,14 @@ const Sidebar = () => {
         await handleSyncMentionsInner();
         await handleLinkLoreInner();
         await handleSyncTagsInner();
+        await fetchPendingCount();
       }
     } catch {
-      setSyncMessage("Sync failed");
+      setMsg(force ? "Full Sync failed" : "Sync failed");
     } finally {
-      setSyncing(false);
+      setBusy(false);
       setFullSyncNote(false);
-      setTimeout(() => setSyncMessage(null), 4000);
+      setTimeout(() => setMsg(null), 4000);
     }
   };
 
