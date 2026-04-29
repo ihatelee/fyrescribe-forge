@@ -14,7 +14,7 @@ SELECT cron.schedule(
     url     := 'https://ignglmxrpbxlgjmjzuql.supabase.co/functions/v1/sync-lore',
     headers := jsonb_build_object(
       'Content-Type',  'application/json',
-      'Authorization', 'Bearer sb_publishable_tdRzYHZsWkMKrymz-e7eqQ_EMg5cYi-'
+      'Authorization', 'Bearer sb_secret_p_aDb34KqJ5Q9rUmNWKAUQ_B8OAaN0X'
     ),
     body    := '{"trigger":"scheduled"}'::jsonb
   ) AS request_id;
