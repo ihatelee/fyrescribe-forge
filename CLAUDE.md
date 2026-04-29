@@ -2,8 +2,8 @@
 
 ## Repo & Services
 
-- **Repo**: [github.com/ihatelee/fyrescribe-forge](https://github.com/ihatelee/fyrescribe-forge)
-- **Supabase project ref**: `bedrzyekoynnzdeblunt`
+- **Repo**: [github.com/ihatelee/fyrescribe](https://github.com/ihatelee/fyrescribe)
+- **Supabase project ref**: `ignglmxrpbxlgjmjzuql`
 - **Supabase credentials**: `src/integrations/supabase/client.ts`; generated types: `src/integrations/supabase/types.ts`
 - **AI model**: `claude-sonnet-4-20250514` (edge functions)
 
