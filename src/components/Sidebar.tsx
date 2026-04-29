@@ -425,13 +425,16 @@ const Sidebar = () => {
         {/* Full Sync */}
         <button
           onClick={() => handleSync(true)}
-          disabled={syncing}
+          disabled={fullSyncing}
           title="Full Sync — ignores is_dirty, processes all scenes"
           className="w-full flex items-center justify-start text-left gap-2 px-3 py-1.5 text-[12px] rounded-md transition-colors text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover disabled:opacity-40"
         >
-          <SyncIcon size={12} weight="duotone" className={syncing ? "animate-spin" : ""} />
-          Full Sync
+          <SyncIcon size={12} weight="duotone" className={fullSyncing ? "animate-spin" : ""} />
+          {fullSyncing ? "Full syncing…" : "Full Sync"}
         </button>
+        {fullSyncMessage && (
+          <p className="px-3 text-[10px] text-text-dimmed">{fullSyncMessage}</p>
+        )}
         </div>
 
         {/* Visual divider between sync controls and Lore Inbox */}
