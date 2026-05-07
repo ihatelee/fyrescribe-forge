@@ -1,28 +1,159 @@
 /**
- * Strip RTF control codes to extract plain text.
- * Not a complete RTF parser — handles common novel exports well enough.
+ * CP1252 → Unicode mapping for the printable range that differs from Latin-1.
+ * Used to decode RTF \'XX escapes correctly (e.g. \'97 → em dash).
+ */
+const CP1252_EXTRAS: Record<number, number> = {
+  0x80: 0x20ac, 0x82: 0x201a, 0x83: 0x0192, 0x84: 0x201e, 0x85: 0x2026,
+  0x86: 0x2020, 0x87: 0x2021, 0x88: 0x02c6, 0x89: 0x2030, 0x8a: 0x0160,
+  0x8b: 0x2039, 0x8c: 0x0152, 0x8e: 0x017d, 0x91: 0x2018, 0x92: 0x2019,
+  0x93: 0x201c, 0x94: 0x201d, 0x95: 0x2022, 0x96: 0x2013, 0x97: 0x2014,
+  0x98: 0x02dc, 0x99: 0x2122, 0x9a: 0x0161, 0x9b: 0x203a, 0x9c: 0x0153,
+  0x9e: 0x017e, 0x9f: 0x0178,
+};
+
+function cp1252ToChar(byte: number): string {
+  return String.fromCodePoint(CP1252_EXTRAS[byte] ?? byte);
+}
+
+// Control words whose entire group contents should be discarded (header tables).
+const SKIP_GROUPS = new Set([
+  "fonttbl", "colortbl", "stylesheet", "info", "pict", "object",
+  "themedata", "colorschememapping", "latentstyles", "datastore",
+  "listtable", "listoverridetable", "rsidtbl", "generator", "filetbl",
+  "revtbl", "wgrffmtfilter", "xmlnstbl",
+]);
+
+/**
+ * Proper(-ish) RTF → plain text. Handles:
+ *  - \par / \line / \tab → newlines & tabs
+ *  - \'XX hex escapes (decoded as CP1252)
+ *  - \uN unicode escapes (with \ucN skip-count handling)
+ *  - {\fonttbl ...}, {\colortbl ...}, {\*\...} ignorable groups
+ *  - bare backslash + newline used as soft line breaks (Cocoa RTF)
+ *  - escaped \\, \{, \}
  */
 export function stripRtf(rtf: string): string {
-  let s = rtf;
-  // Convert paragraph/line-break control words to newlines BEFORE stripping everything else
-  s = s.replace(/\\pard?\b\s*/gi, "\n\n");
-  s = s.replace(/\\line\b\s*/gi, "\n");
-  s = s.replace(/\\tab\b\s*/gi, "\t");
-  // Preserve escaped braces so they survive the group-removal step
-  s = s.replace(/\\\{/g, "\x01");
-  s = s.replace(/\\\}/g, "\x02");
-  // Remove all remaining control words: \word, \word123, \word-123
-  s = s.replace(/\\[a-zA-Z]+[-]?\d*[ ]?/g, "");
-  // Remove remaining backslash sequences
-  s = s.replace(/\\./g, "");
-  // Restore and then remove group delimiters
-  s = s.replace(/\x01/g, "{");
-  s = s.replace(/\x02/g, "}");
-  s = s.replace(/[{}]/g, "");
-  // Normalize whitespace
+  const out: string[] = [];
+  // Stack of per-group state: { skip: boolean, ucSkip: number }
+  const stack: { skip: boolean; ucSkip: number; pendingSkip: number }[] = [
+    { skip: false, ucSkip: 1, pendingSkip: 0 },
+  ];
+  const top = () => stack[stack.length - 1];
+  const emit = (s: string) => {
+    const cur = top();
+    if (cur.skip) return;
+    if (cur.pendingSkip > 0) {
+      // Skip ahead into the literal text that follows a \uN escape
+      const drop = Math.min(cur.pendingSkip, s.length);
+      cur.pendingSkip -= drop;
+      s = s.slice(drop);
+      if (!s) return;
+    }
+    out.push(s);
+  };
+
+  let i = 0;
+  const n = rtf.length;
+  while (i < n) {
+    const c = rtf[i];
+
+    if (c === "{") {
+      const parent = top();
+      stack.push({ skip: parent.skip, ucSkip: parent.ucSkip, pendingSkip: 0 });
+      i++;
+      // Ignorable destination: {\*\foo ...}
+      if (rtf[i] === "\\" && rtf[i + 1] === "*") {
+        top().skip = true;
+        i += 2;
+      }
+      continue;
+    }
+    if (c === "}") {
+      if (stack.length > 1) stack.pop();
+      i++;
+      continue;
+    }
+
+    if (c === "\\") {
+      const next = rtf[i + 1];
+
+      // Escaped literal characters
+      if (next === "\\" || next === "{" || next === "}") {
+        emit(next);
+        i += 2;
+        continue;
+      }
+      // Backslash + newline = soft line break (Cocoa/TextEdit RTF)
+      if (next === "\n" || next === "\r") {
+        emit("\n");
+        i += 2;
+        if (next === "\r" && rtf[i] === "\n") i++;
+        continue;
+      }
+      // \'XX hex byte (CP1252)
+      if (next === "'") {
+        const hex = rtf.slice(i + 2, i + 4);
+        if (/^[0-9a-fA-F]{2}$/.test(hex)) {
+          emit(cp1252ToChar(parseInt(hex, 16)));
+          i += 4;
+          continue;
+        }
+        i += 2;
+        continue;
+      }
+      // Control word: \word[-N][ ]
+      const m = /^\\([a-zA-Z]+)(-?\d+)?[ ]?/.exec(rtf.slice(i));
+      if (m) {
+        const word = m[1];
+        const param = m[2] ? parseInt(m[2], 10) : null;
+        i += m[0].length;
+
+        if (word === "u" && param !== null) {
+          // \uN — signed 16-bit codepoint
+          const cp = param < 0 ? param + 0x10000 : param;
+          emit(String.fromCodePoint(cp));
+          top().pendingSkip = top().ucSkip;
+          continue;
+        }
+        if (word === "uc" && param !== null) {
+          top().ucSkip = param;
+          continue;
+        }
+        if (word === "par" || word === "pard" || word === "sect" || word === "page") {
+          emit("\n\n");
+          continue;
+        }
+        if (word === "line") { emit("\n"); continue; }
+        if (word === "tab")  { emit("\t"); continue; }
+        if (word === "emdash") { emit("\u2014"); continue; }
+        if (word === "endash") { emit("\u2013"); continue; }
+        if (word === "lquote") { emit("\u2018"); continue; }
+        if (word === "rquote") { emit("\u2019"); continue; }
+        if (word === "ldblquote") { emit("\u201c"); continue; }
+        if (word === "rdblquote") { emit("\u201d"); continue; }
+        if (word === "bullet") { emit("\u2022"); continue; }
+        if (SKIP_GROUPS.has(word)) {
+          top().skip = true;
+          continue;
+        }
+        // Unknown control word — silently consumed (formatting only)
+        continue;
+      }
+      // Lone backslash with nothing recognisable — skip it
+      i++;
+      continue;
+    }
+
+    // Literal character
+    emit(c);
+    i++;
+  }
+
+  let s = out.join("");
+  // Normalise whitespace
   s = s.replace(/\r\n?/g, "\n");
   s = s.replace(/[ \t]+/g, " ");
-  s = s.replace(/\n[ \t]+/g, "\n");
+  s = s.replace(/ ?\n ?/g, "\n");
   s = s.replace(/\n{3,}/g, "\n\n");
   return s.trim();
 }
@@ -45,124 +176,148 @@ const HEADING_RE = /^(chapter|part|prologue|epilogue|interlude)\b/i;
 const INVISIBLE_PREFIX_RE = /^[\uFEFF\u200B\u00A0]+/;
 
 /**
- * If a block contains chapter/part/etc. heading lines embedded among
- * single-newline-separated paragraphs, split the block at those heading
- * lines so each heading starts its own sub-block.
- *
- * Example: "The Ember Crown\nChapter One: …\nContent…"
- * becomes: ["The Ember Crown", "Chapter One: …\nContent…"]
+ * Detect a scene-break separator line. Common forms include:
+ *   ***   * * *   #   # # #   ---   ###
+ *   — ⚜ —   ◆   ❖   ✦   ✧   ⁂   ❦   ‖
+ * The line must be short and contain ONLY separator-class characters.
  */
-function splitBlockAtEmbeddedHeadings(block: string): string[] {
-  const lines = block.split("\n");
-  const result: string[] = [];
-  let current: string[] = [];
+const SEPARATOR_CHAR_RE =
+  /^[\s\-\u2010-\u2015_*#=~•·∙‧⋅・◆◇◈◉○●◯◍◎❖❉✦✧✶✷✹✺✻❀❦⚜⁂⸫⸪‡†§¶‖|]+$/;
 
-  for (const line of lines) {
-    const cleaned = line.trim().replace(INVISIBLE_PREFIX_RE, "");
-    if (HEADING_RE.test(cleaned) && cleaned.length < 100) {
-      // Flush accumulated lines before this heading
-      const flushed = current.join("\n").trim();
-      if (flushed) result.push(flushed);
-      current = [line]; // heading starts a new sub-block
-    } else {
-      current.push(line);
-    }
-  }
+function isSceneBreak(line: string): boolean {
+  const t = line.trim().replace(INVISIBLE_PREFIX_RE, "");
+  if (!t || t.length > 40) return false;
+  return SEPARATOR_CHAR_RE.test(t);
+}
 
-  const last = current.join("\n").trim();
-  if (last) result.push(last);
-
-  return result.length > 0 ? result : [block];
+function isChapterHeading(line: string): boolean {
+  const t = line.trim().replace(INVISIBLE_PREFIX_RE, "");
+  return t.length > 0 && t.length < 100 && HEADING_RE.test(t);
 }
 
 /**
  * Parse plain text into chapters and scenes.
  *
- * Case 1: The first content block is a chapter heading → it becomes the
- *   title of the first chapter. No "Chapter 1" default is created.
- *
- * Case 2: Non-heading content appears before the first heading → that
- *   content goes into a default "Chapter 1"; the heading then starts the
- *   next chapter.
- *
- * Within each chapter, content blocks become Scene 1, Scene 2… (counter
- * resets per chapter). Empty chapters are dropped. If no headings exist
- * the whole text becomes one chapter.
+ * - Chapter breaks: lines starting with chapter/part/prologue/etc.
+ * - Scene breaks: ONLY explicit separator lines (***, ⚜, — ⚜ —, ###).
+ *   Plain paragraph breaks stay inside the same scene.
+ * - Subtitles: short title-like lines right after a chapter heading get
+ *   folded into the chapter title, joined with " — ".
  */
 export function parseManuscript(text: string): ParsedChapter[] {
-  // Normalise line endings and strip a leading BOM.
   const normalised = text
     .replace(/^\uFEFF/, "")
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n");
 
-  // Split on double newlines, then re-split any block that contains an
-  // embedded heading on its own line (handles single-newline manuscripts).
-  const blocks = normalised
-    .split(/\n{2,}/)
-    .map((b) => b.trim())
-    .filter((b) => b.length > 0)
-    .flatMap(splitBlockAtEmbeddedHeadings);
+  const lines = normalised.split("\n");
 
-  if (blocks.length === 0) {
-    return [{ title: "Chapter 1", scenes: [{ title: "Scene 1", content: text.trim() }] }];
+  type RawScene = { lines: string[] };
+  type RawChapter = { title: string; scenes: RawScene[] };
+
+  const chapters: RawChapter[] = [];
+  let currentChapter: RawChapter | null = null;
+  let currentScene: RawScene | null = null;
+  let collectingSubtitle = false;
+
+  const startScene = () => {
+    if (!currentChapter) return;
+    currentScene = { lines: [] };
+    currentChapter.scenes.push(currentScene);
+  };
+
+  const startChapter = (title: string) => {
+    currentChapter = { title, scenes: [] };
+    chapters.push(currentChapter);
+    currentScene = null;
+    collectingSubtitle = true;
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.replace(INVISIBLE_PREFIX_RE, "");
+    const trimmed = line.trim();
+
+    if (isChapterHeading(trimmed)) {
+      startChapter(trimmed);
+      continue;
+    }
+
+    if (isSceneBreak(trimmed)) {
+      currentScene = null;
+      collectingSubtitle = false;
+      continue;
+    }
+
+    if (!trimmed) {
+      if (currentScene && currentScene.lines.length > 0) {
+        const last = currentScene.lines[currentScene.lines.length - 1];
+        if (last !== "") currentScene.lines.push("");
+      }
+      continue;
+    }
+
+    // Subtitle right after chapter heading (only the first such line)
+    if (
+      currentChapter &&
+      collectingSubtitle &&
+      !currentScene &&
+      trimmed.length < 80 &&
+      !/[.!?"]$/.test(trimmed)
+    ) {
+      currentChapter.title = `${currentChapter.title} — ${trimmed}`;
+      collectingSubtitle = false;
+      continue;
+    }
+
+    collectingSubtitle = false;
+
+    if (!currentChapter) {
+      // Skip lone short lines before any chapter (book title, etc.)
+      if (trimmed.length < 80 && !/[.!?"]$/.test(trimmed)) continue;
+      startChapter("Chapter 1");
+    }
+    if (!currentScene) startScene();
+    currentScene!.lines.push(trimmed);
   }
 
-  const chapters: ParsedChapter[] = [];
-  let currentChapter: ParsedChapter | null = null;
-  let sceneNum = 1;
+  // Materialise: rebuild paragraph text, drop empty scenes/chapters.
+  const result: ParsedChapter[] = [];
+  for (const ch of chapters) {
+    const scenes: ParsedScene[] = [];
+    for (const sc of ch.scenes) {
+      while (sc.lines.length && sc.lines[sc.lines.length - 1] === "") sc.lines.pop();
+      if (sc.lines.length === 0) continue;
 
-  for (const block of blocks) {
-    // Derive the heading candidate: first line of the block, with any
-    // invisible prefix characters (BOM, zero-width space, NBSP) stripped.
-    const firstLine = block
-      .split("\n")[0]
-      .trim()
-      .replace(INVISIBLE_PREFIX_RE, "");
+      // If the first line of the scene looks like a short title (no terminal
+      // punctuation, < 80 chars), promote it to the scene title.
+      let sceneTitle = `Scene ${scenes.length + 1}`;
+      let bodyLines = sc.lines;
+      const first = bodyLines[0];
+      if (first && first.length < 80 && !/[.!?"]$/.test(first) && bodyLines.length > 1) {
+        sceneTitle = first;
+        bodyLines = bodyLines.slice(1);
+        while (bodyLines.length && bodyLines[0] === "") bodyLines.shift();
+      }
 
-    const isHeading = HEADING_RE.test(firstLine) && firstLine.length < 100;
-
-    if (isHeading) {
-      // ── Start a new chapter ────────────────────────────────────────
-      sceneNum = 1;
-      currentChapter = { title: firstLine, scenes: [] };
-      chapters.push(currentChapter);
-
-      // If the heading and its opening paragraph are in the same block
-      // (separated by a single newline), add the body as the first scene.
-      const newlineIdx = block.indexOf("\n");
-      if (newlineIdx !== -1) {
-        const body = block.slice(newlineIdx + 1).trim();
-        if (body.length >= 30) {
-          currentChapter.scenes.push({ title: "Scene 1", content: body });
-          sceneNum = 2;
+      const paragraphs: string[] = [];
+      let buf: string[] = [];
+      for (const l of bodyLines) {
+        if (l === "") {
+          if (buf.length) { paragraphs.push(buf.join(" ")); buf = []; }
+        } else {
+          buf.push(l);
         }
       }
-    } else {
-      // ── Content block ──────────────────────────────────────────────
-      if (block.length < 30) continue; // skip short separators / artefacts
-
-      // Skip single-line blocks that appear before the first heading —
-      // these are typically the book title, not story content.
-      if (currentChapter === null && !block.includes("\n")) continue;
-
-      if (currentChapter === null) {
-        // Content before the first heading → default chapter
-        currentChapter = { title: "Chapter 1", scenes: [] };
-        chapters.push(currentChapter);
-      }
-
-      currentChapter.scenes.push({ title: `Scene ${sceneNum}`, content: block });
-      sceneNum++;
+      if (buf.length) paragraphs.push(buf.join(" "));
+      const content = paragraphs.join("\n\n").trim();
+      if (!content) continue;
+      scenes.push({ title: sceneTitle, content });
     }
+    if (scenes.length > 0) result.push({ title: ch.title, scenes });
   }
-
-  // Drop chapters that ended up with no scenes.
-  const result = chapters.filter((ch) => ch.scenes.length > 0);
 
   if (result.length === 0) {
     return [{ title: "Chapter 1", scenes: [{ title: "Scene 1", content: normalised.trim() }] }];
   }
-
   return result;
 }
