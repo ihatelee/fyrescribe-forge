@@ -178,6 +178,7 @@ Include world history events and story-level events separately. ONLY include eve
           label: e.label,
           date_label: era.label,
           date_sort: era.sort,
+          date_detail: typeof e.date_detail === "string" && e.date_detail.trim() ? e.date_detail.trim() : null,
           type: e.type as "world_history" | "story_event",
           entity_id: entityIdByName.get(e.label.toLowerCase()) ?? null,
           significance_score: typeof e.significance_score === "number"
