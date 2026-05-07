@@ -548,33 +548,33 @@ const LinkedEntityRow = ({ sourceCategory, sourceName, target, onNavigate, onRem
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
+  const rawRel = target.relationship?.trim() || "linked to";
+  const humanRel = rawRel.replace(/_/g, " ");
+
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 odd:bg-transparent even:bg-fyrescribe-hover/40 hover:bg-fyrescribe-hover transition-colors">
-      {/* Source side (current entity) */}
-      <span
-        className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[sourceCategory] || ""}`}
-        title={sourceName}
-      >
-        {sourceCategory}
-      </span>
+    <div className="flex items-start gap-3 px-4 py-2.5 odd:bg-transparent even:bg-fyrescribe-hover/40 hover:bg-fyrescribe-hover transition-colors">
+      {/* Bullet */}
+      <span className="text-text-dimmed mt-1.5 flex-shrink-0">•</span>
 
-      {/* Relationship label */}
-      <span className="text-xs text-text-dimmed italic flex-shrink-0">
-        {target.relationship?.trim() ? target.relationship : "linked to"}
-      </span>
+      <div className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
+        {/* Target entity — bolded clickable name */}
+        <button
+          onClick={() => onNavigate(target.id)}
+          className="inline-flex items-baseline gap-2 hover:text-gold-bright transition-colors group"
+        >
+          <span className="font-display font-semibold text-sm text-foreground group-hover:text-gold-bright">
+            {target.name}
+          </span>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[target.category] || ""}`}>
+            {target.category}
+          </span>
+        </button>
 
-      {/* Target entity — clickable badge */}
-      <button
-        onClick={() => onNavigate(target.id)}
-        className="flex items-center gap-2 min-w-0 hover:text-gold-bright transition-colors group"
-      >
-        <span className="font-display text-sm text-foreground group-hover:text-gold-bright truncate">
-          {target.name}
+        {/* Relationship description */}
+        <span className="text-xs text-text-dimmed">
+          — {humanRel}
         </span>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[target.category] || ""}`}>
-          {target.category}
-        </span>
-      </button>
+      </div>
 
       {/* 3-dot menu */}
       <div ref={menuRef} className="relative ml-auto flex-shrink-0">

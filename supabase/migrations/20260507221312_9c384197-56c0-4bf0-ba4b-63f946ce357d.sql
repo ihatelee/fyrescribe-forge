@@ -1,0 +1,2 @@
+UPDATE public.entity_links SET relationship = lower(replace(relationship, '_', ' ')) WHERE relationship LIKE '%\_%';
+UPDATE public.lore_link_suggestions SET relationship = lower(replace(relationship, '_', ' ')) WHERE relationship LIKE '%\_%';
