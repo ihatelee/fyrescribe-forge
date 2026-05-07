@@ -713,6 +713,7 @@ export type Database = {
           id: string
           label: string
           project_id: string
+          significance_score: number
           type: Database["public"]["Enums"]["timeline_event_type"]
         }
         Insert: {
@@ -722,6 +723,7 @@ export type Database = {
           id?: string
           label: string
           project_id: string
+          significance_score?: number
           type?: Database["public"]["Enums"]["timeline_event_type"]
         }
         Update: {
@@ -731,6 +733,7 @@ export type Database = {
           id?: string
           label?: string
           project_id?: string
+          significance_score?: number
           type?: Database["public"]["Enums"]["timeline_event_type"]
         }
         Relationships: [
