@@ -153,7 +153,8 @@ Include world history events and story-level events separately. ONLY include eve
         significance_score: typeof e.significance_score === "number"
           ? Math.min(10, Math.max(1, Math.round(e.significance_score)))
           : 5,
-      }));
+      }))
+      .filter((r) => r.significance_score >= 7);
 
     const { data: inserted, error: insertError } = await supabase
       .from("timeline_events")
