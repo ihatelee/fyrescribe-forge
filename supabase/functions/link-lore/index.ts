@@ -147,8 +147,12 @@ serve(async (req) => {
 Given the following entities, suggest meaningful relationships between pairs.
 Only suggest relationships that are strongly implied by the entity descriptions.
 Do not suggest relationships that already exist.
+
 Return ONLY a valid JSON array. Each element must be:
 { "entity_a_id": string, "entity_b_id": string, "relationship": string, "confidence": number }
+
+The "relationship" field MUST be a short, natural-language description (3–10 words, lowercase, no underscores, no snake_case) written from entity_a's perspective toward entity_b. Examples: "former member of", "punished by", "leader of", "rival of", "wields", "located in". Do NOT use snake_case or technical keys like "formerly_member_of" or "punished_by".
+
 Where confidence is a number 1-10. Only return suggestions with confidence 7 or above.
 Return an empty array [] if no strong relationships are found.
 
