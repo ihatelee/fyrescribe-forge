@@ -571,6 +571,11 @@ const TimelinePage = () => {
                         <h3 className="font-display text-sm text-foreground">
                           {event.label}
                         </h3>
+                        {event.date_detail && (
+                          <p className="text-xs text-text-dimmed mt-0.5">
+                            {event.date_detail}
+                          </p>
+                        )}
                       </div>
                       <button
                         onClick={() => handleDeleteEvent(event.id)}
