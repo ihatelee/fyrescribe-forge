@@ -707,6 +707,7 @@ export type Database = {
       }
       timeline_events: {
         Row: {
+          date_detail: string | null
           date_label: string | null
           date_sort: number | null
           entity_id: string | null
@@ -717,6 +718,7 @@ export type Database = {
           type: Database["public"]["Enums"]["timeline_event_type"]
         }
         Insert: {
+          date_detail?: string | null
           date_label?: string | null
           date_sort?: number | null
           entity_id?: string | null
@@ -727,6 +729,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["timeline_event_type"]
         }
         Update: {
+          date_detail?: string | null
           date_label?: string | null
           date_sort?: number | null
           entity_id?: string | null

@@ -14,6 +14,7 @@ interface TimelineEvent {
   label: string;
   date_label: string | null;
   date_sort: number | null;
+  date_detail: string | null;
   type: TimelineEventType;
   project_id: string;
   entity_id: string | null;
@@ -570,6 +571,11 @@ const TimelinePage = () => {
                         <h3 className="font-display text-sm text-foreground">
                           {event.label}
                         </h3>
+                        {event.date_detail && (
+                          <p className="text-xs text-text-dimmed mt-0.5">
+                            {event.date_detail}
+                          </p>
+                        )}
                       </div>
                       <button
                         onClick={() => handleDeleteEvent(event.id)}

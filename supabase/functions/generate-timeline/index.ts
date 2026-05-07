@@ -104,6 +104,7 @@ Return a JSON array only — no prose, no code fences. Each item must have:
 - "label": string (short event name, 3–8 words)
 - "date_label": MUST be EXACTLY one of: "Ancient Times", "Generations Ago", "Years Ago", "Recent Past", "Present Day". No other values allowed.
 - "date_sort": integer matching the era — Ancient Times=100, Generations Ago=300, Years Ago=400, Recent Past=500, Present Day=600
+- "date_detail": OPTIONAL string with a more specific time reference if the text gives one (e.g. "300 years ago", "Year 1242", "Three winters past"). Omit or set null when no specific time is mentioned.
 - "type": "world_history" | "story_event"
 - "significance_score": integer 1–10 (8–10: world-changing events — battles, deaths, major discoveries, regime changes; 7: notable, plot-defining moments; 1–6: minor or background — DO NOT INCLUDE these in your output)
 
@@ -137,7 +138,7 @@ Include world history events and story-level events separately. ONLY include eve
 
     // Strip any accidental code fences
     const jsonText = rawText.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
-    const events: { label: string; date_label: string; date_sort: number; type: string; significance_score?: number }[] =
+    const events: { label: string; date_label: string; date_sort: number; date_detail?: string | null; type: string; significance_score?: number }[] =
       JSON.parse(jsonText);
 
     // Allowed era labels and their sort values
@@ -177,6 +178,7 @@ Include world history events and story-level events separately. ONLY include eve
           label: e.label,
           date_label: era.label,
           date_sort: era.sort,
+          date_detail: typeof e.date_detail === "string" && e.date_detail.trim() ? e.date_detail.trim() : null,
           type: e.type as "world_history" | "story_event",
           entity_id: entityIdByName.get(e.label.toLowerCase()) ?? null,
           significance_score: typeof e.significance_score === "number"
