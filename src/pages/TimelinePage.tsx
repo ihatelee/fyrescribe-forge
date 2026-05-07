@@ -271,7 +271,7 @@ const TimelinePage = () => {
         body: { project_id: activeProject.id },
       });
       if (error) {
-        setGenerateError("Generation failed. Check that ANTHROPIC_API_KEY is set in your Supabase Edge Function secrets.");
+        setGenerateError(data?.error || error.message || "Generation failed. Please try again.");
         return;
       }
       if (data?.events) {
