@@ -403,11 +403,26 @@ const ManuscriptPage = () => {
       const [chaptersRes, scenesRes, entitiesRes] = await Promise.all([
         supabase.from("chapters").select("*").eq("project_id", projectId).order("order"),
         supabase.from("scenes").select("*").eq("project_id", projectId).order("order"),
-        supabase.from("entities").select("id, name").eq("project_id", projectId).is("archived_at", null),
+        supabase.from("entities").select("id, name, aliases").eq("project_id", projectId).is("archived_at", null),
       ]);
       if (chaptersRes.error) console.error("Failed to fetch chapters:", chaptersRes.error);
       if (scenesRes.error) console.error("Failed to fetch scenes:", scenesRes.error);
-      entityNamesRef.current = (entitiesRes.data ?? []) as { id: string; name: string }[];
+      // Expand each entity into one entry per name + alias so the highlighter
+      // links monikers (e.g. "Kaela", "Voss") in addition to the full name.
+      const rawEntities = (entitiesRes.data ?? []) as { id: string; name: string; aliases: string[] | null }[];
+      const expanded: { id: string; name: string }[] = [];
+      const seen = new Set<string>();
+      for (const e of rawEntities) {
+        for (const n of [e.name, ...(e.aliases ?? [])]) {
+          const t = (n ?? "").trim();
+          if (!t) continue;
+          const key = `${e.id}:${t.toLowerCase()}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          expanded.push({ id: e.id, name: t });
+        }
+      }
+      entityNamesRef.current = expanded;
 
       let chapterData: Chapter[] = chaptersRes.data || [];
       let sceneData: Scene[] = scenesRes.data || [];
