@@ -176,124 +176,135 @@ const HEADING_RE = /^(chapter|part|prologue|epilogue|interlude)\b/i;
 const INVISIBLE_PREFIX_RE = /^[\uFEFF\u200B\u00A0]+/;
 
 /**
- * If a block contains chapter/part/etc. heading lines embedded among
- * single-newline-separated paragraphs, split the block at those heading
- * lines so each heading starts its own sub-block.
- *
- * Example: "The Ember Crown\nChapter One: …\nContent…"
- * becomes: ["The Ember Crown", "Chapter One: …\nContent…"]
+ * Detect a scene-break separator line. Common forms include:
+ *   ***   * * *   #   # # #   ---   ###
+ *   — ⚜ —   ◆   ❖   ✦   ✧   ⁂   ❦   ‖
+ * The line must be short and contain ONLY separator-class characters.
  */
-function splitBlockAtEmbeddedHeadings(block: string): string[] {
-  const lines = block.split("\n");
-  const result: string[] = [];
-  let current: string[] = [];
+const SEPARATOR_CHAR_RE =
+  /^[\s\-\u2010-\u2015_*#=~•·∙‧⋅・◆◇◈◉○●◯◍◎❖❉✦✧✶✷✹✺✻❀❦⚜⁂⸫⸪‡†§¶‖|]+$/;
 
-  for (const line of lines) {
-    const cleaned = line.trim().replace(INVISIBLE_PREFIX_RE, "");
-    if (HEADING_RE.test(cleaned) && cleaned.length < 100) {
-      // Flush accumulated lines before this heading
-      const flushed = current.join("\n").trim();
-      if (flushed) result.push(flushed);
-      current = [line]; // heading starts a new sub-block
-    } else {
-      current.push(line);
-    }
-  }
+function isSceneBreak(line: string): boolean {
+  const t = line.trim().replace(INVISIBLE_PREFIX_RE, "");
+  if (!t || t.length > 40) return false;
+  return SEPARATOR_CHAR_RE.test(t);
+}
 
-  const last = current.join("\n").trim();
-  if (last) result.push(last);
-
-  return result.length > 0 ? result : [block];
+function isChapterHeading(line: string): boolean {
+  const t = line.trim().replace(INVISIBLE_PREFIX_RE, "");
+  return t.length > 0 && t.length < 100 && HEADING_RE.test(t);
 }
 
 /**
  * Parse plain text into chapters and scenes.
  *
- * Case 1: The first content block is a chapter heading → it becomes the
- *   title of the first chapter. No "Chapter 1" default is created.
- *
- * Case 2: Non-heading content appears before the first heading → that
- *   content goes into a default "Chapter 1"; the heading then starts the
- *   next chapter.
- *
- * Within each chapter, content blocks become Scene 1, Scene 2… (counter
- * resets per chapter). Empty chapters are dropped. If no headings exist
- * the whole text becomes one chapter.
+ * - Chapter breaks: lines starting with chapter/part/prologue/etc.
+ * - Scene breaks: ONLY explicit separator lines (***, ⚜, — ⚜ —, ###).
+ *   Plain paragraph breaks stay inside the same scene.
+ * - Subtitles: short title-like lines right after a chapter heading get
+ *   folded into the chapter title, joined with " — ".
  */
 export function parseManuscript(text: string): ParsedChapter[] {
-  // Normalise line endings and strip a leading BOM.
   const normalised = text
     .replace(/^\uFEFF/, "")
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n");
 
-  // Split on double newlines, then re-split any block that contains an
-  // embedded heading on its own line (handles single-newline manuscripts).
-  const blocks = normalised
-    .split(/\n{2,}/)
-    .map((b) => b.trim())
-    .filter((b) => b.length > 0)
-    .flatMap(splitBlockAtEmbeddedHeadings);
+  const lines = normalised.split("\n");
 
-  if (blocks.length === 0) {
-    return [{ title: "Chapter 1", scenes: [{ title: "Scene 1", content: text.trim() }] }];
+  type RawScene = { lines: string[] };
+  type RawChapter = { title: string; scenes: RawScene[] };
+
+  const chapters: RawChapter[] = [];
+  let currentChapter: RawChapter | null = null;
+  let currentScene: RawScene | null = null;
+  let collectingSubtitle = false;
+
+  const startScene = () => {
+    if (!currentChapter) return;
+    currentScene = { lines: [] };
+    currentChapter.scenes.push(currentScene);
+  };
+
+  const startChapter = (title: string) => {
+    currentChapter = { title, scenes: [] };
+    chapters.push(currentChapter);
+    currentScene = null;
+    collectingSubtitle = true;
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.replace(INVISIBLE_PREFIX_RE, "");
+    const trimmed = line.trim();
+
+    if (isChapterHeading(trimmed)) {
+      startChapter(trimmed);
+      continue;
+    }
+
+    if (isSceneBreak(trimmed)) {
+      currentScene = null;
+      collectingSubtitle = false;
+      continue;
+    }
+
+    if (!trimmed) {
+      if (currentScene && currentScene.lines.length > 0) {
+        const last = currentScene.lines[currentScene.lines.length - 1];
+        if (last !== "") currentScene.lines.push("");
+      }
+      continue;
+    }
+
+    // Subtitle right after chapter heading
+    if (
+      currentChapter &&
+      collectingSubtitle &&
+      !currentScene &&
+      trimmed.length < 80 &&
+      !/[.!?"]$/.test(trimmed)
+    ) {
+      currentChapter.title = `${currentChapter.title} — ${trimmed}`;
+      continue;
+    }
+
+    collectingSubtitle = false;
+
+    if (!currentChapter) {
+      // Skip lone short lines before any chapter (book title, etc.)
+      if (trimmed.length < 80 && !/[.!?"]$/.test(trimmed)) continue;
+      startChapter("Chapter 1");
+    }
+    if (!currentScene) startScene();
+    currentScene!.lines.push(trimmed);
   }
 
-  const chapters: ParsedChapter[] = [];
-  let currentChapter: ParsedChapter | null = null;
-  let sceneNum = 1;
-
-  for (const block of blocks) {
-    // Derive the heading candidate: first line of the block, with any
-    // invisible prefix characters (BOM, zero-width space, NBSP) stripped.
-    const firstLine = block
-      .split("\n")[0]
-      .trim()
-      .replace(INVISIBLE_PREFIX_RE, "");
-
-    const isHeading = HEADING_RE.test(firstLine) && firstLine.length < 100;
-
-    if (isHeading) {
-      // ── Start a new chapter ────────────────────────────────────────
-      sceneNum = 1;
-      currentChapter = { title: firstLine, scenes: [] };
-      chapters.push(currentChapter);
-
-      // If the heading and its opening paragraph are in the same block
-      // (separated by a single newline), add the body as the first scene.
-      const newlineIdx = block.indexOf("\n");
-      if (newlineIdx !== -1) {
-        const body = block.slice(newlineIdx + 1).trim();
-        if (body.length >= 30) {
-          currentChapter.scenes.push({ title: "Scene 1", content: body });
-          sceneNum = 2;
+  // Materialise: rebuild paragraph text, drop empty scenes/chapters.
+  const result: ParsedChapter[] = [];
+  for (const ch of chapters) {
+    const scenes: ParsedScene[] = [];
+    for (const sc of ch.scenes) {
+      while (sc.lines.length && sc.lines[sc.lines.length - 1] === "") sc.lines.pop();
+      if (sc.lines.length === 0) continue;
+      const paragraphs: string[] = [];
+      let buf: string[] = [];
+      for (const l of sc.lines) {
+        if (l === "") {
+          if (buf.length) { paragraphs.push(buf.join(" ")); buf = []; }
+        } else {
+          buf.push(l);
         }
       }
-    } else {
-      // ── Content block ──────────────────────────────────────────────
-      if (block.length < 30) continue; // skip short separators / artefacts
-
-      // Skip single-line blocks that appear before the first heading —
-      // these are typically the book title, not story content.
-      if (currentChapter === null && !block.includes("\n")) continue;
-
-      if (currentChapter === null) {
-        // Content before the first heading → default chapter
-        currentChapter = { title: "Chapter 1", scenes: [] };
-        chapters.push(currentChapter);
-      }
-
-      currentChapter.scenes.push({ title: `Scene ${sceneNum}`, content: block });
-      sceneNum++;
+      if (buf.length) paragraphs.push(buf.join(" "));
+      const content = paragraphs.join("\n\n").trim();
+      if (!content) continue;
+      scenes.push({ title: `Scene ${scenes.length + 1}`, content });
     }
+    if (scenes.length > 0) result.push({ title: ch.title, scenes });
   }
-
-  // Drop chapters that ended up with no scenes.
-  const result = chapters.filter((ch) => ch.scenes.length > 0);
 
   if (result.length === 0) {
     return [{ title: "Chapter 1", scenes: [{ title: "Scene 1", content: normalised.trim() }] }];
   }
-
   return result;
 }
