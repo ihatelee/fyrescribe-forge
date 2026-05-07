@@ -689,11 +689,16 @@ ${sceneText}
 
 Return a JSON array. Each element must have exactly these fields:
 
-- "type": "character" | "location" | "item" | "lore"
-  - character: named people or beings with a speaking/acting role or clear narrative significance
-  - location: named places — buildings, regions, streets, neighbourhoods, bars, rooms, landmarks. Include named informal locations.
-  - item: named objects, weapons, artifacts
-  - lore: named magic systems, factions, creatures, doctrines, events, historical periods
+- "type": one of these — pick the most specific match:
+  - "character"  → named people or beings with a speaking/acting role or clear narrative significance
+  - "location"   → named places — buildings, regions, cities, streets, neighbourhoods, bars, rooms, landmarks
+  - "item"       → named objects, weapons, artifacts, relics
+  - "magic"      → named magic systems, spells, schools of magic, elemental disciplines
+  - "faction"    → named organisations, orders, guilds, military units, religious orders, political groups (e.g. "The Emberward", "Ashen Veil", "Conclave of Four", "House Stark")
+  - "doctrine"   → named treaties, accords, laws, religious doctrines, codes, philosophies (e.g. "Treaty of Vaen", "Accord of Stillness", "The Ten Commandments")
+  - "creature"   → named creature species or monsters (not individual named characters)
+  - "event"      → named in-story events, battles, ceremonies, rituals (e.g. "Battle of Blackwater", "The Draining")
+  - "history"    → named historical eras, ages, past wars (distinct from current-story events)
 
 - "name": proper name, 1–5 words
 
@@ -708,11 +713,16 @@ Return a JSON array. Each element must have exactly these fields:
 
 - "at_a_glance": structured facts only. Omit any key the scene doesn't support. Values: 1–8 words max.
   - Never emit "Unknown", "N/A", "None", or any placeholder value — if the scene doesn't have clear specific evidence for a key, omit it entirely.
-  - character  → "Place of Birth", "Eye Color", "Hair Color", "Height", "Allegiance"
-    - "Allegiance" must be a named faction, group, organisation, or side in a conflict — never a relationship or person. E.g. "The Crown", "Thieves Guild", "House Voss". Omit if no clear factional loyalty is shown.
-  - location   → "Region", "Climate", "Population", "Government", "Notable Landmarks"
-  - item       → "Type", "Origin", "Current Owner", "Powers"
-  - lore       → "Type", "Regional Origin", "Rarity"
+  - character → "Place of Birth", "Eye Color", "Hair Color", "Height", "Allegiance"
+    - "Allegiance" must be a named faction, group, organisation, or side in a conflict — never a relationship or person.
+  - location  → "Region", "Climate", "Population", "Government", "Notable Landmarks"
+  - item      → "Type", "Origin", "Current Owner", "Powers"
+  - magic     → "Type", "Regional Origin", "Rarity"
+  - faction   → "Type", "Founded", "Leader", "Headquarters", "Allegiance"
+  - doctrine  → "Type", "Regional Origin", "Followers", "Core Belief"
+  - creature  → "Classification", "Habitat", "Average Size", "Diet", "Threat Level"
+  - event     → "Date/Era", "Location", "Key Participants", "Outcome"
+  - history   → "Date/Era", "Location", "Key Factions", "Outcome"
 
 Return [] if the scene contains no clearly named, significant entities.
 Output only the JSON array. No prose, no markdown fences, no explanation.`;
