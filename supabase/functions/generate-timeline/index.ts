@@ -102,8 +102,8 @@ ${sceneContext || "(none)"}
 
 Return a JSON array only — no prose, no code fences. Each item must have:
 - "label": string (short event name, 3–8 words)
-- "date_label": string (human-readable date/era, e.g. "Year 120", "Present day", "15 years ago")
-- "date_sort": number (integer for sorting; use 0 for ancient history, higher for more recent)
+- "date_label": MUST be EXACTLY one of: "Ancient Times", "Generations Ago", "Years Ago", "Recent Past", "Present Day". No other values allowed.
+- "date_sort": integer matching the era — Ancient Times=100, Generations Ago=300, Years Ago=400, Recent Past=500, Present Day=600
 - "type": "world_history" | "story_event"
 - "significance_score": integer 1–10 (8–10: world-changing events — battles, deaths, major discoveries, regime changes; 7: notable, plot-defining moments; 1–6: minor or background — DO NOT INCLUDE these in your output)
 
