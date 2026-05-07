@@ -40,7 +40,12 @@ const ALLOWED_AT_A_GLANCE_KEYS: Record<string, Set<string>> = {
   character: new Set(["Place of Birth", "Eye Color", "Hair Color", "Height", "Allegiance"]),
   location: new Set(["Region", "Climate", "Population", "Government", "Notable Landmarks"]),
   item: new Set(["Type", "Origin", "Current Owner", "Powers"]),
-  lore: new Set(["Type", "Regional Origin", "Rarity"]),
+  magic: new Set(["Type", "Regional Origin", "Rarity"]),
+  faction: new Set(["Type", "Founded", "Leader", "Headquarters", "Allegiance"]),
+  doctrine: new Set(["Type", "Regional Origin", "Followers", "Core Belief"]),
+  creature: new Set(["Classification", "Habitat", "Average Size", "Diet", "Threat Level"]),
+  event: new Set(["Date/Era", "Location", "Key Participants", "Outcome"]),
+  history: new Set(["Date/Era", "Location", "Key Factions", "Outcome"]),
 };
 
 // ── Types ────────────────────────────────────────────────────────────────────
