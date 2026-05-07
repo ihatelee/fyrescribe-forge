@@ -567,20 +567,6 @@ const TimelinePage = () => {
                           >
                             {event.type === "world_history" ? "World History" : "Story Event"}
                           </span>
-                          {event.significance_score != null && (
-                            <span
-                              className={`text-[10px] px-1.5 py-0.5 rounded-full tabular-nums ${
-                                event.significance_score >= 8
-                                  ? "bg-gold/10 text-gold"
-                                  : event.significance_score >= 5
-                                  ? "bg-fyrescribe-hover text-text-secondary"
-                                  : "bg-fyrescribe-hover text-text-dimmed"
-                              }`}
-                              title="Significance score"
-                            >
-                              {event.significance_score}/10
-                            </span>
-                          )}
                         </div>
                         <h3 className="font-display text-sm text-foreground">
                           {event.label}
