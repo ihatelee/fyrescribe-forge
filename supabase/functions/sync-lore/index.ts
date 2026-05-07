@@ -50,7 +50,16 @@ const ALLOWED_AT_A_GLANCE_KEYS: Record<string, Set<string>> = {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type SuggestionType = "character" | "location" | "item" | "lore";
+type SuggestionType =
+  | "character"
+  | "location"
+  | "item"
+  | "magic"
+  | "faction"
+  | "doctrine"
+  | "creature"
+  | "event"
+  | "history";
 
 interface AISuggestion {
   type: SuggestionType;
@@ -94,7 +103,12 @@ const TYPE_TO_CATEGORY: Record<SuggestionType, string> = {
   character: "characters",
   location: "places",
   item: "artifacts",
-  lore: "magic",
+  magic: "magic",
+  faction: "factions",
+  doctrine: "doctrine",
+  creature: "creatures",
+  event: "events",
+  history: "history",
 };
 
 function findExistingEntity(
