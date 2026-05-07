@@ -286,9 +286,21 @@ export function parseManuscript(text: string): ParsedChapter[] {
     for (const sc of ch.scenes) {
       while (sc.lines.length && sc.lines[sc.lines.length - 1] === "") sc.lines.pop();
       if (sc.lines.length === 0) continue;
+
+      // If the first line of the scene looks like a short title (no terminal
+      // punctuation, < 80 chars), promote it to the scene title.
+      let sceneTitle = `Scene ${scenes.length + 1}`;
+      let bodyLines = sc.lines;
+      const first = bodyLines[0];
+      if (first && first.length < 80 && !/[.!?"]$/.test(first) && bodyLines.length > 1) {
+        sceneTitle = first;
+        bodyLines = bodyLines.slice(1);
+        while (bodyLines.length && bodyLines[0] === "") bodyLines.shift();
+      }
+
       const paragraphs: string[] = [];
       let buf: string[] = [];
-      for (const l of sc.lines) {
+      for (const l of bodyLines) {
         if (l === "") {
           if (buf.length) { paragraphs.push(buf.join(" ")); buf = []; }
         } else {
@@ -298,7 +310,7 @@ export function parseManuscript(text: string): ParsedChapter[] {
       if (buf.length) paragraphs.push(buf.join(" "));
       const content = paragraphs.join("\n\n").trim();
       if (!content) continue;
-      scenes.push({ title: `Scene ${scenes.length + 1}`, content });
+      scenes.push({ title: sceneTitle, content });
     }
     if (scenes.length > 0) result.push({ title: ch.title, scenes });
   }
