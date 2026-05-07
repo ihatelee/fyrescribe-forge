@@ -256,7 +256,7 @@ export function parseManuscript(text: string): ParsedChapter[] {
       continue;
     }
 
-    // Subtitle right after chapter heading
+    // Subtitle right after chapter heading (only the first such line)
     if (
       currentChapter &&
       collectingSubtitle &&
@@ -265,6 +265,7 @@ export function parseManuscript(text: string): ParsedChapter[] {
       !/[.!?"]$/.test(trimmed)
     ) {
       currentChapter.title = `${currentChapter.title} — ${trimmed}`;
+      collectingSubtitle = false;
       continue;
     }
 
