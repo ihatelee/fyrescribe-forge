@@ -22,7 +22,6 @@ interface TimelineEvent {
 
 const ERA_OPTIONS = [
   { label: "Ancient Times", sort: 100 },
-  { label: "Distant Past", sort: 200 },
   { label: "Generations Ago", sort: 300 },
   { label: "Years Ago", sort: 400 },
   { label: "Recent Past", sort: 500 },
