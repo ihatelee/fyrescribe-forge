@@ -424,7 +424,10 @@ async function syncProject(
     // new entity           → Lore Inbox (new_entity)
     // existing + new facts → Lore Inbox (update)
     // existing + nothing   → skip
-    const validTypes = new Set<string>(["character", "location", "item", "lore"]);
+    const validTypes = new Set<string>([
+      "character", "location", "item", "magic",
+      "faction", "doctrine", "creature", "event", "history",
+    ]);
     const validSuggestions = suggestions.filter(
       (s) => s.name?.trim() && validTypes.has(s.type),
     );
