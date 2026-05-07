@@ -138,7 +138,7 @@ Include world history events and story-level events separately. ONLY include eve
 
     // Strip any accidental code fences
     const jsonText = rawText.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
-    const events: { label: string; date_label: string; date_sort: number; type: string; significance_score?: number }[] =
+    const events: { label: string; date_label: string; date_sort: number; date_detail?: string | null; type: string; significance_score?: number }[] =
       JSON.parse(jsonText);
 
     // Allowed era labels and their sort values
