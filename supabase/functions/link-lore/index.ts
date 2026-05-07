@@ -228,7 +228,7 @@ ${existingLinkLines || "(none)"}
         project_id,
         entity_a_id: s.entity_a_id,
         entity_b_id: s.entity_b_id,
-        relationship: (s.relationship ?? "related to").trim(),
+        relationship: (s.relationship ?? "related to").trim().replace(/_/g, " ").toLowerCase(),
         confidence: Math.min(10, Math.max(1, Math.round(s.confidence))),
       }));
       const { error: insertError } = await admin.from("lore_link_suggestions").insert(rows);
