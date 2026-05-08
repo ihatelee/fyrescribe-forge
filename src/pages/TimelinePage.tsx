@@ -14,6 +14,7 @@ interface TimelineEvent {
   label: string;
   date_label: string | null;
   date_sort: number | null;
+  date_detail: string | null;
   type: TimelineEventType;
   project_id: string;
   entity_id: string | null;
@@ -22,7 +23,6 @@ interface TimelineEvent {
 
 const ERA_OPTIONS = [
   { label: "Ancient Times", sort: 100 },
-  { label: "Distant Past", sort: 200 },
   { label: "Generations Ago", sort: 300 },
   { label: "Years Ago", sort: 400 },
   { label: "Recent Past", sort: 500 },
@@ -271,7 +271,7 @@ const TimelinePage = () => {
         body: { project_id: activeProject.id },
       });
       if (error) {
-        setGenerateError("Generation failed. Check that ANTHROPIC_API_KEY is set in your Supabase Edge Function secrets.");
+        setGenerateError(data?.error || error.message || "Generation failed. Please try again.");
         return;
       }
       if (data?.events) {
@@ -567,24 +567,15 @@ const TimelinePage = () => {
                           >
                             {event.type === "world_history" ? "World History" : "Story Event"}
                           </span>
-                          {event.significance_score != null && (
-                            <span
-                              className={`text-[10px] px-1.5 py-0.5 rounded-full tabular-nums ${
-                                event.significance_score >= 8
-                                  ? "bg-gold/10 text-gold"
-                                  : event.significance_score >= 5
-                                  ? "bg-fyrescribe-hover text-text-secondary"
-                                  : "bg-fyrescribe-hover text-text-dimmed"
-                              }`}
-                              title="Significance score"
-                            >
-                              {event.significance_score}/10
-                            </span>
-                          )}
                         </div>
                         <h3 className="font-display text-sm text-foreground">
                           {event.label}
                         </h3>
+                        {event.date_detail && (
+                          <p className="text-xs text-text-dimmed mt-0.5">
+                            {event.date_detail}
+                          </p>
+                        )}
                       </div>
                       <button
                         onClick={() => handleDeleteEvent(event.id)}

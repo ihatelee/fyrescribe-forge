@@ -43,7 +43,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          order: number
+          order?: number
           project_id: string
           title: string
         }
@@ -80,6 +80,7 @@ export type Database = {
           project_id: string
           sections: Json | null
           summary: string | null
+          synced_scenes: string[] | null
           updated_at: string
         }
         Insert: {
@@ -97,6 +98,7 @@ export type Database = {
           project_id: string
           sections?: Json | null
           summary?: string | null
+          synced_scenes?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -114,6 +116,7 @@ export type Database = {
           project_id?: string
           sections?: Json | null
           summary?: string | null
+          synced_scenes?: string[] | null
           updated_at?: string
         }
         Relationships: [
@@ -263,7 +266,7 @@ export type Database = {
           id?: string
           project_id: string
           relationship: string
-          status: string
+          status?: string
         }
         Update: {
           confidence?: number
@@ -317,7 +320,7 @@ export type Database = {
           payload?: Json | null
           project_id: string
           reviewed_at?: string | null
-          status: Database["public"]["Enums"]["lore_suggestion_status"]
+          status?: Database["public"]["Enums"]["lore_suggestion_status"]
           type: Database["public"]["Enums"]["lore_suggestion_type"]
         }
         Update: {
@@ -347,9 +350,45 @@ export type Database = {
           },
         ]
       }
+      mention_suggestions: {
+        Row: {
+          context: string
+          created_at: string
+          entity_id: string
+          id: string
+          position: number | null
+          project_id: string
+          reviewed_at: string | null
+          scene_id: string
+          status: string
+        }
+        Insert: {
+          context: string
+          created_at?: string
+          entity_id: string
+          id?: string
+          position?: number | null
+          project_id: string
+          reviewed_at?: string | null
+          scene_id: string
+          status?: string
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          entity_id?: string
+          id?: string
+          position?: number | null
+          project_id?: string
+          reviewed_at?: string | null
+          scene_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       notes: {
         Row: {
-          content: string | null
+          content: string
           created_at: string
           id: string
           project_id: string
@@ -358,16 +397,16 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          content?: string | null
+          content?: string
           created_at?: string
           id?: string
           project_id: string
-          title: string
+          title?: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          content?: string | null
+          content?: string
           created_at?: string
           id?: string
           project_id?: string
@@ -446,29 +485,7 @@ export type Database = {
           project_id?: string
           scene_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "rejected_mentions_entity_id_fkey"
-            columns: ["entity_id"]
-            isOneToOne: false
-            referencedRelation: "entities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rejected_mentions_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rejected_mentions_scene_id_fkey"
-            columns: ["scene_id"]
-            isOneToOne: false
-            referencedRelation: "scenes"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       scene_versions: {
         Row: {
@@ -483,15 +500,15 @@ export type Database = {
           word_delta: number
         }
         Insert: {
-          content: string
+          content?: string
           created_at?: string
           id?: string
           name?: string | null
           project_id: string
           scene_id: string
           summary?: string | null
-          word_count: number
-          word_delta: number
+          word_count?: number
+          word_delta?: number
         }
         Update: {
           content?: string
@@ -539,7 +556,7 @@ export type Database = {
           content?: string | null
           id?: string
           is_dirty?: boolean | null
-          order: number
+          order?: number
           pov_character_id?: string | null
           project_id: string
           title: string
@@ -567,6 +584,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "scenes_pov_character_id_fkey"
+            columns: ["pov_character_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "scenes_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -590,7 +614,7 @@ export type Database = {
           project_id: string
           ran_at?: string
           scenes_processed?: number | null
-          status: Database["public"]["Enums"]["sync_status"]
+          status?: Database["public"]["Enums"]["sync_status"]
           suggestions_created?: number | null
           triggered_by: Database["public"]["Enums"]["sync_trigger"]
         }
@@ -612,6 +636,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tag_suggestions: {
+        Row: {
+          created_at: string
+          entity_category: string
+          entity_id: string
+          field_key: string
+          id: string
+          project_id: string
+          reviewed_at: string | null
+          status: string
+          target_entity_category: string
+          target_entity_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_category: string
+          entity_id: string
+          field_key: string
+          id?: string
+          project_id: string
+          reviewed_at?: string | null
+          status?: string
+          target_entity_category: string
+          target_entity_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_category?: string
+          entity_id?: string
+          field_key?: string
+          id?: string
+          project_id?: string
+          reviewed_at?: string | null
+          status?: string
+          target_entity_category?: string
+          target_entity_id?: string
+        }
+        Relationships: []
       }
       tags: {
         Row: {
@@ -644,30 +707,36 @@ export type Database = {
       }
       timeline_events: {
         Row: {
+          date_detail: string | null
           date_label: string | null
           date_sort: number | null
           entity_id: string | null
           id: string
           label: string
           project_id: string
+          significance_score: number
           type: Database["public"]["Enums"]["timeline_event_type"]
         }
         Insert: {
+          date_detail?: string | null
           date_label?: string | null
           date_sort?: number | null
           entity_id?: string | null
           id?: string
           label: string
           project_id: string
-          type: Database["public"]["Enums"]["timeline_event_type"]
+          significance_score?: number
+          type?: Database["public"]["Enums"]["timeline_event_type"]
         }
         Update: {
+          date_detail?: string | null
           date_label?: string | null
           date_sort?: number | null
           entity_id?: string | null
           id?: string
           label?: string
           project_id?: string
+          significance_score?: number
           type?: Database["public"]["Enums"]["timeline_event_type"]
         }
         Relationships: [
@@ -708,12 +777,12 @@ export type Database = {
           dyslexia_font?: boolean
           has_completed_onboarding?: boolean
           high_contrast?: boolean
-          icon_set: string
+          icon_set?: string
           id?: string
-          interface_scale: number
+          interface_scale?: number
           soundscape_enabled?: boolean
           sparkle_enabled?: boolean
-          theme: string
+          theme?: string
           updated_at?: string
           user_id: string
           whimsical_enabled?: boolean
@@ -759,6 +828,7 @@ export type Database = {
         | "field_update"
         | "contradiction"
         | "new_tag"
+        | "update"
       sync_status: "running" | "completed" | "failed"
       sync_trigger: "scheduled" | "manual"
       timeline_event_type: "world_history" | "story_event"
@@ -906,6 +976,7 @@ export const Constants = {
         "field_update",
         "contradiction",
         "new_tag",
+        "update",
       ],
       sync_status: ["running", "completed", "failed"],
       sync_trigger: ["scheduled", "manual"],

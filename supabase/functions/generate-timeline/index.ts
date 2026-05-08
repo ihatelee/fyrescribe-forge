@@ -102,12 +102,13 @@ ${sceneContext || "(none)"}
 
 Return a JSON array only — no prose, no code fences. Each item must have:
 - "label": string (short event name, 3–8 words)
-- "date_label": string (human-readable date/era, e.g. "Year 120", "Present day", "15 years ago")
-- "date_sort": number (integer for sorting; use 0 for ancient history, higher for more recent)
+- "date_label": MUST be EXACTLY one of: "Ancient Times", "Generations Ago", "Years Ago", "Recent Past", "Present Day". No other values allowed.
+- "date_sort": integer matching the era — Ancient Times=100, Generations Ago=300, Years Ago=400, Recent Past=500, Present Day=600
+- "date_detail": OPTIONAL string with a more specific time reference if the text gives one (e.g. "300 years ago", "Year 1242", "Three winters past"). Omit or set null when no specific time is mentioned.
 - "type": "world_history" | "story_event"
-- "significance_score": integer 1–10 (8–10: world-changing events — battles, deaths, major discoveries, regime changes; 5–7: notable plot points and meaningful character moments; 1–4: minor scene events or background colour)
+- "significance_score": integer 1–10 (8–10: world-changing events — battles, deaths, major discoveries, regime changes; 7: notable, plot-defining moments; 1–6: minor or background — DO NOT INCLUDE these in your output)
 
-Include world history events and story-level events separately. Extract at most 4 events per scene — only the most significant ones. If a scene contains nothing notable, return 0 or 1 events for it. Aim for 6–14 events total across all scenes. Output only the JSON array.`;
+Include world history events and story-level events separately. ONLY include events with significance_score ≥ 7. Extract at most 2 events per scene, only the most significant. If a scene contains nothing notable (≥ 7), return nothing for it. Aim for 4–10 events total. Output only the JSON array.`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -117,7 +118,7 @@ Include world history events and story-level events separately. Extract at most 
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model: "claude-sonnet-4-20250514",
         max_tokens: 1024,
         messages: [{ role: "user", content: prompt }],
       }),
@@ -137,23 +138,55 @@ Include world history events and story-level events separately. Extract at most 
 
     // Strip any accidental code fences
     const jsonText = rawText.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
-    const events: { label: string; date_label: string; date_sort: number; type: string; significance_score?: number }[] =
+    const events: { label: string; date_label: string; date_sort: number; date_detail?: string | null; type: string; significance_score?: number }[] =
       JSON.parse(jsonText);
+
+    // Allowed era labels and their sort values
+    const ERAS: Record<string, number> = {
+      "ancient times": 100,
+      "generations ago": 300,
+      "years ago": 400,
+      "recent past": 500,
+      "present day": 600,
+    };
+    const ERA_NAMES: Record<string, string> = {
+      "ancient times": "Ancient Times",
+      "generations ago": "Generations Ago",
+      "years ago": "Years Ago",
+      "recent past": "Recent Past",
+      "present day": "Present Day",
+    };
+
+    function coerceEra(label: string | undefined, sort: number | undefined): { label: string; sort: number } {
+      const key = (label ?? "").trim().toLowerCase();
+      if (key in ERAS) return { label: ERA_NAMES[key], sort: ERAS[key] };
+      // Fall back by date_sort proximity
+      const s = typeof sort === "number" ? sort : 400;
+      const closest = Object.entries(ERAS).reduce((a, b) =>
+        Math.abs(b[1] - s) < Math.abs(a[1] - s) ? b : a
+      );
+      return { label: ERA_NAMES[closest[0]], sort: closest[1] };
+    }
 
     // Validate and insert into timeline_events; match label → entity_id where possible
     const rows = events
       .filter((e) => e.label && (e.type === "world_history" || e.type === "story_event"))
-      .map((e) => ({
-        project_id,
-        label: e.label,
-        date_label: e.date_label ?? null,
-        date_sort: typeof e.date_sort === "number" ? e.date_sort : null,
-        type: e.type as "world_history" | "story_event",
-        entity_id: entityIdByName.get(e.label.toLowerCase()) ?? null,
-        significance_score: typeof e.significance_score === "number"
-          ? Math.min(10, Math.max(1, Math.round(e.significance_score)))
-          : 5,
-      }));
+      .map((e) => {
+        const era = coerceEra(e.date_label, e.date_sort);
+        return {
+          project_id,
+          label: e.label,
+          date_label: era.label,
+          date_sort: era.sort,
+          date_detail: typeof e.date_detail === "string" && e.date_detail.trim() ? e.date_detail.trim() : null,
+          type: e.type as "world_history" | "story_event",
+          entity_id: entityIdByName.get(e.label.toLowerCase()) ?? null,
+          significance_score: typeof e.significance_score === "number"
+            ? Math.min(10, Math.max(1, Math.round(e.significance_score)))
+            : 5,
+        };
+      })
+      .filter((r) => r.significance_score >= 7);
 
     const { data: inserted, error: insertError } = await supabase
       .from("timeline_events")
