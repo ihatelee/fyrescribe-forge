@@ -680,6 +680,7 @@ const EntityDetailInner = () => {
   const [aliases, setAliases] = useState<string[]>([]);
   const [aliasDraft, setAliasDraft] = useState("");
   const [firstMentionLabel, setFirstMentionLabel] = useState<string>("");
+  const [generateImageOpen, setGenerateImageOpen] = useState(false);
   const storyHistoryRef = useRef<HTMLDivElement>(null);
   const sectionElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
