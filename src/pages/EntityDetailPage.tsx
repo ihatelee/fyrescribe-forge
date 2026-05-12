@@ -1217,24 +1217,40 @@ const EntityDetailInner = () => {
 
         {/* ===== HEADER ===== */}
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-10">
-          <div
-            onClick={() => coverInputRef.current?.click()}
-            className="w-[140px] h-[180px] sm:w-[200px] sm:h-[260px] bg-fyrescribe-raised border border-border rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer hover:border-gold/30 transition-colors overflow-hidden relative group"
-          >
-            {coverImage ? (
-              <>
-                <img src={coverImage} alt={entity.name} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Upload size={20} className="text-foreground" />
+          <div className="w-[140px] sm:w-[200px] flex-shrink-0 flex flex-col gap-0 bg-fyrescribe-raised border border-border rounded-xl overflow-hidden">
+            {/* Top half: Upload Cover */}
+            <div
+              onClick={() => coverInputRef.current?.click()}
+              className="h-[180px] sm:h-[260px] flex items-center justify-center cursor-pointer hover:bg-fyrescribe-hover transition-colors overflow-hidden relative group"
+            >
+              {coverImage ? (
+                <>
+                  <img src={coverImage} alt={entity.name} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Upload size={20} className="text-foreground" />
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-text-dimmed group-hover:text-text-secondary transition-colors">
+                  <ImageIcon size={28} />
+                  <span className="text-[10px] uppercase tracking-widest">Upload cover</span>
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center gap-2 text-text-dimmed group-hover:text-text-secondary transition-colors">
-                <ImageIcon size={28} />
-                <span className="text-[10px] uppercase tracking-widest">Upload cover</span>
-              </div>
-            )}
-            <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
+              )}
+              <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
+            </div>
+
+            {/* Subtle divider */}
+            <div className="h-px bg-border" />
+
+            {/* Bottom half: Generate Image */}
+            <button
+              type="button"
+              onClick={() => setGenerateImageOpen(true)}
+              className="py-3 px-2 flex items-center justify-center gap-1.5 text-text-dimmed hover:text-gold hover:bg-fyrescribe-hover transition-colors group"
+            >
+              <Sparkles size={14} className="group-hover:text-gold transition-colors" />
+              <span className="text-[10px] uppercase tracking-widest">Generate Image</span>
+            </button>
           </div>
 
           <div className="flex-1 min-w-0 pt-1">
