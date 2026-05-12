@@ -1846,6 +1846,28 @@ const EntityDetailInner = () => {
         />
       )}
 
+      {/* Generate cover image modal */}
+      {generateImageOpen && id && (
+        <GenerateImageModal
+          entityId={id}
+          initialAppearance={[
+            fields["Eye Color"] && `${fields["Eye Color"]} eyes`,
+            fields["Hair Color"] && `${fields["Hair Color"]} hair`,
+            fields["Height"] && `${fields["Height"]} tall`,
+            (sections["Overview"] || "").replace(/<[^>]*>/g, "").trim().slice(0, 240),
+          ].filter(Boolean).join(", ")}
+          initialSetting={[
+            entity.category && `${entity.category.replace(/s$/, "")} from a dark fantasy world`,
+            (summary || "").trim().slice(0, 200),
+          ].filter(Boolean).join(". ")}
+          onClose={() => setGenerateImageOpen(false)}
+          onUseImage={async (url) => {
+            setCoverImage(url);
+            await supabase.from("entities").update({ cover_image_url: url }).eq("id", id);
+          }}
+        />
+      )}
+
       {/* Close actions menu on outside click */}
       {showActionsMenu && (
         <div className="fixed inset-0 z-10" onClick={() => setShowActionsMenu(false)} />
