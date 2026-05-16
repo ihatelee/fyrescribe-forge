@@ -1851,16 +1851,19 @@ const EntityDetailInner = () => {
         <GenerateImageModal
           entityId={id}
           projectId={projectId}
-          initialAppearance={[
-            fields["Eye Color"] && `${fields["Eye Color"]} eyes`,
-            fields["Hair Color"] && `${fields["Hair Color"]} hair`,
-            fields["Height"] && `${fields["Height"]} tall`,
-            (sections["Overview"] || "").replace(/<[^>]*>/g, "").trim().slice(0, 240),
-          ].filter(Boolean).join(", ")}
-          initialSetting={[
-            entity.category && `${entity.category.replace(/s$/, "")} from a dark fantasy world`,
-            (summary || "").trim().slice(0, 200),
-          ].filter(Boolean).join(". ")}
+          initialAppearanceFields={{
+            age_build: fields["Height"] ? `${fields["Height"]} tall` : "",
+            hair: fields["Hair Color"] ? `${fields["Hair Color"]} hair` : "",
+            eyes: fields["Eye Color"] ? `${fields["Eye Color"]} eyes` : "",
+            distinguishing_features: "",
+            clothing_style: "",
+          }}
+          initialBackground={(() => {
+            const overview = (sections["Overview"] || "").replace(/<[^>]*>/g, "").trim()
+              || (summary || "").trim();
+            const sentences = overview.match(/[^.!?]+[.!?]+/g) ?? [overview];
+            return sentences.slice(0, 2).join(" ").trim().slice(0, 240);
+          })()}
           onClose={() => setGenerateImageOpen(false)}
           onUseImage={async (url) => {
             setCoverImage(url);
