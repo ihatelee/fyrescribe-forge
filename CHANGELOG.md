@@ -4,6 +4,16 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-05-16 — Spellcheck fixes verified (no code changes required)
+
+- `src/pages/ManuscriptPage.tsx` — Verified all three reported fixes against the implementation:
+  - **Case-insensitive matching**: `_highlightTextNode` uses `new RegExp(..., "gi")` — the `i` flag was already present. Entity names are matched regardless of capitalisation.
+  - **Multi-word names as single span**: The regex produces one `RegExpExecArray` per phrase match (e.g. `\bWhisperwood Forest\b` matches the entire phrase in one pass). `span.textContent = match.matched` assigns the full phrase to one span. No word-level splitting occurs.
+  - **Right-click interception**: No `onContextMenu` handler exists anywhere. `handleEditorClick` calls `e.preventDefault()` only for left-click navigation to entity pages — the browser `contextmenu` event is unaffected.
+  - Known limitation (out of scope): `applyEntityHighlights` is not called from `handleEditorInput` (intentional — DOM mutation during typing resets cursor). Entity names typed mid-session get suppression spans on next scene load, not immediately.
+
+---
+
 ## 2026-05-16 — Lore-aware spellcheck on manuscript editor
 
 - `src/pages/ManuscriptPage.tsx` — Added `spellCheck` to both contentEditable editor divs (regular and focus mode) to enable browser spellcheck. Added `span.spellcheck = false` to the span created in `_highlightTextNode` so any text wrapped by the existing entity-highlight system is excluded from spellcheck. This covers full names, aliases, and multi-word entity names (e.g. "Whisperwood Forest") since each is already wrapped in a single span. No extra DOM passes or data fetching required — the existing `entityNamesRef` already holds the expanded name+alias list.
