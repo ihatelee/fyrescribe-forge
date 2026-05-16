@@ -1850,6 +1850,7 @@ const EntityDetailInner = () => {
       {generateImageOpen && id && (
         <GenerateImageModal
           entityId={id}
+          projectId={projectId}
           initialAppearance={[
             fields["Eye Color"] && `${fields["Eye Color"]} eyes`,
             fields["Hair Color"] && `${fields["Hair Color"]} hair`,

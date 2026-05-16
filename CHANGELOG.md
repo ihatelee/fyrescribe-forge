@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-05-16 — Upgrade generate-entity-image to FLUX Dev with gallery persistence
+
+- `supabase/functions/generate-entity-image/index.ts` — Switched from FLUX Schnell to FLUX Dev (`black-forest-labs/flux-dev`). Output format changed to `webp`, aspect ratio `2:3`. Prompt format simplified to `${art_style} style portrait. ${appearance}. ${setting_mood}. High quality, detailed, dramatic lighting.` Replaced `Prefer: wait=60` header with an explicit async polling loop (2 s interval). After upload, appends the new URL to `entities.gallery_image_urls`. Returns both `image_url` and `imageUrl` for backward compat. Accepts both snake_case (`entity_id`, `setting_mood`, `art_style`) and camelCase (`entityId`, `setting`, `style`) field names.
+- `src/components/GenerateImageModal.tsx` — Accepts optional `projectId` prop; sends `entity_id`, `project_id`, `setting_mood`, `art_style` to the edge function. Reads response from `image_url` with `imageUrl` fallback.
+- `src/pages/EntityDetailPage.tsx` — Passes `projectId` state to `GenerateImageModal`.
+
+---
+
 ## 2026-04-24 — Generate Profile POV fix + short description cap
 
 - `supabase/functions/generate-profile/index.ts` — POV character support: when `is_pov_character = true`, fetches up to 15 full scenes where `pov_character_id = entity.id` (trimmed to 3 000 chars each) and appends them to the prompt as a dedicated POV SCENES block. Mention snippets are still included when present. The 422 "no mentions" error is now suppressed for POV characters that have scenes. `max_tokens` bumped to 4 096 when POV scenes are present.

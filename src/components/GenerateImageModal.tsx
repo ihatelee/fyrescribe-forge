@@ -7,6 +7,7 @@ type ArtStyle = (typeof ART_STYLES)[number];
 
 interface GenerateImageModalProps {
   entityId: string;
+  projectId?: string;
   initialAppearance?: string;
   initialSetting?: string;
   onClose: () => void;
@@ -15,6 +16,7 @@ interface GenerateImageModalProps {
 
 const GenerateImageModal = ({
   entityId,
+  projectId,
   initialAppearance = "",
   initialSetting = "",
   onClose,
@@ -34,11 +36,18 @@ const GenerateImageModal = ({
     setImageUrl(null);
     try {
       const { data, error } = await supabase.functions.invoke("generate-entity-image", {
-        body: { entityId, appearance, setting, style },
+        body: {
+          entity_id: entityId,
+          project_id: projectId,
+          appearance,
+          setting_mood: setting,
+          art_style: style,
+        },
       });
       if (error) throw error;
-      if (!data?.imageUrl) throw new Error("No image returned");
-      setImageUrl(data.imageUrl);
+      const url = data?.image_url ?? data?.imageUrl;
+      if (!url) throw new Error("No image returned");
+      setImageUrl(url);
     } catch (e) {
       console.error(e);
       setError(e instanceof Error ? e.message : "Generation failed");
