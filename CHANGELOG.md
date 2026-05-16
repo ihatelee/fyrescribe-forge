@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-05-16 — Remove image generation; add cover and gallery image deletion
+
+- `supabase/functions/generate-entity-image/index.ts` — deleted.
+- `src/components/GenerateImageModal.tsx` — deleted.
+- `src/pages/EntityDetailPage.tsx` — Removed all generation references (`GenerateImageModal` import, `generateImageOpen` state, "Generate Image" button, modal JSX). Cover image panel simplified to upload-only. Added `extractStoragePath` helper to derive storage path from public URL. Added `handleDeleteCoverImage`: window.confirm → clears `cover_image_url` in DB → attempts storage deletion. Added `handleDeleteGalleryImage`: window.confirm → removes URL from `gallery_image_urls` array → updates DB → attempts storage deletion. Cover image shows an X button (top-right, always present when image is set, stops click propagation from triggering upload). Gallery items converted from `<button>` to `<div>` to allow nested delete button; X button appears on hover.
+
+---
+
 ## 2026-05-16 — Upgrade generate-entity-image to FLUX Dev with gallery persistence
 
 - `supabase/functions/generate-entity-image/index.ts` — Switched from FLUX Schnell to FLUX Dev (`black-forest-labs/flux-dev`). Output format changed to `webp`, aspect ratio `2:3`. Prompt format simplified to `${art_style} style portrait. ${appearance}. ${setting_mood}. High quality, detailed, dramatic lighting.` Replaced `Prefer: wait=60` header with an explicit async polling loop (2 s interval). After upload, appends the new URL to `entities.gallery_image_urls`. Returns both `image_url` and `imageUrl` for backward compat. Accepts both snake_case (`entity_id`, `setting_mood`, `art_style`) and camelCase (`entityId`, `setting`, `style`) field names.

@@ -8,7 +8,6 @@ import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVer
 import type { Json, Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import AppearanceLog from "@/components/AppearanceLog";
-import GenerateImageModal from "@/components/GenerateImageModal";
 
 type EntityCategory = Database["public"]["Enums"]["entity_category"];
 
@@ -642,6 +641,12 @@ const DeleteModal = ({ entityName, onConfirm, onCancel }: DeleteModalProps) => (
 
 // ─── Main Entity Detail ───────────────────────────────────────────────
 
+function extractStoragePath(url: string): string | null {
+  const marker = "/entity-images/";
+  const idx = url.indexOf(marker);
+  return idx !== -1 ? url.slice(idx + marker.length) : null;
+}
+
 const EntityDetailInner = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -680,7 +685,6 @@ const EntityDetailInner = () => {
   const [aliases, setAliases] = useState<string[]>([]);
   const [aliasDraft, setAliasDraft] = useState("");
   const [firstMentionLabel, setFirstMentionLabel] = useState<string>("");
-  const [generateImageOpen, setGenerateImageOpen] = useState(false);
   const storyHistoryRef = useRef<HTMLDivElement>(null);
   const sectionElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -954,6 +958,25 @@ const EntityDetailInner = () => {
     if (galleryInputRef.current) galleryInputRef.current.value = "";
   }, [id, uploadImage]);
 
+  const handleDeleteCoverImage = useCallback(async () => {
+    if (!id || !coverImage) return;
+    if (!window.confirm("Remove cover image?")) return;
+    const path = extractStoragePath(coverImage);
+    setCoverImage(null);
+    await supabase.from("entities").update({ cover_image_url: null }).eq("id", id);
+    if (path) await supabase.storage.from("entity-images").remove([path]);
+  }, [id, coverImage]);
+
+  const handleDeleteGalleryImage = useCallback(async (url: string, index: number) => {
+    if (!id) return;
+    if (!window.confirm("Remove this image?")) return;
+    const path = extractStoragePath(url);
+    const updated = galleryImages.filter((_, i) => i !== index);
+    setGalleryImages(updated);
+    await supabase.from("entities").update({ gallery_image_urls: updated }).eq("id", id);
+    if (path) await supabase.storage.from("entity-images").remove([path]);
+  }, [id, galleryImages]);
+
   // ─── Tag management ──────────────────────────────────────────────
 
   const handleRemoveTag = useCallback(async (tagId: string) => {
@@ -1217,8 +1240,8 @@ const EntityDetailInner = () => {
 
         {/* ===== HEADER ===== */}
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-10">
-          <div className="w-[140px] sm:w-[200px] flex-shrink-0 flex flex-col gap-0 bg-fyrescribe-raised border border-border rounded-xl overflow-hidden">
-            {/* Top half: Upload Cover */}
+          <div className="w-[140px] sm:w-[200px] flex-shrink-0 bg-fyrescribe-raised border border-border rounded-xl overflow-hidden">
+            {/* Cover image upload */}
             <div
               onClick={() => coverInputRef.current?.click()}
               className="h-[180px] sm:h-[260px] flex items-center justify-center cursor-pointer hover:bg-fyrescribe-hover transition-colors overflow-hidden relative group"
@@ -1229,6 +1252,13 @@ const EntityDetailInner = () => {
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Upload size={20} className="text-foreground" />
                   </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleDeleteCoverImage(); }}
+                    className="absolute top-1.5 right-1.5 z-10 w-6 h-6 flex items-center justify-center bg-black/70 rounded-full text-white hover:bg-black/90 transition-colors"
+                  >
+                    <X size={11} />
+                  </button>
                 </>
               ) : (
                 <div className="flex flex-col items-center gap-2 text-text-dimmed group-hover:text-text-secondary transition-colors">
@@ -1238,19 +1268,6 @@ const EntityDetailInner = () => {
               )}
               <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
             </div>
-
-            {/* Subtle divider */}
-            <div className="h-px bg-border" />
-
-            {/* Bottom half: Generate Image */}
-            <button
-              type="button"
-              onClick={() => setGenerateImageOpen(true)}
-              className="py-3 px-2 flex items-center justify-center gap-1.5 text-text-dimmed hover:text-gold hover:bg-fyrescribe-hover transition-colors group"
-            >
-              <Sparkles size={14} className="group-hover:text-gold transition-colors" />
-              <span className="text-[10px] uppercase tracking-widest">Generate Image</span>
-            </button>
           </div>
 
           <div className="flex-1 min-w-0 pt-1">
@@ -1675,16 +1692,23 @@ const EntityDetailInner = () => {
               <h2 className="font-display text-base text-foreground mb-4 tracking-wide">Gallery</h2>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {galleryImages.map((img, i) => (
-                  <button
+                  <div
                     key={i}
+                    className="aspect-square bg-fyrescribe-raised border border-border rounded-lg overflow-hidden relative group hover:border-gold/20 transition-colors cursor-pointer"
                     onClick={() => setLightboxImage(img)}
-                    className="aspect-square bg-fyrescribe-raised border border-border rounded-lg overflow-hidden relative group hover:border-gold/20 transition-colors"
                   >
                     <img src={img} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <ZoomIn size={18} className="text-foreground" />
                     </div>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteGalleryImage(img, i); }}
+                      className="absolute top-1 right-1 z-10 w-5 h-5 flex items-center justify-center bg-black/70 rounded-full text-white hover:bg-black/90 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
                 ))}
                 <button
                   onClick={() => galleryInputRef.current?.click()}
@@ -1843,32 +1867,6 @@ const EntityDetailInner = () => {
           entityName={entity.name}
           onConfirm={handleDeleteEntity}
           onCancel={() => setDeleteModalOpen(false)}
-        />
-      )}
-
-      {/* Generate cover image modal */}
-      {generateImageOpen && id && (
-        <GenerateImageModal
-          entityId={id}
-          projectId={projectId}
-          initialAppearanceFields={{
-            age_build: fields["Height"] ? `${fields["Height"]} tall` : "",
-            hair: fields["Hair Color"] ? `${fields["Hair Color"]} hair` : "",
-            eyes: fields["Eye Color"] ? `${fields["Eye Color"]} eyes` : "",
-            distinguishing_features: "",
-            clothing_style: "",
-          }}
-          initialBackground={(() => {
-            const overview = (sections["Overview"] || "").replace(/<[^>]*>/g, "").trim()
-              || (summary || "").trim();
-            const sentences = overview.match(/[^.!?]+[.!?]+/g) ?? [overview];
-            return sentences.slice(0, 2).join(" ").trim().slice(0, 240);
-          })()}
-          onClose={() => setGenerateImageOpen(false)}
-          onUseImage={async (url) => {
-            setCoverImage(url);
-            await supabase.from("entities").update({ cover_image_url: url }).eq("id", id);
-          }}
         />
       )}
 
