@@ -14,15 +14,41 @@ serve(async (req) => {
     if (!REPLICATE_API_KEY) throw new Error("REPLICATE_API_KEY is not configured");
 
     const body = await req.json();
-    // Accept both camelCase (legacy modal) and snake_case (brief spec) field names.
     const entity_id: string = body.entity_id ?? body.entityId;
-    const appearance: string = body.appearance ?? "";
-    const setting_mood: string = body.setting_mood ?? body.setting ?? "";
     const art_style: string = body.art_style ?? body.style ?? "Fantasy Portrait";
+
+    // Appearance can be a structured object (new modal) or a string (legacy).
+    const appearanceRaw = body.appearance;
+    let appearanceParts: string[] = [];
+    if (appearanceRaw && typeof appearanceRaw === "object") {
+      const a = appearanceRaw as Record<string, string | undefined>;
+      appearanceParts = [
+        a.age_build,
+        a.hair,
+        a.eyes,
+        a.distinguishing_features,
+        a.clothing_style,
+      ]
+        .map((v) => (v ?? "").trim())
+        .filter(Boolean);
+    } else if (typeof appearanceRaw === "string" && appearanceRaw.trim()) {
+      appearanceParts = [appearanceRaw.trim()];
+    }
+
+    const background: string =
+      (body.background ?? body.setting_mood ?? body.setting ?? "").toString().trim();
 
     if (!entity_id) throw new Error("entity_id is required");
 
-    const prompt = `${art_style} style portrait. ${appearance}. ${setting_mood}. High quality, detailed, dramatic lighting.`;
+    // Appearance weighted first; background is supporting context.
+    const appearanceText = appearanceParts.join(", ");
+    const promptSegments = [
+      `${art_style} style portrait`,
+      appearanceText && `Subject: ${appearanceText}`,
+      background && `Background: ${background}`,
+      "High quality, detailed, dramatic lighting.",
+    ].filter(Boolean);
+    const prompt = promptSegments.join(". ");
 
     // ── Call Replicate FLUX Dev ──────────────────────────────────────────────
     const predRes = await fetch(
