@@ -4,6 +4,12 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-05-16 — Lore-aware spellcheck on manuscript editor
+
+- `src/pages/ManuscriptPage.tsx` — Added `spellCheck` to both contentEditable editor divs (regular and focus mode) to enable browser spellcheck. Added `span.spellcheck = false` to the span created in `_highlightTextNode` so any text wrapped by the existing entity-highlight system is excluded from spellcheck. This covers full names, aliases, and multi-word entity names (e.g. "Whisperwood Forest") since each is already wrapped in a single span. No extra DOM passes or data fetching required — the existing `entityNamesRef` already holds the expanded name+alias list.
+
+---
+
 ## 2026-05-16 — Remove image generation; add cover and gallery image deletion
 
 - `supabase/functions/generate-entity-image/index.ts` — deleted.

@@ -103,6 +103,7 @@ function _highlightTextNode(textNode: Text, entities: { id: string; name: string
     const span = document.createElement("span");
     span.dataset.entityId = match.entityId;
     span.className = "entity-link";
+    span.spellcheck = false;
     span.textContent = match.matched;
     frag.appendChild(span);
     cursor = match.end;
@@ -1271,6 +1272,7 @@ const ManuscriptPage = () => {
               ref={makeEditorRef(focusEditorRef)}
               className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} ${LINE_HEIGHT_CLASSES[lineHeight]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
               contentEditable
+              spellCheck
               suppressContentEditableWarning
               onInput={handleEditorInput}
               onKeyDown={handleEditorKeyDown}
@@ -1649,6 +1651,7 @@ const ManuscriptPage = () => {
                     ref={makeEditorRef(editorRef)}
                     className={`font-prose ${TEXT_SIZE_CLASSES[textSize]} ${LINE_HEIGHT_CLASSES[lineHeight]} text-foreground/80 whitespace-pre-wrap outline-none min-h-[60vh]`}
                     contentEditable
+                    spellCheck
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
                     onKeyDown={handleEditorKeyDown}
