@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
@@ -51,7 +51,6 @@ const ENTITY_CATEGORIES: { value: EntityCategory; label: string }[] = [
   { value: "characters", label: "Characters" },
   { value: "places", label: "Places" },
   { value: "events", label: "Events" },
-  { value: "history", label: "History" },
   { value: "artifacts", label: "Artifacts" },
   { value: "creatures", label: "Creatures" },
   { value: "magic", label: "Magic" },
@@ -65,7 +64,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   characters: "bg-blue-500/20 text-blue-300",
   places: "bg-green-500/20 text-green-300",
   events: "bg-orange-500/20 text-orange-300",
-  history: "bg-amber-500/20 text-amber-300",
   artifacts: "bg-purple-500/20 text-purple-300",
   creatures: "bg-red-500/20 text-red-300",
   magic: "bg-cyan-500/20 text-cyan-300",
@@ -79,7 +77,6 @@ interface EntityRow {
   category: string;
   summary: string | null;
   archived_at: string | null;
-  entity_tags: { tags: { id: string; name: string; color: string | null } | null }[];
 }
 
 // ─── New Entity Modal ────────────────────────────────────────────────
@@ -191,7 +188,6 @@ const NewEntityModal = ({ projectId, defaultCategory, onCreated, onClose }: NewE
 const EntityGalleryPage = () => {
   const { category } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { activeProject } = useActiveProject();
   const [activeFilter, setActiveFilter] = useState<EntityCategory | "all">(
     ENTITY_CATEGORIES.find((c) => c.value === category)?.value ?? "all",
@@ -217,8 +213,6 @@ const EntityGalleryPage = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
 
-  const tagFilter = searchParams.get("tag");
-
   useEffect(() => {
     setActiveFilter(ENTITY_CATEGORIES.find((c) => c.value === category)?.value ?? "all");
   }, [category]);
@@ -235,7 +229,7 @@ const EntityGalleryPage = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("entities")
-        .select("id, name, category, summary, archived_at, entity_tags(tags(id, name, color))")
+        .select("id, name, category, summary, archived_at")
         .eq("project_id", activeProject.id)
         .order("name");
       if (error) console.error("Failed to fetch entities:", error);
@@ -248,19 +242,6 @@ const EntityGalleryPage = () => {
   const handleViewMode = (mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem(VIEW_MODE_KEY, mode);
-  };
-
-  // Smart tag click: 1 entity → go to it directly; >1 → filtered gallery
-  const handleTagClick = (tag: { id: string; name: string; color: string | null }, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const matching = entities.filter((ent) =>
-      ent.entity_tags.some((et: any) => et.tags?.id === tag.id)
-    );
-    if (matching.length === 1) {
-      navigate(`/entity/${matching[0].id}`);
-    } else {
-      navigate(`/world?tag=${tag.id}`);
-    }
   };
 
   const handleArchive = async (entity: EntityRow, e: React.MouseEvent) => {
@@ -279,7 +260,6 @@ const EntityGalleryPage = () => {
     if (!deleteTarget) return;
     const eid = deleteTarget.id;
     await supabase.from("entity_links").delete().or(`entity_a_id.eq.${eid},entity_b_id.eq.${eid}`);
-    await supabase.from("entity_tags").delete().eq("entity_id", eid);
     await supabase.from("entities").delete().eq("id", eid);
     setEntities((prev) => prev.filter((ent) => ent.id !== eid));
     setDeleteTarget(null);
@@ -300,7 +280,6 @@ const EntityGalleryPage = () => {
     const ids = [...selectedIds];
     for (const eid of ids) {
       await supabase.from("entity_links").delete().or(`entity_a_id.eq.${eid},entity_b_id.eq.${eid}`);
-      await supabase.from("entity_tags").delete().eq("entity_id", eid);
       await supabase.from("entities").delete().eq("id", eid);
     }
     setEntities((prev) => prev.filter((ent) => !selectedIds.has(ent.id)));
@@ -313,18 +292,7 @@ const EntityGalleryPage = () => {
   const archivedEntities = entities.filter((e) => !!e.archived_at);
 
   const filteredEntities = activeEntities
-    .filter((e) => activeFilter === "all" || e.category === activeFilter)
-    .filter((e) =>
-      !tagFilter || e.entity_tags.some((et: any) => et.tags?.id === tagFilter)
-    );
-
-  // Find tag name for display when tag filter is active
-  const activeTagName = tagFilter
-    ? entities
-        .flatMap((e) => e.entity_tags)
-        .map((et: any) => et.tags)
-        .find((t: any) => t?.id === tagFilter)?.name
-    : null;
+    .filter((e) => activeFilter === "all" || e.category === activeFilter);
 
   const handleFilterChange = (value: string) => {
     setActiveFilter(value as EntityCategory | "all");
@@ -442,7 +410,7 @@ const EntityGalleryPage = () => {
               key={cat.value}
               onClick={() => handleFilterChange(cat.value)}
               className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                activeFilter === cat.value && !tagFilter
+                activeFilter === cat.value
                   ? "border-gold text-gold bg-gold-glow"
                   : "border-border text-text-secondary hover:text-foreground hover:border-text-dimmed"
               }`}
@@ -450,14 +418,6 @@ const EntityGalleryPage = () => {
               {cat.label}
             </button>
           ))}
-          {tagFilter && (
-            <button
-              onClick={() => navigate("/world")}
-              className="px-3 py-1 text-xs rounded-full border border-gold text-gold bg-gold-glow flex items-center gap-1"
-            >
-              × Clear tag filter
-            </button>
-          )}
         </div>
 
         {/* Bulk action bar */}
@@ -512,7 +472,6 @@ const EntityGalleryPage = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredEntities.map((entity) => {
-                const tags = entity.entity_tags.map((et: any) => et.tags).filter(Boolean);
                 return (
                   <div
                     key={entity.id}
@@ -560,19 +519,6 @@ const EntityGalleryPage = () => {
                       <p className="text-text-secondary text-xs mb-3 line-clamp-2">
                         {entity.summary}
                       </p>
-                    )}
-                    {tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {tags.map((tag: any) => (
-                          <span
-                            key={tag.id}
-                            onClick={(e) => handleTagClick(tag, e)}
-                            className="text-[10px] px-2 py-0.5 rounded-full bg-fyrescribe-hover text-text-dimmed hover:text-gold hover:bg-gold-glow transition-colors cursor-pointer"
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
                     )}
                   </div>
                 );
@@ -624,7 +570,6 @@ const EntityGalleryPage = () => {
                 </div>
               ) : (
                 filteredEntities.map((entity, i) => {
-                  const tags = entity.entity_tags.map((et: any) => et.tags).filter(Boolean);
                   return (
                     <div
                       key={entity.id}
@@ -654,22 +599,6 @@ const EntityGalleryPage = () => {
                       <span className="text-xs text-text-secondary truncate flex-1 min-w-0">
                         {entity.summary ?? ""}
                       </span>
-                      {tags.length > 0 && (
-                        <div className="flex gap-1 flex-shrink-0">
-                          {tags.slice(0, 3).map((tag: any) => (
-                            <span
-                              key={tag.id}
-                              onClick={(e) => handleTagClick(tag, e)}
-                              className="text-[10px] px-1.5 py-0.5 rounded-full bg-fyrescribe-hover text-text-dimmed hover:text-gold hover:bg-gold-glow transition-colors cursor-pointer"
-                            >
-                              {tag.name}
-                            </span>
-                          ))}
-                          {tags.length > 3 && (
-                            <span className="text-[10px] text-text-dimmed px-1">+{tags.length - 3}</span>
-                          )}
-                        </div>
-                      )}
                       <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                         <EntityMenu entity={entity} />
                       </div>

@@ -563,38 +563,6 @@ const LoreInboxPage = () => {
       entityId = entity.id;
     }
 
-    // ── Create / link tags (shared by both paths) ─────────────────────────
-    const tagNames = (payload.tags ?? []).filter(Boolean);
-    if (tagNames.length > 0) {
-      const { data: existingTags } = await supabase
-        .from("tags")
-        .select("id, name")
-        .eq("project_id", activeProject.id)
-        .in("name", tagNames);
-
-      const existingNameSet = new Set((existingTags ?? []).map((t) => t.name.toLowerCase()));
-      const newTagNames = tagNames.filter((n) => !existingNameSet.has(n.toLowerCase()));
-
-      let createdTags: { id: string }[] = [];
-      if (newTagNames.length > 0) {
-        const { data: inserted } = await supabase
-          .from("tags")
-          .insert(newTagNames.map((tagName) => ({ project_id: activeProject.id, name: tagName })))
-          .select("id");
-        createdTags = inserted ?? [];
-      }
-
-      const allTagIds = [
-        ...(existingTags ?? []).map((t) => t.id),
-        ...createdTags.map((t) => t.id),
-      ];
-      if (allTagIds.length > 0) {
-        await supabase
-          .from("entity_tags")
-          .insert(allTagIds.map((tag_id) => ({ entity_id: entityId, tag_id })));
-      }
-    }
-
     // ── Mark suggestion reviewed ──────────────────────────────────────────
     await supabase
       .from("lore_suggestions")

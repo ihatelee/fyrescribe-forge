@@ -4,6 +4,18 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-05-16 — Retire entity_tags table and history enum value
+
+- `supabase/migrations/20260516000000_retire_entity_tags_and_history_category.sql` — New migration: drops `entity_tags` table, reassigns any `history` category entities to `events`, creates `entity_category_new` without `history`, migrates the column, drops the old enum, renames the new one.
+- `src/integrations/supabase/types.ts` — Removed `entity_tags` table types (Row/Insert/Update/Relationships) and `"history"` from the `entity_category` enum.
+- `supabase/functions/generate-timeline/index.ts` — Removed `"history"` from the `.in("category", [...])` filter; only `"events"` queried now.
+- `src/pages/EntityDetailPage.tsx` — Removed `TagAutocomplete` component, all tag-related state (`tags`, `projectTags`, `isAddingTag`), tag callbacks (`handleRemoveTag`, `handleTagApplied`, `handleTagClick`), tags UI section, and `history` from `CATEGORY_COLORS`/`CATEGORY_SECTIONS`/`CATEGORY_FIELDS`.
+- `src/pages/EntityGalleryPage.tsx` — Removed `entity_tags` from the `EntityRow` interface and select query, removed tag display from card and list views, removed tag filter UI, removed `history` from category lists and color maps.
+- `src/pages/LoreInboxPage.tsx` — Removed "Create / link tags" block that queried the `tags` table and inserted into `entity_tags`.
+- `src/components/LoreUploadModal.tsx` — Removed tag extraction, tag creation, and `entity_tags` insert block; removed `extractedTags` state.
+
+---
+
 ## 2026-05-16 — Spellcheck fixes verified (no code changes required)
 
 - `src/pages/ManuscriptPage.tsx` — Verified all three reported fixes against the implementation:

@@ -17,7 +17,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   characters: "bg-blue-500/20 text-blue-300",
   places: "bg-green-500/20 text-green-300",
   events: "bg-orange-500/20 text-orange-300",
-  history: "bg-amber-500/20 text-amber-300",
   artifacts: "bg-purple-500/20 text-purple-300",
   creatures: "bg-red-500/20 text-red-300",
   magic: "bg-cyan-500/20 text-cyan-300",
@@ -34,7 +33,6 @@ const CATEGORY_SECTIONS: Record<string, string[]> = {
   magic: ["Description", "Regional Origin", "Known Users", "Imbued Weapons & Artifacts"],
   factions: ["Overview", "History", "Structure", "Notable Members", "Goals"],
   doctrine: ["Core Tenets", "Origins", "Followers", "Contradictions"],
-  history: ["Overview", "Causes", "Key Figures", "Consequences", "Legacy"],
 };
 
 // Standard At a Glance fields per category — seeded on first load if entity has no fields
@@ -47,7 +45,6 @@ const CATEGORY_FIELDS: Record<string, string[]> = {
   magic: ["Type", "Regional Origin", "Rarity", "First Recorded Use"],
   factions: ["Type", "Founded", "Leader", "Headquarters", "Allegiance", "First Mentioned"],
   doctrine: ["Type", "Regional Origin", "Followers", "Core Belief", "First Mentioned"],
-  history: ["Date/Era", "Location", "Key Factions", "Outcome"],
 };
 
 // Maps At a Glance field names → target entity category for entity-picker fields.
@@ -126,104 +123,6 @@ interface LinkedEntityEntry {
 }
 
 // ─── Tag Autocomplete Component ───────────────────────────────────────
-
-interface TagAutocompleteProps {
-  entityId: string;
-  projectId: string;
-  appliedTagIds: string[];
-  onTagApplied: (tag: { id: string; name: string; color: string | null }) => void;
-  onClose: () => void;
-}
-
-const TagAutocomplete = ({ entityId, projectId, appliedTagIds, onTagApplied, onClose }: TagAutocompleteProps) => {
-  const [query, setQuery] = useState("");
-  const [projectTags, setProjectTags] = useState<{ id: string; name: string; color: string | null }[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    if (projectId) {
-      supabase.from("tags").select("id, name, color").eq("project_id", projectId).order("name")
-        .then(({ data }) => { if (data) setProjectTags(data); });
-    }
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose, projectId]);
-
-  const filtered = projectTags.filter(
-    (t) => !appliedTagIds.includes(t.id) && t.name.toLowerCase().includes(query.toLowerCase())
-  );
-  const exactMatch = projectTags.some((t) => t.name.toLowerCase() === query.trim().toLowerCase());
-
-  const handleCreateAndApply = async () => {
-    const name = query.trim();
-    if (!name) return;
-    const { data, error } = await supabase.from("tags").insert({ name, project_id: projectId }).select().single();
-    if (error) { console.error("Failed to create tag:", error); return; }
-    const { error: linkError } = await supabase.from("entity_tags").insert({ entity_id: entityId, tag_id: data.id });
-    if (linkError) { console.error("Failed to link tag:", linkError); return; }
-    onTagApplied(data);
-    onClose();
-  };
-
-  const handleSelect = async (tag: { id: string; name: string; color: string | null }) => {
-    const { error } = await supabase.from("entity_tags").insert({ entity_id: entityId, tag_id: tag.id });
-    if (error) { console.error("Failed to link tag:", error); return; }
-    onTagApplied(tag);
-    onClose();
-  };
-
-  return (
-    <div ref={containerRef} className="relative">
-      <div className="flex items-center border border-gold/40 bg-fyrescribe-hover rounded-full overflow-hidden">
-        <Search size={10} className="ml-2.5 text-text-dimmed" />
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !exactMatch && query.trim()) {
-              e.preventDefault();
-              handleCreateAndApply();
-            }
-          }}
-          placeholder="Search or create tag…"
-          className="text-xs px-2 py-1 bg-transparent text-foreground outline-none w-40"
-        />
-      </div>
-      {(query.length > 0 || filtered.length > 0) && (
-        <div className="absolute top-full left-0 mt-1 w-52 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-20 max-h-48 overflow-y-auto">
-          {filtered.map((tag) => (
-            <button
-              key={tag.id}
-              onClick={() => handleSelect(tag)}
-              className="w-full text-left px-3 py-2 text-xs text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors flex items-center gap-2"
-            >
-              {tag.color && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />}
-              {tag.name}
-            </button>
-          ))}
-          {query.trim() && !exactMatch && (
-            <button
-              onClick={handleCreateAndApply}
-              className="w-full text-left px-3 py-2 text-xs text-gold hover:text-gold-bright hover:bg-fyrescribe-hover transition-colors flex items-center gap-2 border-t border-border"
-            >
-              <Plus size={10} />
-              Create "{query.trim()}"
-            </button>
-          )}
-          {filtered.length === 0 && (exactMatch || !query.trim()) && (
-            <div className="px-3 py-2 text-xs text-text-dimmed">No more tags available</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
 
 // ─── Link Entity Modal ────────────────────────────────────────────────
 
@@ -660,13 +559,10 @@ const EntityDetailInner = () => {
   const [summary, setSummary] = useState("");
   const [fields, setFields] = useState<EntityFields>({});
   const [sections, setSections] = useState<EntitySections>({});
-  const [tags, setTags] = useState<{ id: string; name: string; color: string | null }[]>([]);
-  const [projectTags, setProjectTags] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [linkedEntities, setLinkedEntities] = useState<LinkedEntityEntry[]>([]);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-  const [isAddingTag, setIsAddingTag] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editingFieldValue, setEditingFieldValue] = useState("");
   const [isLinkingEntity, setIsLinkingEntity] = useState(false);
@@ -722,16 +618,6 @@ const EntityDetailInner = () => {
         setCoverImage(dbEntity.cover_image_url || null);
         setGalleryImages(dbEntity.gallery_image_urls || []);
         setAliases(((dbEntity as unknown as { aliases?: string[] }).aliases) || []);
-
-        // Tags for this entity
-        const { data: entityTags } = await supabase
-          .from("entity_tags").select("tag_id, tags(id, name, color)").eq("entity_id", id);
-        if (entityTags) setTags(entityTags.map((et: any) => et.tags).filter(Boolean));
-
-        // All project tags (for At a Glance auto-conversion)
-        const { data: allTags } = await supabase
-          .from("tags").select("id, name, color").eq("project_id", dbEntity.project_id);
-        if (allTags) setProjectTags(allTags);
 
         // Linked entities (both directions, include relationship)
         const [{ data: linksA }, { data: linksB }] = await Promise.all([
@@ -977,19 +863,6 @@ const EntityDetailInner = () => {
     if (path) await supabase.storage.from("entity-images").remove([path]);
   }, [id, galleryImages]);
 
-  // ─── Tag management ──────────────────────────────────────────────
-
-  const handleRemoveTag = useCallback(async (tagId: string) => {
-    if (!id) return;
-    setTags((prev) => prev.filter((t) => t.id !== tagId));
-    await supabase.from("entity_tags").delete().eq("entity_id", id).eq("tag_id", tagId);
-  }, [id]);
-
-  const handleTagApplied = useCallback((tag: { id: string; name: string; color: string | null }) => {
-    setTags((prev) => [...prev, tag]);
-    setProjectTags((prev) => prev.some((t) => t.id === tag.id) ? prev : [...prev, tag]);
-  }, []);
-
   // ─── Aliases (Also Known As) ─────────────────────────────────────
 
   const persistAliases = useCallback(async (next: string[]) => {
@@ -1020,21 +893,6 @@ const EntityDetailInner = () => {
     persistAliases(next);
   }, [aliases, persistAliases]);
 
-  // ─── Smart tag click ─────────────────────────────────────────────
-
-  const handleTagClick = useCallback(async (tag: { id: string; name: string; color: string | null }) => {
-    const { count } = await supabase
-      .from("entity_tags")
-      .select("*", { count: "exact", head: true })
-      .eq("tag_id", tag.id);
-    if (count === 1) {
-      const { data } = await supabase.from("entity_tags").select("entity_id").eq("tag_id", tag.id).single();
-      if (data) navigate(`/entity/${data.entity_id}`);
-    } else {
-      navigate(`/world?tag=${tag.id}`);
-    }
-  }, [navigate]);
-
   // ─── Linked entities ─────────────────────────────────────────────
 
   const handleEntityLinked = useCallback((ent: LinkedEntityEntry) => {
@@ -1061,7 +919,6 @@ const EntityDetailInner = () => {
 
   const handleDeleteEntity = useCallback(async () => {
     if (!id || !entity) return;
-    await supabase.from("entity_tags").delete().eq("entity_id", id);
     await supabase.from("entity_links").delete().or(`entity_a_id.eq.${id},entity_b_id.eq.${id}`);
     await supabase.from("entities").delete().eq("id", id);
     navigate(`/world/${entity.category}`);
@@ -1323,40 +1180,6 @@ const EntityDetailInner = () => {
               className="block w-full text-sm text-text-secondary bg-transparent border-b border-transparent hover:border-border focus:border-gold/40 outline-none pb-1 mb-4 transition-colors placeholder:text-text-dimmed resize-none overflow-hidden"
               placeholder="Write a short description…"
             />
-
-            {/* Tags — smart clicking */}
-            <div className="flex flex-wrap gap-2 items-center">
-              {tags.map((tag) => (
-                <span
-                  key={tag.id}
-                  className="flex items-center gap-1 text-xs px-3 py-1 rounded-full bg-fyrescribe-hover text-text-secondary border border-border cursor-pointer hover:border-gold/30 hover:text-gold transition-colors"
-                  onClick={() => handleTagClick(tag)}
-                >
-                  {tag.name}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag.id); }}
-                  >
-                    <X size={10} className="text-text-dimmed hover:text-destructive" />
-                  </button>
-                </span>
-              ))}
-              {isAddingTag ? (
-                <TagAutocomplete
-                  entityId={id!}
-                  projectId={projectId}
-                  appliedTagIds={tags.map((t) => t.id)}
-                  onTagApplied={handleTagApplied}
-                  onClose={() => setIsAddingTag(false)}
-                />
-              ) : (
-                <button
-                  onClick={() => setIsAddingTag(true)}
-                  className="text-xs px-3 py-1 rounded-full border border-dashed border-border text-text-dimmed hover:text-text-secondary hover:border-text-dimmed transition-colors"
-                >
-                  + Add tag
-                </button>
-              )}
-            </div>
 
             {/* Also Known As — alternate names that should resolve to this entity */}
             <div className="mt-3">

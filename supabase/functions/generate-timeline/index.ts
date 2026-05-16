@@ -62,12 +62,12 @@ serve(async (req) => {
     // ── Service-role client for data operations ────────────────────────
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch Events and History entities (include id for entity_id linking)
+    // Fetch Events entities (include id for entity_id linking)
     const { data: entities } = await supabase
       .from("entities")
       .select("id, name, category, summary")
       .eq("project_id", project_id)
-      .in("category", ["events", "history"]);
+      .in("category", ["events"]);
 
     // Build a lookup map: lowercase name → entity id (covers events + history)
     const entityIdByName = new Map<string, string>(
