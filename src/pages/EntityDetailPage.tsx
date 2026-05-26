@@ -1797,6 +1797,16 @@ const EntityDetailInner = () => {
         />
       )}
 
+      {/* Version history slide-over */}
+      {versionHistoryOpen && (
+        <EntityVersionHistoryPanel
+          entityId={id!}
+          entityName={entity.name}
+          onClose={() => setVersionHistoryOpen(false)}
+          onRestore={restoreEntityVersion}
+        />
+      )}
+
       {/* Close actions menu on outside click */}
       {showActionsMenu && (
         <div className="fixed inset-0 z-10" onClick={() => setShowActionsMenu(false)} />
