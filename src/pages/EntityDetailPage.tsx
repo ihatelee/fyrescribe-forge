@@ -584,6 +584,8 @@ const EntityDetailInner = () => {
   const [firstMentionLabel, setFirstMentionLabel] = useState<string>("");
   const storyHistoryRef = useRef<HTMLDivElement>(null);
   const sectionElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [versionSavedNotice, setVersionSavedNotice] = useState(false);
 
   const sectionsRef = useRef<EntitySections>({});
   const sectionList = CATEGORY_SECTIONS[entity?.category || "characters"] || [];
