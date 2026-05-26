@@ -735,7 +735,80 @@ const EntityDetailInner = () => {
     return () => { cancelled = true; };
   }, [id]);
 
+  // ─── Version History ─────────────────────────────────────────────
+
+  const saveEntityVersion = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!id || !projectId) return;
+      const snapshotSections = sectionsRef.current ?? {};
+      const { data, error } = await supabase
+        .from("entity_versions")
+        .insert({
+          entity_id: id,
+          project_id: projectId,
+          sections: snapshotSections as Json,
+          fields: (fields ?? {}) as Json,
+          summary,
+        })
+        .select("id")
+        .maybeSingle();
+      if (error) {
+        console.error("Failed to save entity version:", error);
+        return;
+      }
+      if (data?.id) {
+        supabase.functions
+          .invoke("summarize-entity-version", { body: { versionId: data.id } })
+          .catch((e) => console.error("Summarize entity version failed:", e));
+      }
+      if (!opts?.silent) {
+        setVersionSavedNotice(true);
+        setTimeout(() => setVersionSavedNotice(false), 2500);
+      }
+    },
+    [id, projectId, fields, summary],
+  );
+
+  const restoreEntityVersion = useCallback(
+    async (v: EntityVersion) => {
+      if (!id) return;
+      const newSections = (v.sections ?? {}) as EntitySections;
+      const newFields = (v.fields ?? {}) as EntityFields;
+      const newSummary = v.summary ?? "";
+
+      const { error } = await supabase
+        .from("entities")
+        .update({
+          sections: newSections as Json,
+          fields: newFields as Json,
+          summary: newSummary,
+        })
+        .eq("id", id);
+      if (error) {
+        console.error("Failed to restore version:", error);
+        return;
+      }
+      sectionsRef.current = newSections;
+      setSections(newSections);
+      setFields(newFields);
+      setSummary(newSummary);
+      for (const [key, el] of sectionElRefs.current.entries()) {
+        el.innerHTML = DOMPurify.sanitize(newSections[key] || "");
+        el.dataset.initialized = "true";
+      }
+      const sh = storyHistoryRef.current;
+      if (sh) {
+        sh.innerHTML = DOMPurify.sanitize(newSections["Story History"] || "");
+        sh.dataset.initialized = "true";
+      }
+      setVersionHistoryOpen(false);
+    },
+    [id],
+  );
+
   // ─── Generate Profile (AI, from entity_mentions) ─────────────────
+
+
 
   const handleGenerateProfile = useCallback(async () => {
     if (!id || generatingProfile) return;
