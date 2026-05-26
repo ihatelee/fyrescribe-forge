@@ -8,6 +8,7 @@ import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVer
 import type { Json, Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import AppearanceLog from "@/components/AppearanceLog";
+import EntityVersionHistoryPanel, { EntityVersion } from "@/components/EntityVersionHistoryPanel";
 
 type EntityCategory = Database["public"]["Enums"]["entity_category"];
 
