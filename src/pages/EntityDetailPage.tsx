@@ -864,7 +864,7 @@ const EntityDetailInner = () => {
     } finally {
       setGeneratingProfile(false);
     }
-  }, [id, generatingProfile]);
+  }, [id, generatingProfile, summary, saveEntityVersion]);
 
   // ─── Save summary / fields ───────────────────────────────────────
 
