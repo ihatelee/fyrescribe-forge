@@ -815,6 +815,15 @@ const EntityDetailInner = () => {
     setGeneratingProfile(true);
     setProfileDone(false);
     setProfileNotice(null);
+    // Snapshot the current profile before overwriting it.
+    const hasExisting =
+      (summary && summary.trim().length > 0) ||
+      Object.values(sectionsRef.current || {}).some(
+        (s) => (s || "").replace(/<[^>]*>/g, "").trim().length > 0,
+      );
+    if (hasExisting) {
+      await saveEntityVersion({ silent: true });
+    }
     try {
       const { data, error } = await supabase.functions.invoke("generate-profile", {
         body: { entity_id: id },
