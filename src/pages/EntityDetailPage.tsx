@@ -1142,6 +1142,17 @@ const EntityDetailInner = () => {
               POV
             </button>
           )}
+          {/* Version history */}
+          <button
+            onClick={() => setVersionHistoryOpen(true)}
+            title="Version history"
+            className="w-8 h-8 rounded-full bg-fyrescribe-raised border border-border flex items-center justify-center text-text-dimmed hover:text-foreground hover:border-gold/30 transition-colors"
+          >
+            <History size={14} />
+          </button>
+          {versionSavedNotice && (
+            <span className="text-[11px] text-green-400">Version saved.</span>
+          )}
           {/* Actions menu */}
           <div className="relative">
             <button
@@ -1151,10 +1162,18 @@ const EntityDetailInner = () => {
               <MoreVertical size={14} />
             </button>
             {showActionsMenu && (
-              <div className="absolute right-0 mt-1 w-40 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-20">
+              <div className="absolute right-0 mt-1 w-44 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-20 overflow-hidden">
+                <button
+                  onClick={() => { setShowActionsMenu(false); saveEntityVersion(); }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                >
+                  <Save size={13} />
+                  Save version
+                </button>
+                <div className="h-px bg-border" />
                 <button
                   onClick={() => { setShowActionsMenu(false); setDeleteModalOpen(true); }}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-fyrescribe-hover transition-colors rounded-lg"
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-fyrescribe-hover transition-colors"
                 >
                   <Trash2 size={13} />
                   Delete entity
