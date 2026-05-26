@@ -454,17 +454,15 @@ const EntityGalleryPage = () => {
                 ? "Start building your world by creating your first entity."
                 : `Add your first ${activeFilter.replace(/s$/, "")} to bring your world to life.`}
             </p>
-            {!tagFilter && (
-              <button
-                onClick={() => setShowNewModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
-              >
-                <Plus size={14} />
-                {activeFilter === "all"
-                  ? "Create your first entry"
-                  : `Create a ${activeFilter.replace(/s$/, "")}`}
-              </button>
-            )}
+            <button
+              onClick={() => setShowNewModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gold text-primary-foreground text-sm font-medium rounded-lg hover:bg-gold-bright transition-colors"
+            >
+              <Plus size={14} />
+              {activeFilter === "all"
+                ? "Create your first entry"
+                : `Create a ${activeFilter.replace(/s$/, "")}`}
+            </button>
           </div>
         ) : viewMode === "card" ? (
           <>
