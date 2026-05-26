@@ -4,10 +4,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil, Loader2, Sparkles, History, Save } from "lucide-react";
 import type { Json, Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import AppearanceLog from "@/components/AppearanceLog";
+import EntityVersionHistoryPanel, { EntityVersion } from "@/components/EntityVersionHistoryPanel";
 
 type EntityCategory = Database["public"]["Enums"]["entity_category"];
 
@@ -583,6 +584,8 @@ const EntityDetailInner = () => {
   const [firstMentionLabel, setFirstMentionLabel] = useState<string>("");
   const storyHistoryRef = useRef<HTMLDivElement>(null);
   const sectionElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [versionSavedNotice, setVersionSavedNotice] = useState(false);
 
   const sectionsRef = useRef<EntitySections>({});
   const sectionList = CATEGORY_SECTIONS[entity?.category || "characters"] || [];
@@ -732,13 +735,95 @@ const EntityDetailInner = () => {
     return () => { cancelled = true; };
   }, [id]);
 
+  // ─── Version History ─────────────────────────────────────────────
+
+  const saveEntityVersion = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!id || !projectId) return;
+      const snapshotSections = sectionsRef.current ?? {};
+      const { data, error } = await supabase
+        .from("entity_versions")
+        .insert({
+          entity_id: id,
+          project_id: projectId,
+          sections: snapshotSections as Json,
+          fields: (fields ?? {}) as Json,
+          summary,
+        })
+        .select("id")
+        .maybeSingle();
+      if (error) {
+        console.error("Failed to save entity version:", error);
+        return;
+      }
+      if (data?.id) {
+        supabase.functions
+          .invoke("summarize-entity-version", { body: { versionId: data.id } })
+          .catch((e) => console.error("Summarize entity version failed:", e));
+      }
+      if (!opts?.silent) {
+        setVersionSavedNotice(true);
+        setTimeout(() => setVersionSavedNotice(false), 2500);
+      }
+    },
+    [id, projectId, fields, summary],
+  );
+
+  const restoreEntityVersion = useCallback(
+    async (v: EntityVersion) => {
+      if (!id) return;
+      const newSections = (v.sections ?? {}) as EntitySections;
+      const newFields = (v.fields ?? {}) as EntityFields;
+      const newSummary = v.summary ?? "";
+
+      const { error } = await supabase
+        .from("entities")
+        .update({
+          sections: newSections as Json,
+          fields: newFields as Json,
+          summary: newSummary,
+        })
+        .eq("id", id);
+      if (error) {
+        console.error("Failed to restore version:", error);
+        return;
+      }
+      sectionsRef.current = newSections;
+      setSections(newSections);
+      setFields(newFields);
+      setSummary(newSummary);
+      for (const [key, el] of sectionElRefs.current.entries()) {
+        el.innerHTML = DOMPurify.sanitize(newSections[key] || "");
+        el.dataset.initialized = "true";
+      }
+      const sh = storyHistoryRef.current;
+      if (sh) {
+        sh.innerHTML = DOMPurify.sanitize(newSections["Story History"] || "");
+        sh.dataset.initialized = "true";
+      }
+      setVersionHistoryOpen(false);
+    },
+    [id],
+  );
+
   // ─── Generate Profile (AI, from entity_mentions) ─────────────────
+
+
 
   const handleGenerateProfile = useCallback(async () => {
     if (!id || generatingProfile) return;
     setGeneratingProfile(true);
     setProfileDone(false);
     setProfileNotice(null);
+    // Snapshot the current profile before overwriting it.
+    const hasExisting =
+      (summary && summary.trim().length > 0) ||
+      Object.values(sectionsRef.current || {}).some(
+        (s) => (s || "").replace(/<[^>]*>/g, "").trim().length > 0,
+      );
+    if (hasExisting) {
+      await saveEntityVersion({ silent: true });
+    }
     try {
       const { data, error } = await supabase.functions.invoke("generate-profile", {
         body: { entity_id: id },
@@ -779,7 +864,7 @@ const EntityDetailInner = () => {
     } finally {
       setGeneratingProfile(false);
     }
-  }, [id, generatingProfile]);
+  }, [id, generatingProfile, summary, saveEntityVersion]);
 
   // ─── Save summary / fields ───────────────────────────────────────
 
@@ -1057,6 +1142,17 @@ const EntityDetailInner = () => {
               POV
             </button>
           )}
+          {/* Version history */}
+          <button
+            onClick={() => setVersionHistoryOpen(true)}
+            title="Version history"
+            className="w-8 h-8 rounded-full bg-fyrescribe-raised border border-border flex items-center justify-center text-text-dimmed hover:text-foreground hover:border-gold/30 transition-colors"
+          >
+            <History size={14} />
+          </button>
+          {versionSavedNotice && (
+            <span className="text-[11px] text-green-400">Version saved.</span>
+          )}
           {/* Actions menu */}
           <div className="relative">
             <button
@@ -1066,10 +1162,18 @@ const EntityDetailInner = () => {
               <MoreVertical size={14} />
             </button>
             {showActionsMenu && (
-              <div className="absolute right-0 mt-1 w-40 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-20">
+              <div className="absolute right-0 mt-1 w-44 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-20 overflow-hidden">
+                <button
+                  onClick={() => { setShowActionsMenu(false); saveEntityVersion(); }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-text-secondary hover:text-foreground hover:bg-fyrescribe-hover transition-colors"
+                >
+                  <Save size={13} />
+                  Save version
+                </button>
+                <div className="h-px bg-border" />
                 <button
                   onClick={() => { setShowActionsMenu(false); setDeleteModalOpen(true); }}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-fyrescribe-hover transition-colors rounded-lg"
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-fyrescribe-hover transition-colors"
                 >
                   <Trash2 size={13} />
                   Delete entity
@@ -1690,6 +1794,16 @@ const EntityDetailInner = () => {
           entityName={entity.name}
           onConfirm={handleDeleteEntity}
           onCancel={() => setDeleteModalOpen(false)}
+        />
+      )}
+
+      {/* Version history slide-over */}
+      {versionHistoryOpen && (
+        <EntityVersionHistoryPanel
+          entityId={id!}
+          entityName={entity.name}
+          onClose={() => setVersionHistoryOpen(false)}
+          onRestore={restoreEntityVersion}
         />
       )}
 

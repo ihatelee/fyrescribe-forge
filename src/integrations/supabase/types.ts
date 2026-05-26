@@ -217,6 +217,72 @@ export type Database = {
           },
         ]
       }
+      entity_tags: {
+        Row: {
+          entity_id: string
+          tag_id: string
+        }
+        Insert: {
+          entity_id: string
+          tag_id: string
+        }
+        Update: {
+          entity_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_tags_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_versions: {
+        Row: {
+          change_summary: string | null
+          created_at: string
+          entity_id: string
+          fields: Json
+          id: string
+          name: string | null
+          project_id: string
+          sections: Json
+          summary: string | null
+        }
+        Insert: {
+          change_summary?: string | null
+          created_at?: string
+          entity_id: string
+          fields?: Json
+          id?: string
+          name?: string | null
+          project_id: string
+          sections?: Json
+          summary?: string | null
+        }
+        Update: {
+          change_summary?: string | null
+          created_at?: string
+          entity_id?: string
+          fields?: Json
+          id?: string
+          name?: string | null
+          project_id?: string
+          sections?: Json
+          summary?: string | null
+        }
+        Relationships: []
+      }
       lore_link_suggestions: {
         Row: {
           confidence: number
@@ -791,6 +857,7 @@ export type Database = {
         | "magic"
         | "factions"
         | "doctrine"
+        | "history"
       lore_suggestion_status: "pending" | "accepted" | "edited" | "rejected"
       lore_suggestion_type:
         | "new_entity"
