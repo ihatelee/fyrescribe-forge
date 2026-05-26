@@ -303,9 +303,7 @@ const EntityGalleryPage = () => {
   const defaultNewCategory: EntityCategory =
     activeFilter !== "all" ? activeFilter : "characters";
 
-  const heading = activeTagName
-    ? `Tagged: ${activeTagName}`
-    : category
+  const heading = category
     ? category.charAt(0).toUpperCase() + category.slice(1)
     : "World & Lore";
 
