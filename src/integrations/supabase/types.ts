@@ -247,6 +247,42 @@ export type Database = {
           },
         ]
       }
+      entity_versions: {
+        Row: {
+          change_summary: string | null
+          created_at: string
+          entity_id: string
+          fields: Json
+          id: string
+          name: string | null
+          project_id: string
+          sections: Json
+          summary: string | null
+        }
+        Insert: {
+          change_summary?: string | null
+          created_at?: string
+          entity_id: string
+          fields?: Json
+          id?: string
+          name?: string | null
+          project_id: string
+          sections?: Json
+          summary?: string | null
+        }
+        Update: {
+          change_summary?: string | null
+          created_at?: string
+          entity_id?: string
+          fields?: Json
+          id?: string
+          name?: string | null
+          project_id?: string
+          sections?: Json
+          summary?: string | null
+        }
+        Relationships: []
+      }
       lore_link_suggestions: {
         Row: {
           confidence: number
