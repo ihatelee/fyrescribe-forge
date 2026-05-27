@@ -509,7 +509,7 @@ const LoreInboxPage = () => {
         );
         supabase.functions
           .invoke("merge-entity-sections", {
-            body: { existing_sections: capturedExisting, new_sections: sectionsToWrite },
+            body: { entity_id: bgEntityId, existing_sections: capturedExisting, new_sections: sectionsToWrite },
           })
           .then(({ data: mergeResult, error: mergeError }) => {
             if (mergeError) {
