@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil, Loader2, Sparkles, History, Save } from "lucide-react";
+import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil, Loader2, Sparkles, History, Save, ChevronDown } from "lucide-react";
 import type { Json, Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import AppearanceLog from "@/components/AppearanceLog";
@@ -584,6 +584,8 @@ const EntityDetailInner = () => {
   const [firstMentionLabel, setFirstMentionLabel] = useState<string>("");
   const storyHistoryRef = useRef<HTMLDivElement>(null);
   const sectionElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [versionSavedNotice, setVersionSavedNotice] = useState(false);
 
@@ -735,6 +737,17 @@ const EntityDetailInner = () => {
     return () => { cancelled = true; };
   }, [id]);
 
+  useEffect(() => {
+    if (!profileDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target as Node)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [profileDropdownOpen]);
+
   // ─── Version History ─────────────────────────────────────────────
 
   const saveEntityVersion = useCallback(
@@ -808,28 +821,18 @@ const EntityDetailInner = () => {
 
   // ─── Generate Profile (AI, from entity_mentions) ─────────────────
 
-
-
-  const handleGenerateProfile = useCallback(async () => {
+  const handleGenerateProfile = useCallback(async (mode: "fresh" | "update") => {
     if (!id || generatingProfile) return;
     setGeneratingProfile(true);
     setProfileDone(false);
     setProfileNotice(null);
-    // Snapshot the current profile before overwriting it.
-    const hasExisting =
-      (summary && summary.trim().length > 0) ||
-      Object.values(sectionsRef.current || {}).some(
-        (s) => (s || "").replace(/<[^>]*>/g, "").trim().length > 0,
-      );
-    if (hasExisting) {
-      await saveEntityVersion({ silent: true });
-    }
+    // Always snapshot current content silently before any AI write.
+    await saveEntityVersion({ silent: true });
     try {
       const { data, error } = await supabase.functions.invoke("generate-profile", {
-        body: { entity_id: id },
+        body: { entity_id: id, mode },
       });
       if (error) {
-        // supabase-js returns FunctionsHttpError for non-2xx; the original Response is in error.context
         const ctx = (error as { context?: Response }).context;
         if (ctx && ctx.status === 422) {
           setProfileNotice("Not enough manuscript content to generate. Try syncing mentions first.");
@@ -864,7 +867,7 @@ const EntityDetailInner = () => {
     } finally {
       setGeneratingProfile(false);
     }
-  }, [id, generatingProfile, summary, saveEntityVersion]);
+  }, [id, generatingProfile, saveEntityVersion]);
 
   // ─── Save summary / fields ───────────────────────────────────────
 
@@ -1331,24 +1334,54 @@ const EntityDetailInner = () => {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Left: Article body */}
           <div className="flex-1 min-w-0">
-            {/* Sync Lore Info */}
+            {/* Generate Profile */}
             <div className="flex flex-col items-end mb-4 gap-1.5">
               <div className="flex items-center gap-2">
                 {profileDone && (
                   <span className="text-[11px] text-green-400">Profile generated.</span>
                 )}
-                <button
-                  onClick={handleGenerateProfile}
-                  disabled={generatingProfile}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {generatingProfile ? (
-                    <Loader2 size={12} className="animate-spin" />
-                  ) : (
-                    <Sparkles size={12} className="text-gold" />
+                <div ref={profileDropdownRef} className="relative">
+                  <button
+                    onClick={() => setProfileDropdownOpen((v) => !v)}
+                    disabled={generatingProfile}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-secondary hover:text-foreground bg-fyrescribe-raised border border-border rounded-lg hover:border-gold/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {generatingProfile ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={12} className="text-gold" />
+                    )}
+                    Generate Profile
+                    <ChevronDown size={11} className="text-text-dimmed ml-0.5" />
+                  </button>
+                  {profileDropdownOpen && (
+                    <div className="absolute right-0 mt-1 w-60 bg-fyrescribe-raised border border-border rounded-lg shadow-xl z-30 overflow-hidden">
+                      <button
+                        onClick={() => { setProfileDropdownOpen(false); handleGenerateProfile("fresh"); }}
+                        disabled={generatingProfile}
+                        className="w-full flex flex-col gap-0.5 px-3 py-2.5 text-left hover:bg-fyrescribe-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <span className="text-xs text-foreground font-medium flex items-center gap-1.5">
+                          <Sparkles size={11} className="text-gold" />
+                          Generate Fresh
+                        </span>
+                        <span className="text-[10px] text-text-dimmed">Rewrite all content from available information</span>
+                      </button>
+                      <div className="h-px bg-border" />
+                      <button
+                        onClick={() => { setProfileDropdownOpen(false); handleGenerateProfile("update"); }}
+                        disabled={generatingProfile}
+                        className="w-full flex flex-col gap-0.5 px-3 py-2.5 text-left hover:bg-fyrescribe-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <span className="text-xs text-foreground font-medium flex items-center gap-1.5">
+                          <Sparkles size={11} className="text-gold" />
+                          Update Existing
+                        </span>
+                        <span className="text-[10px] text-text-dimmed">Keep content and add new information</span>
+                      </button>
+                    </div>
                   )}
-                  Sync Lore Info
-                </button>
+                </div>
               </div>
               {profileNotice && (
                 <span className="text-[11px] text-text-dimmed max-w-xs text-right">

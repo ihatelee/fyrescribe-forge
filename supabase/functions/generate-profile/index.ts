@@ -80,7 +80,9 @@ serve(async (req) => {
       });
     }
 
-    const { entity_id } = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
+    const { entity_id } = body;
+    const mode: "fresh" | "update" = body.mode === "update" ? "update" : "fresh";
     if (!entity_id) {
       return new Response(JSON.stringify({ error: "entity_id is required" }), {
         status: 400,
@@ -151,7 +153,48 @@ serve(async (req) => {
     }
     const contextBlock = contextParts.join("\n\n===\n\n");
 
-    const prompt = `You are FyrescribeAI, the research and documentation engine for a novelist's series bible. Your job is to write lore entries that read like they were written by someone who has lived inside this manuscript — not someone summarizing it from the outside. You write with the authority of a showrunner who knows every character, every scene, every implication, and every motivation. Your entries are factual, specific, and match the emotional register of the source material. If a character was murdered in cold blood, you say in the character entry how they were murdered. You adapt to the manuscript in front of you. If it's dark, you write dark. If it's funny, that lands in the entry. If it's both, you hold both without flattening either. You never impose a neutral tone onto material that isn't neutral. You never placate, subdue, water-down, or euphemize. You are the aficionado of the story and you love it too much to simplify the meaning for an audience that gets uncomfortable easily. You share the truth and nothing but about the source material you love so much.
+    const existingSections = (entity.sections ?? {}) as Record<string, string>;
+
+    // Build the prompt based on mode.
+    let prompt: string;
+
+    if (mode === "update") {
+      const sectionKeys = [
+        "short_description",
+        ...(CATEGORY_SECTIONS[entity.category] ?? CATEGORY_SECTIONS["characters"]),
+        ...(entity.category === "characters" ? ["Magic & Abilities"] : []),
+      ];
+      const allExisting: Record<string, string> = {
+        short_description: entity.summary || "",
+        ...existingSections,
+      };
+      const existingSectionsList = sectionKeys
+        .map((k) => {
+          const val = (allExisting[k] ?? "").replace(/<[^>]*>/g, "").trim();
+          return `${k}:\n${val || "(empty)"}`;
+        })
+        .join("\n\n");
+
+      prompt = `You are updating an existing entity profile with new information only.
+For each field, the existing content is shown below.
+Only write content for fields that are EMPTY or contain placeholder text.
+Do NOT rewrite, replace, or modify fields that already have content.
+Add new information only where there are genuine gaps.
+Be direct and factual. Do not infer beyond what is in the manuscript evidence.
+
+Existing sections:
+"""
+${existingSectionsList}
+"""
+
+Manuscript evidence:
+"""
+${contextBlock}
+"""
+
+Return ONLY a JSON object. Only include fields that you are filling — omit fields that already have content.`;
+    } else {
+      prompt = `You are FyrescribeAI, the research and documentation engine for a novelist's series bible. Your job is to write lore entries that read like they were written by someone who has lived inside this manuscript — not someone summarizing it from the outside. You write with the authority of a showrunner who knows every character, every scene, every implication, and every motivation. Your entries are factual, specific, and match the emotional register of the source material. If a character was murdered in cold blood, you say in the character entry how they were murdered. You adapt to the manuscript in front of you. If it's dark, you write dark. If it's funny, that lands in the entry. If it's both, you hold both without flattening either. You never impose a neutral tone onto material that isn't neutral. You never placate, subdue, water-down, or euphemize. You are the aficionado of the story and you love it too much to simplify the meaning for an audience that gets uncomfortable easily. You share the truth and nothing but about the source material you love so much.
 
 Non-negotiable rules:
 - Every claim traces directly to the manuscript. No inference, no gap-filling, no invented detail.
@@ -175,6 +218,7 @@ Return a JSON object. Include only fields you have clear evidence for:
 ${sectionInstructions}
 
 Return ONLY a JSON object. No prose, no markdown fences, no explanation.`;
+    }
 
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -216,7 +260,7 @@ Return ONLY a JSON object. No prose, no markdown fences, no explanation.`;
       });
     }
 
-    if (Object.keys(generatedSections).length === 0) {
+    if (Object.keys(generatedSections).length === 0 && mode === "fresh") {
       return new Response(JSON.stringify({ error: "AI returned empty profile" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -237,14 +281,49 @@ Return ONLY a JSON object. No prose, no markdown fences, no explanation.`;
     };
     const shortDescription = rawShort ? capWords(rawShort, 20) : "";
 
-    // Generated fields win over existing; non-profile fields (Story History, etc.) are preserved.
-    const existingSections = (entity.sections ?? {}) as Record<string, string>;
-    const mergedSections = { ...existingSections, ...generatedSections };
+    const isFieldEmpty = (value: string | undefined): boolean => {
+      if (!value) return true;
+      return value.replace(/<[^>]*>/g, "").trim().length === 0;
+    };
+
+    // Merge strategy: fresh mode — AI wins; update mode — AI only fills empty fields.
+    let mergedSections: Record<string, string>;
+    let appliedSummary: string;
+
+    if (mode === "update") {
+      // In update mode, only apply AI-generated values to fields that are currently empty.
+      mergedSections = { ...existingSections };
+      for (const [key, value] of Object.entries(generatedSections)) {
+        if (isFieldEmpty(existingSections[key])) {
+          mergedSections[key] = value;
+        }
+      }
+      // Only update short_description if the entity has no existing summary.
+      appliedSummary = isFieldEmpty(entity.summary) && shortDescription
+        ? shortDescription
+        : (entity.summary || "");
+
+      // For update mode, an AI returning nothing new is a valid (not error) outcome.
+      // Return early with existing data if no fields were actually filled.
+      const anyFilled = Object.keys(generatedSections).some((k) => isFieldEmpty(existingSections[k]));
+      if (!anyFilled && !shortDescription) {
+        return new Response(
+          JSON.stringify({ sections: mergedSections, summary: appliedSummary }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else {
+      // Fresh mode: generated fields win over existing; non-profile fields (Story History, etc.) are preserved.
+      mergedSections = { ...existingSections, ...generatedSections };
+      appliedSummary = shortDescription || entity.summary || "";
+    }
 
     const updatePayload: { sections: Record<string, string>; summary?: string } = {
       sections: mergedSections,
     };
-    if (shortDescription) {
+    if (mode === "fresh" && shortDescription) {
+      updatePayload.summary = shortDescription;
+    } else if (mode === "update" && isFieldEmpty(entity.summary) && shortDescription) {
       updatePayload.summary = shortDescription;
     }
 
@@ -261,7 +340,7 @@ Return ONLY a JSON object. No prose, no markdown fences, no explanation.`;
       });
     }
 
-    return new Response(JSON.stringify({ sections: mergedSections, summary: shortDescription || entity.summary || "" }), {
+    return new Response(JSON.stringify({ sections: mergedSections, summary: appliedSummary }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

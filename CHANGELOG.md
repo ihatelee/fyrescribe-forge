@@ -4,6 +4,13 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-05-27 — Generate Profile dropdown + Update Existing mode
+
+- `src/pages/EntityDetailPage.tsx` — Replaced the single "Sync Lore Info" button with a split dropdown labelled "Generate Profile" (Sparkles icon + ChevronDown). Dropdown contains two options: "Generate Fresh" (rewrite all content) and "Update Existing" (fill empty fields only). Both options auto-save a silent version snapshot before calling the edge function. `handleGenerateProfile` now accepts a `mode: "fresh" | "update"` parameter and passes it to the edge function. Added `profileDropdownOpen` state, `profileDropdownRef`, and a click-outside `useEffect` for the dropdown. Removed the `hasExisting` guard on version auto-save — both modes always snapshot.
+- `supabase/functions/generate-profile/index.ts` — Added `mode` field to the request body (defaults to `"fresh"`). For `mode === "update"`: builds a dedicated update prompt showing all existing field values (HTML-stripped) and instructing the AI to only fill empty fields; server-side merge enforces this — AI-returned values are only applied to fields where `existingSections[key]` is empty after HTML-stripping; `short_description` only overwrites `entity.summary` if it was empty. For `mode === "fresh"`: existing behavior unchanged. Empty AI response is only an error in fresh mode (update mode returning empty means all fields are already populated). `existingSections` declaration moved above prompt building so both modes can reference it.
+
+---
+
 ## 2026-05-16 — Retire entity_tags table and history enum value
 
 - `supabase/migrations/20260516000000_retire_entity_tags_and_history_category.sql` — New migration: drops `entity_tags` table, reassigns any `history` category entities to `events`, creates `entity_category_new` without `history`, migrates the column, drops the old enum, renames the new one.
