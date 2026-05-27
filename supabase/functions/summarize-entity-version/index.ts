@@ -165,7 +165,7 @@ One-sentence summary:`;
     });
   } catch (e) {
     console.error("summarize-entity-version error:", e);
-    return new Response(JSON.stringify({ error: String(e) }), {
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
