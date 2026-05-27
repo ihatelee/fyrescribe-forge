@@ -146,7 +146,7 @@ ${JSON.stringify(new_sections, null, 2)}
   } catch (err) {
     console.error("merge-entity-sections error:", err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unexpected error" }),
+      JSON.stringify({ error: "An unexpected error occurred" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
