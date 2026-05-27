@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const MAX_PAYLOAD_BYTES = 50_000;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -36,21 +38,43 @@ serve(async (req) => {
       });
     }
 
-    const { entity_id, new_sections } = await req.json().catch(() => ({}));
+    const { entity_id, existing_sections, new_sections } = await req.json().catch(() => ({}));
 
-    if (!entity_id || typeof entity_id !== "string" || !new_sections || typeof new_sections !== "object") {
-      return new Response(JSON.stringify({ error: "entity_id and new_sections are required" }), {
+    if (
+      !entity_id || typeof entity_id !== "string" ||
+      !existing_sections || typeof existing_sections !== "object" ||
+      !new_sections || typeof new_sections !== "object"
+    ) {
+      return new Response(JSON.stringify({ error: "entity_id, existing_sections and new_sections are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { existing_sections } = (await req.clone?.()) ? {} as any : {} as any;
-    // existing_sections comes from request body alongside the validated ones above
-    const body = await (async () => null)();
+    // Enforce payload size limits on AI inputs to prevent credit abuse.
+    if (
+      JSON.stringify(existing_sections).length > MAX_PAYLOAD_BYTES ||
+      JSON.stringify(new_sections).length > MAX_PAYLOAD_BYTES
+    ) {
+      return new Response(JSON.stringify({ error: "Payload too large" }), {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // (re-parse body for existing_sections — see below)
-    void body;
+    // Verify caller owns the entity (RLS-enforced).
+    const { data: entityRow, error: entityErr } = await userClient
+      .from("entities")
+      .select("id")
+      .eq("id", entity_id)
+      .maybeSingle();
+
+    if (entityErr || !entityRow) {
+      return new Response(JSON.stringify({ error: "Entity not found or access denied" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const prompt = `You are merging two records for the same entity. Apply these rules per field:
 
