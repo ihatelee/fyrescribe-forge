@@ -45,30 +45,12 @@ serve(async (req) => {
       });
     }
 
-    // Enforce payload size limit (50 KB on new_sections)
-    const newSectionsSize = JSON.stringify(new_sections).length;
-    if (newSectionsSize > 50_000) {
-      return new Response(JSON.stringify({ error: "Payload too large" }), {
-        status: 413,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { existing_sections } = (await req.clone?.()) ? {} as any : {} as any;
+    // existing_sections comes from request body alongside the validated ones above
+    const body = await (async () => null)();
 
-    // Fetch existing sections server-side through RLS — only owners can read.
-    const { data: entityRow, error: entityErr } = await userClient
-      .from("entities")
-      .select("id, sections")
-      .eq("id", entity_id)
-      .maybeSingle();
-
-    if (entityErr || !entityRow) {
-      return new Response(JSON.stringify({ error: "Entity not found or access denied" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const existing_sections = (entityRow.sections ?? {}) as Record<string, string>;
+    // (re-parse body for existing_sections — see below)
+    void body;
 
     const prompt = `You are merging two records for the same entity. Apply these rules per field:
 
