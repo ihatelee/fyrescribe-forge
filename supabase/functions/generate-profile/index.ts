@@ -267,7 +267,7 @@ Return ONLY a JSON object. No prose, no markdown fences, no explanation.`;
   } catch (err) {
     console.error("generate-profile error:", err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unexpected error" }),
+      JSON.stringify({ error: "An unexpected error occurred" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

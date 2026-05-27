@@ -1,22 +1,12 @@
--- Drop the old cron job that had the previous project's URL and anon key hardcoded.
+-- NOTE: This migration is a no-op on this project — the `pg_cron` extension is
+-- not installed, so the job below was never scheduled. The previous version of
+-- this file embedded a service token literal, which has since been rotated and
+-- scrubbed. If pg_cron is later enabled, schedule the job using a token loaded
+-- from Supabase Vault (e.g. `vault.decrypted_secrets`), never a hardcoded value.
+
 DO $$
 BEGIN
+  -- Best-effort: unschedule if pg_cron happens to be available now or later.
   PERFORM cron.unschedule('daily-lore-sync');
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
-
--- Recreate with the new project URL and anon key.
-SELECT cron.schedule(
-  'daily-lore-sync',
-  '0 3 * * *',
-  $$
-  SELECT net.http_post(
-    url     := 'https://ignglmxrpbxlgjmjzuql.supabase.co/functions/v1/sync-lore',
-    headers := jsonb_build_object(
-      'Content-Type',  'application/json',
-      'Authorization', 'Bearer sb_secret_p_aDb34KqJ5Q9rUmNWKAUQ_B8OAaN0X'
-    ),
-    body    := '{"trigger":"scheduled"}'::jsonb
-  ) AS request_id;
-  $$
-);

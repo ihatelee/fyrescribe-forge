@@ -64,6 +64,17 @@ serve(async (req) => {
       );
     }
 
+    const VALID_CATEGORIES = new Set([
+      "characters", "places", "events", "artifacts", "creatures",
+      "magic", "factions", "doctrine", "history",
+    ]);
+    if (!VALID_CATEGORIES.has(category)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid category" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // ── Extract text ───────────────────────────────────────────────────────
     const isPdf =
       file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
