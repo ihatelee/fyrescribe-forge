@@ -6,7 +6,7 @@ import { componentTagger } from "lovable-tagger";
 // Hardcoded Supabase fallbacks — these are PUBLIC values (project URL + anon key)
 // and are safe to ship in the bundle. Used as a safety net in case the build
 // environment fails to inject the VITE_SUPABASE_* env vars at build time.
-const SUPABASE_URL_FALLBACK = "https://ignglmxrpbxlgjmjzuql.supabase.co";
+const SUPABASE_URL_FALLBACK = "https://ignglmxrpbxlgjmjzuql.supabase.com";
 const SUPABASE_PUBLISHABLE_KEY_FALLBACK =
   "sb_publishable_tdRzYHZsWkMKrymz-e7eqQ_EMg5cYi-";
 const SUPABASE_PROJECT_ID_FALLBACK = "ignglmxrpbxlgjmjzuql";
