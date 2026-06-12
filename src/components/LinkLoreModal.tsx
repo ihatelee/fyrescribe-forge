@@ -48,14 +48,14 @@ const LinkLoreModal = ({ projectId, onClose }: LinkLoreModalProps) => {
       const { data, error } = await supabase
         .from("lore_link_suggestions")
         .select(
-          "id, relationship, confidence, entity_a:entity_a_id(id, name, category), entity_b:entity_b_id(id, name, category)",
+          "id, relationship, confidence, entity_a:entities!entity_a_id(id, name, category), entity_b:entities!entity_b_id(id, name, category)",
         )
         .eq("project_id", projectId)
         .eq("status", "pending")
         .order("confidence", { ascending: false });
 
       if (!error && data) {
-        const mapped: SuggestedLink[] = (data as any[]).map((row) => ({
+        const mapped: SuggestedLink[] = data.map((row) => ({
           id: row.id,
           entity_a: row.entity_a,
           entity_b: row.entity_b,

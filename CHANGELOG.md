@@ -4,6 +4,16 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-06-12 — Audit cleanup: sync-mentions auth, LinkLoreModal types, CLAUDE.md project ref
+
+- `supabase/functions/sync-mentions/index.ts` — Auth switched from `getClaims(token)` to `getUser()`, matching every other edge function. `getUser()` validates the session against the auth server (catches revoked sessions); `getClaims` only validated the JWT locally. `userId` now comes from `user.id` instead of `claims.sub`; the unused `token` variable removed. Handler structure, 401 path, and ownership check unchanged.
+- `src/components/LinkLoreModal.tsx` — Removed the `(data as any[])` cast on the suggestion query result. Root cause: `lore_link_suggestions` has two FKs to `entities`, so the generated Supabase types could not disambiguate the embeds and inference collapsed to `SelectQueryError`. Fixed by hinting the embeds explicitly (`entity_a:entities!entity_a_id(...)`, `entity_b:entities!entity_b_id(...)`) — runtime-equivalent PostgREST syntax — so the rows now typecheck end-to-end with no cast. Schema drift in this query now fails the build instead of failing silently. (`exportLore.ts` casts intentionally left for a later pass.)
+- `CLAUDE.md` — Supabase project ref corrected from the stale `ignglmxrpbxlgjmjzuql` to `bedrzyekoynnzdeblunt` (matches vite.config.ts and all repo credentials).
+- CHANGELOG archive task: **no-op**. No entries dated before 2026-04-01 exist — project history starts 2026-04-11, and everything before session 11 (2026-04-13) was already moved to CHANGELOG_ARCHIVE.md in a prior pass (commit `1f00f08`).
+- Verified with `tsc -p tsconfig.app.json --noEmit` (exit 0; note: the root `tsconfig.json` is solution-style and checks nothing on its own) and `vitest run` (1/1 passing).
+
+---
+
 ## 2026-05-27 — Generate Profile dropdown + Update Existing mode
 
 - `src/pages/EntityDetailPage.tsx` — Replaced the single "Sync Lore Info" button with a split dropdown labelled "Generate Profile" (Sparkles icon + ChevronDown). Dropdown contains two options: "Generate Fresh" (rewrite all content) and "Update Existing" (fill empty fields only). Both options auto-save a silent version snapshot before calling the edge function. `handleGenerateProfile` now accepts a `mode: "fresh" | "update"` parameter and passes it to the edge function. Added `profileDropdownOpen` state, `profileDropdownRef`, and a click-outside `useEffect` for the dropdown. Removed the `hasExisting` guard on version auto-save — both modes always snapshot.
