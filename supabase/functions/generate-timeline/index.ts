@@ -1,3 +1,4 @@
+import { fetchAnthropic } from "../_shared/anthropic.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -110,7 +111,7 @@ Return a JSON array only — no prose, no code fences. Each item must have:
 
 Include world history events and story-level events separately. ONLY include events with significance_score ≥ 7. Extract at most 2 events per scene, only the most significant. If a scene contains nothing notable (≥ 7), return nothing for it. Aim for 4–10 events total. Output only the JSON array.`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetchAnthropic({
       method: "POST",
       headers: {
         "Content-Type": "application/json",

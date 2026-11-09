@@ -1,6 +1,7 @@
 // Generate a one-line summary of the changes between a previous scene version
 // and the just-saved version.
 
+import { fetchAnthropic } from "../_shared/anthropic.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -109,7 +110,7 @@ ${newText}
 
 One-sentence summary:`;
 
-    const aiResp = await fetch("https://api.anthropic.com/v1/messages", {
+    const aiResp = await fetchAnthropic({
       method: "POST",
       headers: {
         "x-api-key": ANTHROPIC_API_KEY,

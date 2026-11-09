@@ -1,3 +1,4 @@
+import { fetchAnthropic } from "../_shared/anthropic.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -220,7 +221,7 @@ ${sectionInstructions}
 Return ONLY a JSON object. No prose, no markdown fences, no explanation.`;
     }
 
-    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const aiRes = await fetchAnthropic({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
