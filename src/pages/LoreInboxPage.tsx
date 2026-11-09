@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import ConnectionsTab from "@/components/lore-inbox/ConnectionsTab";
+import MentionsTab from "@/components/lore-inbox/MentionsTab";
+import TagsTab from "@/components/lore-inbox/TagsTab";
+import {
+  INBOX_TABS,
+  LORE_INBOX_CHANGED,
+  notifyLoreInboxChanged,
+  type InboxTab,
+} from "@/components/lore-inbox/shared";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
@@ -384,6 +393,44 @@ const LoreInboxPage = () => {
   const [acceptAllStatus, setAcceptAllStatus] = useState<string | null>(null);
   const [acceptingAll, setAcceptingAll] = useState(false);
 
+  // ── Tabs ──────────────────────────────────────────────────────────────
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab") as InboxTab | null;
+  const [counts, setCounts] = useState<Record<InboxTab, number> | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fetchCounts = useCallback(async () => {
+    if (!activeProject) return;
+    const countOf = (table: "lore_suggestions" | "lore_link_suggestions" | "mention_suggestions" | "tag_suggestions") =>
+      supabase
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", activeProject.id)
+        .eq("status", "pending");
+    const [entries, connections, mentions, tags] = await Promise.all([
+      countOf("lore_suggestions"),
+      countOf("lore_link_suggestions"),
+      countOf("mention_suggestions"),
+      countOf("tag_suggestions"),
+    ]);
+    setCounts({
+      entries: entries.count ?? 0,
+      connections: connections.count ?? 0,
+      mentions: mentions.count ?? 0,
+      tags: tags.count ?? 0,
+    });
+  }, [activeProject]);
+
+  // With no ?tab= in the URL, open the first tab that has something to review.
+  const activeTab: InboxTab =
+    tabParam && INBOX_TABS.some((t) => t.id === tabParam)
+      ? tabParam
+      : counts
+        ? (INBOX_TABS.find((t) => counts[t.id] > 0)?.id ?? "entries")
+        : "entries";
+
+  const selectTab = (tab: InboxTab) => setSearchParams({ tab }, { replace: true });
+
   const fetchSuggestions = useCallback(async () => {
     if (!activeProject) return;
     setLoading(true);
@@ -406,6 +453,23 @@ const LoreInboxPage = () => {
   useEffect(() => {
     fetchSuggestions();
   }, [fetchSuggestions]);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
+  // Keep counts (and, after a sync, the lists) in step with reviews and syncs.
+  useEffect(() => {
+    const onChanged = (e: Event) => {
+      fetchCounts();
+      if ((e as CustomEvent<{ reload?: boolean }>).detail?.reload) {
+        fetchSuggestions();
+        setRefreshKey((k) => k + 1);
+      }
+    };
+    window.addEventListener(LORE_INBOX_CHANGED, onChanged);
+    return () => window.removeEventListener(LORE_INBOX_CHANGED, onChanged);
+  }, [fetchCounts, fetchSuggestions]);
 
   // Core accept logic — shared by individual accept and Accept All.
   // Returns { entityId, isMerge, noNewInfo } on success or null on failure.
@@ -583,6 +647,7 @@ const LoreInboxPage = () => {
       .eq("id", suggestion.id);
 
     setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
+    notifyLoreInboxChanged();
     return { entityId, isMerge, noNewInfo };
   };
 
@@ -619,22 +684,73 @@ const LoreInboxPage = () => {
       .update({ status: "rejected", reviewed_at: new Date().toISOString() })
       .eq("id", id);
     setSuggestions((prev) => prev.filter((s) => s.id !== id));
+    notifyLoreInboxChanged();
   };
 
   // Re-fetch when page becomes visible (e.g. after sync adds new suggestions)
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") fetchSuggestions();
+      if (document.visibilityState === "visible") {
+        fetchSuggestions();
+        fetchCounts();
+        setRefreshKey((k) => k + 1);
+      }
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [fetchSuggestions]);
+  }, [fetchSuggestions, fetchCounts]);
 
   return (
     <AppLayout>
       <div className="p-6 max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="font-display text-xl text-foreground tracking-wide">Lore Inbox</h1>
+        <h1 className="font-display text-xl text-foreground tracking-wide mb-5">Lore Inbox</h1>
+
+        {/* Tabs */}
+        <div role="tablist" className="flex items-center gap-6 border-b border-border mb-6">
+          {INBOX_TABS.map((t) => {
+            const isActive = activeTab === t.id;
+            const n = counts?.[t.id] ?? 0;
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => selectTab(t.id)}
+                className={`-mb-px flex items-center gap-1.5 pb-2.5 text-[13px] border-b transition-colors ${
+                  isActive
+                    ? "border-gold text-gold"
+                    : "border-transparent text-text-dimmed hover:text-foreground"
+                }`}
+              >
+                {t.label}
+                <span
+                  className={`text-[10px] px-1.5 py-px rounded-full ${
+                    isActive
+                      ? "bg-gold/15 text-gold"
+                      : n > 0
+                        ? "bg-fyrescribe-hover text-text-secondary"
+                        : "text-text-dimmed"
+                  }`}
+                >
+                  {n}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {activeTab === "connections" && activeProject && (
+          <ConnectionsTab projectId={activeProject.id} refreshKey={refreshKey} />
+        )}
+        {activeTab === "mentions" && activeProject && (
+          <MentionsTab projectId={activeProject.id} refreshKey={refreshKey} />
+        )}
+        {activeTab === "tags" && activeProject && (
+          <TagsTab projectId={activeProject.id} refreshKey={refreshKey} />
+        )}
+
+        {activeTab === "entries" && (<>
+        <div className="flex items-center justify-end mb-4">
           <div className="flex items-center gap-3">
             {suggestions.length > 0 && (
               <>
@@ -682,7 +798,7 @@ const LoreInboxPage = () => {
           <div className="text-center py-20">
             <Sparkles size={32} className="text-text-dimmed mx-auto mb-4" />
             <p className="text-text-secondary text-sm mb-1">
-              Your lore inbox is clear
+              No new entries to review
             </p>
             <p className="text-text-dimmed text-[12px]">
               Use <span className="text-text-secondary">Sync Lore</span> in the sidebar to analyse your manuscript scenes
@@ -700,6 +816,7 @@ const LoreInboxPage = () => {
             ))}
           </div>
         )}
+        </>)}
       </div>
     </AppLayout>
   );

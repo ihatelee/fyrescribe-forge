@@ -4,6 +4,15 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-11-09 — Lore Inbox tabs (Entries · Connections · Mentions · Tags)
+
+- `LoreInboxPage.tsx`: tab bar with per-tab pending counts (they sum to the sidebar badge). With no `?tab=`, opens the first tab that has items. Counts stay live via the `fyrescribe:lore-inbox-changed` window event (`src/components/lore-inbox/shared.ts`).
+- New `src/components/lore-inbox/{ConnectionsTab,MentionsTab,TagsTab}.tsx`: the former pop-up lists, moved onto the page and loading pending rows from the DB. Mentions gained per-item **Accept**; leaving the tab no longer auto-accepts remaining mentions (the old pop-up accepted them on close).
+- Removed `LinkLoreModal`, `SyncMentionsModal`, `SyncTagsModal`. Sync Connections / Sync Mentions / Sync Tags now open `/lore-inbox?tab=…`. The World gallery's **Link Lore** button opens the Connections tab. Full Sync refreshes the inbox lists when done.
+- Entries tab empty state reads "No new entries to review" (the inbox as a whole may not be clear).
+
+---
+
 ## 2026-11-09 — Audit follow-ups: dependencies, version history, AI retries, changelog
 
 - **Dependencies**: in-range security updates (dompurify 3.4.17, supabase-js 2.119, react-router-dom 6.30.6, vite 5.4.21). Removed 31 unused packages (jspdf, zod, recharts, react-hook-form, date-fns, cmdk, vaul, embla, unused Radix) and 38 unused `src/components/ui` files. `bun.lock` is now the only lockfile (`bun.lockb`, `package-lock.json` deleted). Remaining advisories: dev-only tooling (vite/vitest dev server) and two react-router v6 items that need SSR or untrusted link targets (neither applies).
