@@ -1,5 +1,4 @@
 import { useEffect, useRef, useCallback } from "react";
-import { runWhileUnloading } from "@/lib/unloadSafeFetch";
 
 /**
  * Debounced callback used for autosave.
@@ -35,15 +34,14 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
         callbackRef.current(...args);
       }
     };
-    const flushForUnload = () => runWhileUnloading(flushAll);
     const onVisibility = () => {
-      if (document.visibilityState === "hidden") flushForUnload();
+      if (document.visibilityState === "hidden") flushAll();
     };
     document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("pagehide", flushForUnload);
+    window.addEventListener("pagehide", flushAll);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pagehide", flushForUnload);
+      window.removeEventListener("pagehide", flushAll);
       flushAll();
     };
   }, []);

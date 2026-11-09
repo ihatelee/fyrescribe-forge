@@ -7,7 +7,6 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 ## 2026-11-09 — Post-migration audit: speed + reliability (no design or feature changes)
 
 - `src/hooks/use-debounce.ts` — Autosave hook now **flushes** pending saves on unmount, tab hide, and pagehide (previously dropped them — edits in the last ~1 s before navigating away were lost). Added optional per-key debouncing so saves for different records never cancel each other. Tests: `src/hooks/use-debounce.test.ts`.
-- `src/lib/unloadSafeFetch.ts` + Supabase client `global.fetch` — saves flushed on tab close/reload are sent with `keepalive` so the browser doesn't cancel them (bodies > 60 KB fall back to a normal request). Found during preview testing: an edit 150 ms before a hard reload was lost.
 - `ManuscriptPage.tsx` — `saveScene` debounced per scene (switching scenes within 1 s no longer drops the previous scene's save).
 - `NotesPage.tsx` — `persistNote` debounced per note + field (a title edit followed by a body edit within 800 ms no longer drops the title; switching notes no longer drops a pending save).
 - `EntityDetailPage.tsx` — `saveSectionsToDb` takes the entity id at call time (previously read at fire time — navigating to a linked entity within 1 s could write the old entity's sections onto the new one).
