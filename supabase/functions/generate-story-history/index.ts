@@ -139,7 +139,7 @@ If there is existing history, build on it additively — preserve what is alread
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-5-20250929",
         max_tokens: 1024,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],

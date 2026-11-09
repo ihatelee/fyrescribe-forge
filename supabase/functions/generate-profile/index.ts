@@ -228,7 +228,7 @@ Return ONLY a JSON object. No prose, no markdown fences, no explanation.`;
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-5-20250929",
         max_tokens: povScenes.length > 0 ? 4096 : 2048,
         messages: [{ role: "user", content: prompt }],
       }),
