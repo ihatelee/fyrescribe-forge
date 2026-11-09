@@ -240,3 +240,28 @@ rewrites them — out of scope for this phase.
   the pre-migration state. The new `fyrescribe` Supabase project can be
   left running (nightly backups via GitHub Actions) or paused once the
   cutover is confirmed stable.
+
+# Post-migration fixes (2026-11-09)
+
+Two pre-existing Fyrescribe bugs noted during Phase 5c testing (see above)
+were fixed on branch `fix/lore-inbox-fields-and-cascade-fks`, merged to
+`main` as `ea985ce`.
+
+- **Lore Inbox dropped at-a-glance fields on accept.** In
+  `LoreInboxPage.tsx`, `acceptOneSuggestion` computed `fieldsToWrite` from
+  the AI's `at_a_glance` payload, but the merge branch (used whenever a
+  fuzzy name+category match finds an existing entity — the normal case for
+  "update" suggestions) only ever wrote `sections`, `summary`, and
+  `aliases`; `fields` was only included on the create-new-entity path. Now
+  the merge branch spreads `fieldsToWrite` over the entity's existing
+  `fields`, independent of whether prose sections are also present. Covers
+  both accept and edit-then-accept. Added `src/pages/LoreInboxPage.test.tsx`.
+- **Deleting a project orphaned rows.** `entity_versions`,
+  `mention_suggestions`, `rejected_mentions`, and `tag_suggestions` had no
+  foreign key constraints at all on their `project_id`/`entity_id`/
+  `scene_id` columns. Migration
+  `20261109063350_add_cascade_fks_project_delete_cleanup.sql` adds
+  `ON DELETE CASCADE` FKs on all 11 affected columns, matching the pattern
+  already used by `entity_mentions`/`scene_versions`/etc. Verified zero
+  orphans existed beforehand; verified zero orphans remain anywhere after
+  deleting a throwaway test project, with real data row counts unchanged.
