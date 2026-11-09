@@ -1,3 +1,4 @@
+import { fetchAnthropic } from "../_shared/anthropic.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -577,7 +578,7 @@ async function callAnthropicForScene(
 ): Promise<AISuggestion[]> {
   let response: Response;
   try {
-    response = await fetch("https://api.anthropic.com/v1/messages", {
+    response = await fetchAnthropic({
       method: "POST",
       headers: {
         "Content-Type": "application/json",

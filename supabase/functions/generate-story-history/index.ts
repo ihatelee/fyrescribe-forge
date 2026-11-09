@@ -2,6 +2,7 @@
 // Additive: builds on existing history rather than replacing it.
 // Uses Anthropic Claude directly (migrated from Lovable AI gateway).
 
+import { fetchAnthropic } from "../_shared/anthropic.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -131,7 +132,7 @@ New mention contexts (manuscript order):
 
 If there is existing history, build on it additively — preserve what is already there and extend it with new information only. If there is no existing history, write from scratch based strictly on the mention contexts above. Return only the Story History prose (max 2 paragraphs).`;
 
-    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const aiRes = await fetchAnthropic({
       method: "POST",
       headers: {
         "x-api-key": ANTHROPIC_API_KEY,
