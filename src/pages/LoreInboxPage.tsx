@@ -452,7 +452,7 @@ const LoreInboxPage = () => {
     // "Evette" → "Evette Koval" without creating a duplicate.
     const { data: categoryEntities } = await supabase
       .from("entities")
-      .select("id, name, summary, sections, aliases")
+      .select("id, name, summary, sections, aliases, fields")
       .eq("project_id", activeProject.id)
       .eq("category", payload.category);
 
@@ -482,10 +482,19 @@ const LoreInboxPage = () => {
         sections: Record<string, string>;
         summary?: string;
         aliases?: string[];
+        fields?: Record<string, string>;
       } = {
         sections: optimisticSections,
       };
       if (!existing.summary && description) updates.summary = description;
+
+      // At-a-glance fields live in the `fields` jsonb column, independent of
+      // prose `sections` — merge them in whenever the suggestion has any,
+      // regardless of whether it also carries section content.
+      if (Object.keys(fieldsToWrite).length > 0) {
+        const existingFields = (existing.fields ?? {}) as Record<string, string>;
+        updates.fields = { ...existingFields, ...fieldsToWrite };
+      }
 
       // Ensure first-name alias exists on the existing character entity too.
       if (shouldSeedFirstName) {
