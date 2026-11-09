@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
+import { runSave, useSaveStatus } from "@/lib/saveStatus";
 import { stripRtf, parseManuscript } from "@/lib/manuscriptParser";
 
 // Strip theme-bound color styles from manuscript HTML.
@@ -55,6 +56,7 @@ import {
   MoreVertical,
   ScanSearch,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import ContinuityPanel, { type ContinuityIssue } from "@/components/ContinuityPanel";
 import {
@@ -635,10 +637,12 @@ const ManuscriptPage = () => {
     async (sceneId: string, content: string) => {
       setSaving(true);
       const wc = countWords(content);
-      const { error } = await supabase
-        .from("scenes")
-        .update({ content, word_count: wc, is_dirty: true })
-        .eq("id", sceneId);
+      const { error } = await runSave(`scene:${sceneId}`, () =>
+        supabase
+          .from("scenes")
+          .update({ content, word_count: wc, is_dirty: true })
+          .eq("id", sceneId),
+      );
       setSaving(false);
       if (error) {
         console.error("Failed to save scene:", error);
@@ -652,6 +656,8 @@ const ManuscriptPage = () => {
     // Debounce per scene so switching scenes never cancels the previous scene's pending save.
     (sceneId: string) => sceneId
   );
+
+  const { failing: saveFailing } = useSaveStatus("scene:");
 
   // ─── Versioning ─────────────────────────────────────────────────────
 
@@ -1687,12 +1693,19 @@ const ManuscriptPage = () => {
           {/* Status bar */}
           <div className="flex items-center justify-between px-3 lg:px-4 py-1.5 border-t border-border bg-fyrescribe-base text-text-dimmed text-[11px]">
             <div className="flex items-center gap-3 min-w-0">
-              <span className="truncate">
-                {versionToast
-                  ? versionToast
-                  : saving
-                  ? "Saving…"
-                  : "Auto-saved"}
+              <span className="truncate flex items-center gap-1.5">
+                {versionToast ? (
+                  versionToast
+                ) : saveFailing ? (
+                  <span className="flex items-center gap-1.5 text-destructive">
+                    <AlertTriangle size={11} className="flex-shrink-0" />
+                    Couldn't save. Retrying… your text is safe in this tab
+                  </span>
+                ) : saving ? (
+                  "Saving…"
+                ) : (
+                  "Auto-saved"
+                )}
               </span>
               <div className="w-px h-3 bg-border hidden lg:block" />
 

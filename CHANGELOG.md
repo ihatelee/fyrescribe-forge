@@ -4,6 +4,14 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-11-09 — Save-failure warning + auto-retry for autosaves
+
+- `src/lib/saveStatus.ts` (new) — `runSave(key, fn)` wraps an autosave write; on failure it retries with backoff (5s, 10s, 20s, then every 30s) until it succeeds or a newer call for the same key supersedes it. Exposes `useSaveStatus(keyPrefix?)` (`{ failing }`) and `hasUnsavedWork()`. Tests: `src/lib/saveStatus.test.ts`.
+- `src/hooks/use-debounce.ts` — added `pendingCount()` so `hasUnsavedWork()` can see queued-but-not-yet-fired debounced saves.
+- `ManuscriptPage.tsx`, `NotesPage.tsx`, `EntityDetailPage.tsx` — `saveScene`, `persistNote`, and `saveSectionsToDb` now go through `runSave`. Manuscript's status bar and Notes' header label replace "Saving…"/"Auto-saved" with a destructive-colored "Couldn't save. Retrying…" while a save is failing. Entity pages show a single auto-dismissing toast on the same condition (no page had a save indicator before).
+- `App.tsx` — app-wide `beforeunload` guard: prompts before closing/reloading the tab only while `hasUnsavedWork()` is true.
+- `README.md` — lore sync is on-demand only now; changed "daily or manual sync" to "on-demand sync".
+
 ## 2026-11-09 — Post-migration audit: speed + reliability (no design or feature changes)
 
 - `src/hooks/use-debounce.ts` — Autosave hook now **flushes** pending saves on unmount, tab hide, and pagehide (previously dropped them — edits in the last ~1 s before navigating away were lost). Added optional per-key debouncing so saves for different records never cancel each other. Tests: `src/hooks/use-debounce.test.ts`.

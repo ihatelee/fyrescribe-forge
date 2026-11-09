@@ -6,6 +6,7 @@ import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
+import { runSave, useSaveStatus } from "@/lib/saveStatus";
 import {
   Bold,
   Italic,
@@ -19,6 +20,7 @@ import {
   StickyNote,
   PanelLeft,
   X,
+  AlertTriangle,
 } from "lucide-react";
 
 interface Note {
@@ -111,7 +113,10 @@ const NotesPage = () => {
   const persistNote = useDebouncedCallback(
     async (noteId: string, patch: { title?: string; content?: string }) => {
       setSaving(true);
-      const { error } = await supabase.from("notes").update(patch).eq("id", noteId);
+      const fields = Object.keys(patch).sort().join(",");
+      const { error } = await runSave(`note:${noteId}:${fields}`, () =>
+        supabase.from("notes").update(patch).eq("id", noteId),
+      );
       setSaving(false);
       if (error) {
         console.error("Failed to save note:", error);
@@ -129,6 +134,11 @@ const NotesPage = () => {
     // together both save, and switching notes never drops a pending save.
     (noteId: string, patch: { title?: string; content?: string }) =>
       `${noteId}:${Object.keys(patch).sort().join(",")}`,
+  );
+
+  // Sentinel prefix when there's no active note, so this never matches a real key.
+  const { failing: noteSaveFailing } = useSaveStatus(
+    activeNoteId ? `note:${activeNoteId}:` : "\u0000no-active-note",
   );
 
   // ─── Selection ──────────────────────────────────────────────────────
@@ -469,7 +479,16 @@ const NotesPage = () => {
                 </div>
 
                 <div className="text-[10px] text-text-dimmed">
-                  {saving ? "Saving…" : "Saved"}
+                  {noteSaveFailing ? (
+                    <span className="flex items-center gap-1 text-destructive">
+                      <AlertTriangle size={10} className="flex-shrink-0" />
+                      Couldn't save. Retrying…
+                    </span>
+                  ) : saving ? (
+                    "Saving…"
+                  ) : (
+                    "Saved"
+                  )}
                 </div>
               </div>
 

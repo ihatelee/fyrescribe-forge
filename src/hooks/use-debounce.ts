@@ -1,5 +1,14 @@
 import { useEffect, useRef, useCallback } from "react";
 
+// Module-level count of debounced calls currently pending (across every
+// useDebouncedCallback instance in the app), so hasUnsavedWork() in
+// saveStatus.ts can know whether any autosave is still queued.
+let globalPendingCount = 0;
+
+export function pendingCount(): number {
+  return globalPendingCount;
+}
+
 /**
  * Debounced callback used for autosave.
  *
@@ -31,6 +40,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
       for (const [key, { timer, args }] of pending) {
         clearTimeout(timer);
         pending.delete(key);
+        globalPendingCount--;
         callbackRef.current(...args);
       }
     };
@@ -52,8 +62,10 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
       const key = getKeyRef.current ? getKeyRef.current(...args) : "__default__";
       const existing = pending.get(key);
       if (existing) clearTimeout(existing.timer);
+      else globalPendingCount++;
       const timer = setTimeout(() => {
         pending.delete(key);
+        globalPendingCount--;
         callbackRef.current(...args);
       }, delay);
       pending.set(key, { timer, args });
