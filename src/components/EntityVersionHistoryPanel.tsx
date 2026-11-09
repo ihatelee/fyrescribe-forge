@@ -54,7 +54,8 @@ const EntityVersionHistoryPanel = ({
       if (isInitial) setLoading(true);
       const { data, error } = await supabase
         .from("entity_versions")
-        .select("*")
+        // List view only: the full text is fetched on restore, so 4 s polls stay small.
+        .select("id, entity_id, project_id, name, summary, change_summary, created_at")
         .eq("entity_id", entityId)
         .order("created_at", { ascending: false });
       if (!cancelled) {
@@ -90,7 +91,17 @@ const EntityVersionHistoryPanel = ({
   const handleRestore = async (v: EntityVersion) => {
     setRestoring(v.id);
     try {
-      await onRestore(v);
+      // Load the full version (including its text) only when restoring.
+      const { data: full, error } = await supabase
+        .from("entity_versions")
+        .select("*")
+        .eq("id", v.id)
+        .single();
+      if (error || !full) {
+        console.error("Failed to load entity version for restore:", error);
+        return;
+      }
+      await onRestore(full as unknown as EntityVersion);
     } finally {
       setRestoring(null);
       setConfirmId(null);

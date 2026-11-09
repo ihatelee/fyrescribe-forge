@@ -54,7 +54,8 @@ const VersionHistoryPanel = ({
       if (isInitial) setLoading(true);
       const { data, error } = await supabase
         .from("scene_versions")
-        .select("*")
+        // List view only: the full text is fetched on restore, so 4 s polls stay small.
+        .select("id, scene_id, project_id, name, word_count, word_delta, summary, created_at")
         .eq("scene_id", sceneId)
         .order("created_at", { ascending: false });
       if (!cancelled) {
@@ -91,7 +92,17 @@ const VersionHistoryPanel = ({
   const handleRestore = async (v: SceneVersion) => {
     setRestoring(v.id);
     try {
-      await onRestore(v);
+      // Load the full version (including its text) only when restoring.
+      const { data: full, error } = await supabase
+        .from("scene_versions")
+        .select("*")
+        .eq("id", v.id)
+        .single();
+      if (error || !full) {
+        console.error("Failed to load version for restore:", error);
+        return;
+      }
+      await onRestore(full as unknown as SceneVersion);
     } finally {
       setRestoring(null);
       setConfirmId(null);
