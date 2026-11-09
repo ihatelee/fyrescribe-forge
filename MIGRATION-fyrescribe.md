@@ -125,3 +125,118 @@ rewrites them — out of scope for this phase.
 - No rewriting of old-project storage URLs embedded in `entities` data.
 - No cleanup of the 4 orphaned manuscript files noted above.
 - No app code or edge function changes; no deploys.
+
+# Phase 5b: backend cutover prep
+
+- Rewrote the 4 stored `bedrzyekoynnzdeblunt.supabase.co` URLs in
+  `entities.cover_image_url` / `gallery_image_urls` to the new project's
+  storage host. All text/jsonb/array columns across every public table were
+  scanned first — these 4 were the only hits. One rewritten gallery URL
+  still 404s because it was never in the Lovable export to begin with
+  (pre-existing dead reference, not migration-caused).
+- Deleted the 4 orphaned manuscript files under `batheinradiowavs@gmail.com`
+  that referenced project ids no longer in the `projects` table (leftovers
+  from deleted/replaced projects — not, as originally assumed, files owned
+  by a skipped account). Backed up locally before deleting.
+- Set `ANTHROPIC_API_KEY` as an edge function secret.
+- Deployed all 13 edge functions with default `verify_jwt = true`
+  (no per-function settings exist in `config.toml`, historically or now —
+  confirmed all 13 return 401 to unauthenticated calls).
+- `claude-sonnet-4-20250514` is retired (404s). Swapped to
+  `claude-sonnet-4-5-20250929` in the 10 functions that referenced it
+  (model string only). `claude-haiku-4-5-20251001` still works unchanged.
+- Set both accounts' passwords via the Admin API; both emails stay
+  confirmed.
+- Added `.github/workflows/nightly-backup.yml` and `keep-alive.yml`,
+  mirroring `fanclub-apps`. Repo secrets `SUPABASE_DB_URL` and
+  `SUPABASE_ANON_KEY` (publishable key) set via `gh secret set`.
+- Anonymous audit (publishable key): every table returns 0 rows and
+  rejects writes, `allowed_emails` unreadable, `manuscripts` bucket
+  unlistable, intentionally-public buckets still public.
+
+# Phase 5c: app changes, preview, AI feature testing
+
+- `vite.config.ts`: removed the hardcoded fallback to the old project;
+  the build now throws if `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`
+  / `VITE_SUPABASE_PROJECT_ID` are missing, instead of silently serving
+  against the wrong backend.
+- Removed `@lovable.dev/cloud-auth-js`, `lovable-tagger`, and the dead
+  `src/integrations/lovable` module (nothing imported it).
+- Replaced `public/_redirects` (Netlify-style) with `vercel.json`'s SPA
+  rewrite.
+- Hid the Google sign-in button on `AuthPage` (both accounts use
+  email/password).
+- Created the Vercel project `fyrescribe` from `ihatelee/fyrescribe-forge`,
+  env vars set (not Sensitive) across all environments, preview deployed
+  and tested signed in as `batheinradiowavs@gmail.com`: manuscript
+  open/edit/save/version-history, entities with images, timeline, notes,
+  soundscape, theme switching — all pass.
+- Supabase Auth URL Configuration (new project only): Site URL
+  `https://app.fyrescribe.com`; redirect URLs for `app.fyrescribe.com/**`,
+  `fyrescribe.com/**`, and the Vercel preview wildcard.
+- Created a throwaway `MIGRATION TEST` project and exercised every AI
+  feature (sync-lore, sync-mentions, sync-tags, link-lore, parse-lore-file,
+  generate-profile, generate-story-history, generate-timeline,
+  check-continuity, merge-entity-sections, summarize-version,
+  summarize-entity-version). Deleted it afterward; verified all 14 table
+  row counts match the pre-test baseline exactly (found and cleaned up 2
+  tables — `entity_versions`, `mention_suggestions` — that the app's own
+  project-delete flow doesn't cascade through; pre-existing gap, not
+  fixed).
+
+  Two findings from that testing pass:
+  - **Fixed (migration-caused):** `claude-sonnet-4-5-20250929` silently
+    returned all-empty fields for `parse-lore-file`'s long multi-category
+    system prompt. Verified via direct Anthropic API calls with the exact
+    deployed prompt: `claude-haiku-4-5-20251001` and `claude-sonnet-4-6`
+    both extract correctly, only that one model fails on this prompt.
+    Swapped `parse-lore-file` specifically to `claude-sonnet-4-6`.
+  - **Pre-existing, not fixed:** accepting an "update"-type Lore Inbox
+    suggestion (`LoreInboxPage.tsx`) computes `fieldsToWrite` from the AI's
+    `at_a_glance` payload but never writes it to the entity in the merge
+    branch — only `sections` get merged, and the background
+    `merge-entity-sections` call only fires when the suggestion also
+    contains prose `sections`. Field-only updates are silently dropped.
+
+# Phase 5d: cutover
+
+- Merged `phase5c-cutover-prep` → `main` (fast-forward); Vercel's GitHub
+  integration auto-deployed it to production, confirmed Ready.
+- Added `app.fyrescribe.com` and `fyrescribe.com` to the Vercel project.
+  `fyrescribe.com` is configured as a 308 redirect to `app.fyrescribe.com`
+  (it was never a working domain — no DNS records existed for it before
+  this migration).
+- Namecheap DNS (A `@` → `216.198.79.1`, CNAME `app` →
+  `92e31278610fee92.vercel-dns-017.com.`) set by Lee. Verified via
+  1.1.1.1/8.8.8.8 and `curl --resolve` against both target IPs: `app.`
+  serves the Vercel app (200, `server: Vercel`), apex 308s to `app.`.
+  Confirmed live: signed in as `batheinradiowavs@gmail.com`, real projects
+  load correctly.
+- Removed `app.fyrescribe.com` from the Lovable project's connected
+  domains. Deleted the `_lovable.app.fyrescribe.com` TXT verification
+  record in Namecheap.
+- Re-ran the anonymous audit post-cutover: unchanged, all passes.
+- `nightly-backup.yml` could not be run from this session (Claude Code's
+  own safety classifier blocks triggering a workflow that dumps the full
+  DB to an artifact) — `keep-alive.yml` ran successfully. Run
+  `nightly-backup.yml` manually once (Actions tab → Run workflow) to
+  confirm it works end to end.
+
+## Rollback
+
+- **DNS**: revert the `app` CNAME and apex `A` record at Namecheap to
+  whatever they pointed at before this migration (Lovable's values — not
+  recorded here since `app.fyrescribe.com` was the only one configured and
+  its prior value wasn't captured before the switch). Re-add
+  `app.fyrescribe.com` to the Lovable project's domains and restore the
+  `_lovable.app.fyrescribe.com` TXT record (Lovable will show the exact
+  value to re-add during reconnection).
+- **App**: the `main` branch before this migration is commit `caf210e`.
+  `git revert` or redeploy that commit's Vercel build if the new app code
+  needs to be rolled back independently of DNS.
+- **Backend**: the old Lovable-managed project (`bedrzyekoynnzdeblunt`)
+  was never written to during this migration — it's untouched and still
+  has all original data, so rollback at the DNS level alone fully restores
+  the pre-migration state. The new `fyrescribe` Supabase project can be
+  left running (nightly backups via GitHub Actions) or paused once the
+  cutover is confirmed stable.
