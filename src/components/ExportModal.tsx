@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { FileText, BookOpen, Package, Download, Loader2, X } from "lucide-react";
-import { exportManuscript } from "@/lib/exportManuscript";
-import { exportLore } from "@/lib/exportLore";
 
 type ExportOption = "manuscript" | "lore" | "everything";
 
@@ -46,10 +44,13 @@ const ExportModal = ({ projectId, projectTitle, onClose }: ExportModalProps) => 
     setExporting(true);
     setError(null);
     try {
+      // Export libraries (docx) are loaded on demand to keep them out of the main bundle.
       if (selected === "manuscript" || selected === "everything") {
+        const { exportManuscript } = await import("@/lib/exportManuscript");
         await exportManuscript(projectId, projectTitle);
       }
       if (selected === "lore" || selected === "everything") {
+        const { exportLore } = await import("@/lib/exportLore");
         await exportLore(projectId, projectTitle);
       }
       onClose();

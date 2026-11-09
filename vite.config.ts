@@ -21,6 +21,18 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          // Split rarely-changing libraries into their own long-cached chunks,
+          // so a deploy that only touches app code doesn't re-download them.
+          manualChunks: {
+            react: ["react", "react-dom", "react-router-dom"],
+            supabase: ["@supabase/supabase-js"],
+          },
+        },
+      },
+    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),

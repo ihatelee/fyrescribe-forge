@@ -2,10 +2,11 @@
 
 ## Repo & Services
 
-- **Repo**: [github.com/ihatelee/fyrescribe](https://github.com/ihatelee/fyrescribe)
-- **Supabase project ref**: `bedrzyekoynnzdeblunt`
+- **Repo**: [github.com/ihatelee/fyrescribe-forge](https://github.com/ihatelee/fyrescribe-forge)
+- **Supabase project ref**: `kxryozryqbajtgrfystu` (old Lovable project `bedrzyekoynnzdeblunt` is retired — never target it)
+- **Hosting**: Vercel (auto-deploys `main`); app at app.fyrescribe.com
 - **Supabase credentials**: `src/integrations/supabase/client.ts`; generated types: `src/integrations/supabase/types.ts`
-- **AI model**: `claude-sonnet-4-20250514` (edge functions)
+- **AI models** (edge functions): `claude-sonnet-4-5-20250929` (most), `claude-sonnet-4-6` (parse-lore-file), `claude-haiku-4-5-20251001` (version summaries)
 
 ## Tech Stack
 

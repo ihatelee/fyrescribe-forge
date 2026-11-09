@@ -648,7 +648,9 @@ const ManuscriptPage = () => {
         );
       }
     },
-    1000
+    1000,
+    // Debounce per scene so switching scenes never cancels the previous scene's pending save.
+    (sceneId: string) => sceneId
   );
 
   // ─── Versioning ─────────────────────────────────────────────────────

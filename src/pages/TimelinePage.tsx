@@ -234,11 +234,14 @@ const TimelinePage = () => {
     if (selectedIds.size === 0) return;
     setBulkBusy(true);
     const ids = [...selectedIds];
-    for (const id of ids) {
-      await supabase.from("timeline_events").delete().eq("id", id);
+    // One request instead of one per event; only drop rows from the UI if the delete succeeded.
+    const { error } = await supabase.from("timeline_events").delete().in("id", ids);
+    if (error) {
+      console.error("Failed to delete timeline events:", error);
+    } else {
+      setEvents((prev) => prev.filter((e) => !selectedIds.has(e.id)));
+      setSelectedIds(new Set());
     }
-    setEvents((prev) => prev.filter((e) => !selectedIds.has(e.id)));
-    setSelectedIds(new Set());
     setBulkBusy(false);
   };
 

@@ -278,12 +278,21 @@ const EntityGalleryPage = () => {
     if (selectedIds.size === 0) return;
     setBulkBusy(true);
     const ids = [...selectedIds];
-    for (const eid of ids) {
-      await supabase.from("entity_links").delete().or(`entity_a_id.eq.${eid},entity_b_id.eq.${eid}`);
-      await supabase.from("entities").delete().eq("id", eid);
+    // Two requests total instead of two per entity; only drop rows from the UI if the delete succeeded.
+    const idList = ids.join(",");
+    const { error: linkErr } = await supabase
+      .from("entity_links")
+      .delete()
+      .or(`entity_a_id.in.(${idList}),entity_b_id.in.(${idList})`);
+    const { error } = linkErr
+      ? { error: linkErr }
+      : await supabase.from("entities").delete().in("id", ids);
+    if (error) {
+      console.error("Failed to delete entities:", error);
+    } else {
+      setEntities((prev) => prev.filter((ent) => !selectedIds.has(ent.id)));
+      setSelectedIds(new Set());
     }
-    setEntities((prev) => prev.filter((ent) => !selectedIds.has(ent.id)));
-    setSelectedIds(new Set());
     setBulkBusy(false);
   };
 
