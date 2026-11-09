@@ -49,6 +49,8 @@ const EntityVersionHistoryPanel = ({
     let cancelled = false;
     let isInitial = true;
     const load = async () => {
+      // Skip background polls while the tab is hidden.
+      if (!isInitial && document.visibilityState === "hidden") return;
       if (isInitial) setLoading(true);
       const { data, error } = await supabase
         .from("entity_versions")
@@ -57,7 +59,8 @@ const EntityVersionHistoryPanel = ({
         .order("created_at", { ascending: false });
       if (!cancelled) {
         if (error) console.error("Failed to load entity versions:", error);
-        setVersions((data as unknown as EntityVersion[]) ?? []);
+        // Keep the current list on a failed poll instead of flashing it empty.
+        else setVersions((data as unknown as EntityVersion[]) ?? []);
         if (isInitial) {
           setLoading(false);
           isInitial = false;

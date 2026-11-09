@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -12,16 +13,41 @@ import GlobalSparkle from "./components/GlobalSparkle";
 import OutrunGlobals from "./components/OutrunGlobals";
 import AmbianceAudioGate from "./components/AmbianceAudioGate";
 import AuthPage from "./pages/AuthPage";
-import ProjectsPage from "./pages/ProjectsPage";
-import OnboardingPage from "./pages/OnboardingPage";
-import ManuscriptPage from "./pages/ManuscriptPage";
-import EntityGalleryPage from "./pages/EntityGalleryPage";
-import EntityDetailPage from "./pages/EntityDetailPage";
-import TimelinePage from "./pages/TimelinePage";
-import POVTrackerPage from "./pages/POVTrackerPage";
-import LoreInboxPage from "./pages/LoreInboxPage";
-import NotesPage from "./pages/NotesPage";
-import NotFound from "./pages/NotFound";
+
+// Route-level code splitting: each page ships as its own chunk instead of one
+// 1.5 MB bundle. All chunks are prefetched in the background once the browser
+// is idle, so in-app navigation stays instant after the first load.
+const pageLoaders = {
+  projects: () => import("./pages/ProjectsPage"),
+  onboarding: () => import("./pages/OnboardingPage"),
+  manuscript: () => import("./pages/ManuscriptPage"),
+  gallery: () => import("./pages/EntityGalleryPage"),
+  entity: () => import("./pages/EntityDetailPage"),
+  timeline: () => import("./pages/TimelinePage"),
+  pov: () => import("./pages/POVTrackerPage"),
+  loreInbox: () => import("./pages/LoreInboxPage"),
+  notes: () => import("./pages/NotesPage"),
+  notFound: () => import("./pages/NotFound"),
+};
+const ProjectsPage = lazy(pageLoaders.projects);
+const OnboardingPage = lazy(pageLoaders.onboarding);
+const ManuscriptPage = lazy(pageLoaders.manuscript);
+const EntityGalleryPage = lazy(pageLoaders.gallery);
+const EntityDetailPage = lazy(pageLoaders.entity);
+const TimelinePage = lazy(pageLoaders.timeline);
+const POVTrackerPage = lazy(pageLoaders.pov);
+const LoreInboxPage = lazy(pageLoaders.loreInbox);
+const NotesPage = lazy(pageLoaders.notes);
+const NotFound = lazy(pageLoaders.notFound);
+
+const prefetchPages = () => {
+  for (const load of Object.values(pageLoaders)) load().catch(() => {});
+};
+if (typeof window !== "undefined") {
+  const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+  if (w.requestIdleCallback) w.requestIdleCallback(prefetchPages);
+  else setTimeout(prefetchPages, 1500);
+}
 
 const queryClient = new QueryClient();
 
@@ -38,6 +64,7 @@ const App = () => (
           <BrowserRouter>
             <AmbianceAudioGate />
             <OnboardingProvider>
+              <Suspense fallback={null}>
               <Routes>
                 <Route path="/" element={<AuthPage />} />
                 <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
@@ -53,6 +80,7 @@ const App = () => (
                 <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </Suspense>
             </OnboardingProvider>
           </BrowserRouter>
         </TooltipProvider>

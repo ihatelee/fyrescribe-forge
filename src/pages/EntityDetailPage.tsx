@@ -645,18 +645,20 @@ const EntityDetailInner = () => {
 
   // ─── Auto-save sections ──────────────────────────────────────────
 
-  const saveSectionsToDb = useDebouncedCallback(async (newSections: EntitySections) => {
-    if (!id) return;
+  // The entity id is captured at call time (not read at fire time), so navigating
+  // to another entity within the debounce window can't write these sections to it.
+  const saveSectionsToDb = useDebouncedCallback(async (entityId: string, newSections: EntitySections) => {
     const { error } = await supabase
-      .from("entities").update({ sections: newSections as Json }).eq("id", id);
+      .from("entities").update({ sections: newSections as Json }).eq("id", entityId);
     if (error) console.error("Failed to save sections:", error);
-  }, 1000);
+  }, 1000, (entityId: string) => entityId);
 
   const handleSectionInput = useCallback((sectionName: string, content: string) => {
+    if (!id) return;
     const updated = { ...sectionsRef.current, [sectionName]: content };
     sectionsRef.current = updated;
-    saveSectionsToDb(updated);
-  }, [saveSectionsToDb]);
+    saveSectionsToDb(id, updated);
+  }, [id, saveSectionsToDb]);
 
   // ─── Story History (character only, AI-generated) ──────────────────
 

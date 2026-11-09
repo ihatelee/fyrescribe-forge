@@ -125,6 +125,10 @@ const NotesPage = () => {
       );
     },
     800,
+    // Debounce per note + field, so a title edit and a body edit made close
+    // together both save, and switching notes never drops a pending save.
+    (noteId: string, patch: { title?: string; content?: string }) =>
+      `${noteId}:${Object.keys(patch).sort().join(",")}`,
   );
 
   // ─── Selection ──────────────────────────────────────────────────────

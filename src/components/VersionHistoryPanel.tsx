@@ -49,6 +49,8 @@ const VersionHistoryPanel = ({
     let cancelled = false;
     let isInitial = true;
     const load = async () => {
+      // Skip background polls while the tab is hidden.
+      if (!isInitial && document.visibilityState === "hidden") return;
       if (isInitial) setLoading(true);
       const { data, error } = await supabase
         .from("scene_versions")
@@ -57,7 +59,8 @@ const VersionHistoryPanel = ({
         .order("created_at", { ascending: false });
       if (!cancelled) {
         if (error) console.error("Failed to load versions:", error);
-        setVersions((data as SceneVersion[]) ?? []);
+        // Keep the current list on a failed poll instead of flashing it empty.
+        else setVersions((data as SceneVersion[]) ?? []);
         if (isInitial) {
           setLoading(false);
           isInitial = false;

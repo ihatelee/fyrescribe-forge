@@ -4,6 +4,22 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-11-09 — Post-migration audit: speed + reliability (no design or feature changes)
+
+- `src/hooks/use-debounce.ts` — Autosave hook now **flushes** pending saves on unmount, tab hide, and pagehide (previously dropped them — edits in the last ~1 s before navigating away were lost). Added optional per-key debouncing so saves for different records never cancel each other. Tests: `src/hooks/use-debounce.test.ts`.
+- `ManuscriptPage.tsx` — `saveScene` debounced per scene (switching scenes within 1 s no longer drops the previous scene's save).
+- `NotesPage.tsx` — `persistNote` debounced per note + field (a title edit followed by a body edit within 800 ms no longer drops the title; switching notes no longer drops a pending save).
+- `EntityDetailPage.tsx` — `saveSectionsToDb` takes the entity id at call time (previously read at fire time — navigating to a linked entity within 1 s could write the old entity's sections onto the new one).
+- `App.tsx` — Route-level code splitting (`React.lazy`) with idle-time prefetch of all page chunks. `main.tsx` — one-time reload on `vite:preloadError` so open tabs recover after a deploy.
+- `ExportModal.tsx` — `docx` export code loaded on demand. `vite.config.ts` — React and Supabase split into long-cached vendor chunks. Initial JS: 1,503 kB → ~800 kB (429 → ~238 kB gzip).
+- `TimelinePage.tsx`, `EntityGalleryPage.tsx` — Bulk delete is one request (two for entities) instead of one per row; rows are removed from the UI only if the delete succeeds.
+- `VersionHistoryPanel.tsx`, `EntityVersionHistoryPanel.tsx` — 4 s poll pauses while the tab is hidden; a failed poll keeps the current list instead of blanking it.
+- `index.html` — Removed Lovable author / twitter:site meta and a leftover TODO.
+- `CLAUDE.md` — Supabase ref updated to the new project (`kxryozryqbajtgrfystu`), repo link and model list corrected.
+- Verified: `vite build`, `tsc -p tsconfig.app.json --noEmit` (0), `vitest run` (7/7).
+
+---
+
 ## 2026-06-12 — Audit cleanup: sync-mentions auth, LinkLoreModal types, CLAUDE.md project ref
 
 - `supabase/functions/sync-mentions/index.ts` — Auth switched from `getClaims(token)` to `getUser()`, matching every other edge function. `getUser()` validates the session against the auth server (catches revoked sessions); `getClaims` only validated the JWT locally. `userId` now comes from `user.id` instead of `claims.sub`; the unused `token` variable removed. Handler structure, 401 path, and ownership check unchanged.
