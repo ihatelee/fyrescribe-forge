@@ -666,11 +666,12 @@ const EntityDetailInner = () => {
         saveFailureToastRef.current = toast({
           description: (
             <span className="flex items-center gap-1.5">
-              <AlertTriangle size={14} className="flex-shrink-0" />
+              <AlertTriangle size={14} className="flex-shrink-0 text-destructive" />
               Couldn't save changes. Retrying…
             </span>
           ),
-          variant: "destructive",
+          // Approved design: raised dark card with a soft ember border, not a solid red fill.
+          className: "bg-fyrescribe-raised border-destructive/45 text-foreground",
           duration: Infinity,
         });
       }
