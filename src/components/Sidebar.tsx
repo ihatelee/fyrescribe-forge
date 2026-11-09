@@ -6,9 +6,11 @@ import { useActiveProject } from "@/contexts/ProjectContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import LoreSearchModal from "@/components/LoreSearchModal";
-import LinkLoreModal from "@/components/LinkLoreModal";
-import SyncMentionsModal, { type NewMention } from "@/components/SyncMentionsModal";
-import SyncTagsModal, { type TagSuggestion } from "@/components/SyncTagsModal";
+import {
+  LORE_INBOX_CHANGED,
+  notifyLoreInboxChanged,
+  type InboxTab,
+} from "@/components/lore-inbox/shared";
 
 const WRITE_KEYS = ["manuscript", "timeline", "pov"] as const;
 const WRITE_LABELS: Record<string, string> = {
@@ -68,11 +70,6 @@ const Sidebar = () => {
   const [syncingTags, setSyncingTags] = useState(false);
   const [tagsMessage, setTagsMessage] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [linkLoreModalOpen, setLinkLoreModalOpen] = useState(false);
-  const [mentionsModalOpen, setMentionsModalOpen] = useState(false);
-  const [newMentions, setNewMentions] = useState<NewMention[]>([]);
-  const [tagsModalOpen, setTagsModalOpen] = useState(false);
-  const [tagSuggestions, setTagSuggestions] = useState<TagSuggestion[]>([]);
 
   const fetchPendingCount = useCallback(async () => {
     if (!activeProject) {
@@ -113,6 +110,19 @@ const Sidebar = () => {
   useEffect(() => {
     fetchPendingCount();
   }, [fetchPendingCount]);
+
+  // Badge follows reviews made in the Lore Inbox.
+  useEffect(() => {
+    const onChanged = () => fetchPendingCount();
+    window.addEventListener(LORE_INBOX_CHANGED, onChanged);
+    return () => window.removeEventListener(LORE_INBOX_CHANGED, onChanged);
+  }, [fetchPendingCount]);
+
+  // After a sync, show its results in the matching Lore Inbox tab.
+  const openInboxTab = (tab: InboxTab) => {
+    notifyLoreInboxChanged({ reload: true });
+    navigate(`/lore-inbox?tab=${tab}`);
+  };
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -160,6 +170,7 @@ const Sidebar = () => {
         await handleSyncTagsInner();
         await fetchPendingCount();
       }
+      notifyLoreInboxChanged({ reload: true });
     } catch {
       setMsg(force ? "Full Sync failed" : "Sync failed");
     } finally {
@@ -170,14 +181,13 @@ const Sidebar = () => {
   };
 
   const handleSyncMentionsInner = async () => {
-    if (!activeProject) return { found: undefined, fresh: [] as NewMention[] };
+    if (!activeProject) return { found: undefined as number | undefined };
     const { data, error } = await supabase.functions.invoke("sync-mentions", {
       body: { project_id: activeProject.id },
     });
     if (error) throw error;
     return {
       found: data?.mentions_found as number | undefined,
-      fresh: (data?.new_mentions as NewMention[]) ?? [],
     };
   };
 
@@ -186,13 +196,12 @@ const Sidebar = () => {
     setSyncingMentions(true);
     setMentionsMessage(null);
     try {
-      const { found, fresh } = await handleSyncMentionsInner();
+      const { found } = await handleSyncMentionsInner();
       setMentionsMessage(
         found != null ? `Found ${found} mention${found !== 1 ? "s" : ""}` : "Done",
       );
-      setNewMentions(fresh);
-      setMentionsModalOpen(true);
       await fetchPendingCount();
+      openInboxTab("mentions");
     } catch {
       setMentionsMessage("Sync failed");
     } finally {
@@ -210,13 +219,13 @@ const Sidebar = () => {
     return data?.suggestions_created as number | undefined;
   };
 
-  const handleSyncTagsInner = async (): Promise<TagSuggestion[]> => {
+  const handleSyncTagsInner = async (): Promise<unknown[]> => {
     if (!activeProject) return [];
     const { data, error } = await supabase.functions.invoke("sync-tags", {
       body: { project_id: activeProject.id },
     });
     if (error) throw error;
-    return (data?.suggestions as TagSuggestion[]) ?? [];
+    return (data?.suggestions as unknown[]) ?? [];
   };
 
   const handleSyncTags = async () => {
@@ -228,9 +237,8 @@ const Sidebar = () => {
       setTagsMessage(
         `${suggestions.length} suggestion${suggestions.length !== 1 ? "s" : ""}`,
       );
-      setTagSuggestions(suggestions);
-      setTagsModalOpen(true);
       await fetchPendingCount();
+      openInboxTab("tags");
     } catch {
       setTagsMessage("Sync failed");
     } finally {
@@ -248,8 +256,8 @@ const Sidebar = () => {
       setLinkLoreMessage(
         created != null ? `Found ${created} suggested link${created !== 1 ? "s" : ""}` : "Done",
       );
-      setLinkLoreModalOpen(true);
       await fetchPendingCount();
+      openInboxTab("connections");
     } catch {
       setLinkLoreMessage("Sync Connections failed");
     } finally {
@@ -464,34 +472,6 @@ const Sidebar = () => {
     </div>
 
     <LoreSearchModal open={searchOpen} onOpenChange={setSearchOpen} />
-    {linkLoreModalOpen && activeProject && (
-      <LinkLoreModal
-        projectId={activeProject.id}
-        onClose={() => {
-          setLinkLoreModalOpen(false);
-          fetchPendingCount();
-        }}
-      />
-    )}
-    {mentionsModalOpen && activeProject && (
-      <SyncMentionsModal
-        projectId={activeProject.id}
-        mentions={newMentions}
-        onClose={() => {
-          setMentionsModalOpen(false);
-          fetchPendingCount();
-        }}
-      />
-    )}
-    {tagsModalOpen && (
-      <SyncTagsModal
-        suggestions={tagSuggestions}
-        onClose={() => {
-          setTagsModalOpen(false);
-          fetchPendingCount();
-        }}
-      />
-    )}
     </>
   );
 };
