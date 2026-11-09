@@ -4,7 +4,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil, Loader2, Sparkles, History, Save, ChevronDown } from "lucide-react";
+import { runSave, useSaveStatus } from "@/lib/saveStatus";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Plus, X, Image as ImageIcon, Upload, ZoomIn, Search, MoreVertical, Trash2, Check, Pencil, Loader2, Sparkles, History, Save, ChevronDown, AlertTriangle } from "lucide-react";
 import type { Json, Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import AppearanceLog from "@/components/AppearanceLog";
@@ -648,10 +650,35 @@ const EntityDetailInner = () => {
   // The entity id is captured at call time (not read at fire time), so navigating
   // to another entity within the debounce window can't write these sections to it.
   const saveSectionsToDb = useDebouncedCallback(async (entityId: string, newSections: EntitySections) => {
-    const { error } = await supabase
-      .from("entities").update({ sections: newSections as Json }).eq("id", entityId);
+    const { error } = await runSave(`entity:${entityId}:sections`, () =>
+      supabase.from("entities").update({ sections: newSections as Json }).eq("id", entityId),
+    );
     if (error) console.error("Failed to save sections:", error);
   }, 1000, (entityId: string) => entityId);
+
+  const { failing: entitySaveFailing } = useSaveStatus(id ? `entity:${id}:` : "\u0000no-entity");
+
+  const { toast } = useToast();
+  const saveFailureToastRef = useRef<ReturnType<typeof toast> | null>(null);
+  useEffect(() => {
+    if (entitySaveFailing) {
+      if (!saveFailureToastRef.current) {
+        saveFailureToastRef.current = toast({
+          description: (
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle size={14} className="flex-shrink-0" />
+              Couldn't save changes. Retrying…
+            </span>
+          ),
+          variant: "destructive",
+          duration: Infinity,
+        });
+      }
+    } else if (saveFailureToastRef.current) {
+      saveFailureToastRef.current.dismiss();
+      saveFailureToastRef.current = null;
+    }
+  }, [entitySaveFailing, toast]);
 
   const handleSectionInput = useCallback((sectionName: string, content: string) => {
     if (!id) return;

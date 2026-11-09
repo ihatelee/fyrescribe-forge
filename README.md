@@ -10,7 +10,7 @@ Fyrescribe is a dark, atmospheric web app for fantasy writers to manage their ma
 - **World & Lore** — 9 entity categories: Characters, Places, Events, History, Artifacts, Creatures, Magic, Factions, Doctrine
 - **Entity Detail Pages** — Wikipedia-style with At a Glance fields, rich text sections, gallery, and linked entities
 - **Lore Entry Upload** — upload a PDF or TXT character/lore sheet and auto-populate an entity page via AI extraction
-- **AI Lore Sync** — daily or manual sync scans your manuscript scenes and surfaces new entities, field updates, and contradictions
+- **AI Lore Sync** — on-demand sync scans your manuscript scenes and surfaces new entities, field updates, and contradictions
 - **Lore Inbox** — review, accept, edit, or reject AI-suggested lore changes
 - **Timeline** — generate and manage a visual timeline linked to world entities
 - **6 Color Themes** — customisable dark atmospheric themes
