@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Search, StickyNote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/contexts/ProjectContext";
@@ -149,15 +150,28 @@ const Sidebar = () => {
       });
       if (error) throw error;
 
-      const results: { scenes_processed?: number; suggestions_created?: number }[] =
-        data?.results ?? [];
+      const results: {
+        scenes_processed?: number;
+        suggestions_created?: number;
+        refused_scenes?: { scene_id: string; name: string; category: string }[];
+      }[] = data?.results ?? [];
       const scenesProcessed = results.reduce((s, r) => s + (r.scenes_processed ?? 0), 0);
       const created = results.reduce((s, r) => s + (r.suggestions_created ?? 0), 0);
+      const refusedScenes = results.flatMap((r) => r.refused_scenes ?? []);
+
+      if (refusedScenes.length > 0) {
+        const names = refusedScenes.map((s) => s.name).join(", ");
+        toast.error(
+          `The AI declined to process ${refusedScenes.length} scene${refusedScenes.length !== 1 ? "s" : ""}: ${names}`,
+        );
+      }
 
       if (scenesProcessed === 0) {
         setMsg("No edited scenes");
       } else if (created > 0) {
         setMsg(`${created} new suggestion${created !== 1 ? "s" : ""}`);
+      } else if (refusedScenes.length > 0) {
+        setMsg(`${scenesProcessed} scene${scenesProcessed !== 1 ? "s" : ""} processed, ${refusedScenes.length} declined by AI`);
       } else {
         setMsg(`${scenesProcessed} scene${scenesProcessed !== 1 ? "s" : ""} processed, 0 suggestions`);
       }
@@ -211,21 +225,32 @@ const Sidebar = () => {
   };
 
   const handleLinkLoreInner = async () => {
-    if (!activeProject) return;
+    if (!activeProject) return { created: undefined as number | undefined };
     const { data, error } = await supabase.functions.invoke("link-lore", {
       body: { project_id: activeProject.id },
     });
     if (error) throw error;
-    return data?.suggestions_created as number | undefined;
+    if (data?.refused) {
+      toast.error(data.message);
+      return { created: undefined as number | undefined, refused: true };
+    }
+    if (data?.field_tagging_refused) {
+      toast.error(data.field_tagging_refused.message);
+    }
+    return { created: data?.suggestions_created as number | undefined };
   };
 
-  const handleSyncTagsInner = async (): Promise<unknown[]> => {
-    if (!activeProject) return [];
+  const handleSyncTagsInner = async (): Promise<{ suggestions: unknown[]; refused?: boolean }> => {
+    if (!activeProject) return { suggestions: [] };
     const { data, error } = await supabase.functions.invoke("sync-tags", {
       body: { project_id: activeProject.id },
     });
     if (error) throw error;
-    return (data?.suggestions as unknown[]) ?? [];
+    if (data?.refused) {
+      toast.error(data.refused.message);
+      return { suggestions: (data?.suggestions as unknown[]) ?? [], refused: true };
+    }
+    return { suggestions: (data?.suggestions as unknown[]) ?? [] };
   };
 
   const handleSyncTags = async () => {
@@ -233,9 +258,11 @@ const Sidebar = () => {
     setSyncingTags(true);
     setTagsMessage(null);
     try {
-      const suggestions = await handleSyncTagsInner();
+      const { suggestions, refused } = await handleSyncTagsInner();
       setTagsMessage(
-        `${suggestions.length} suggestion${suggestions.length !== 1 ? "s" : ""}`,
+        refused
+          ? "AI declined this pass"
+          : `${suggestions.length} suggestion${suggestions.length !== 1 ? "s" : ""}`,
       );
       await fetchPendingCount();
       openInboxTab("tags");
@@ -252,9 +279,13 @@ const Sidebar = () => {
     setLinkingLore(true);
     setLinkLoreMessage(null);
     try {
-      const created = await handleLinkLoreInner();
+      const { created, refused } = await handleLinkLoreInner();
       setLinkLoreMessage(
-        created != null ? `Found ${created} suggested link${created !== 1 ? "s" : ""}` : "Done",
+        refused
+          ? "AI declined this request"
+          : created != null
+            ? `Found ${created} suggested link${created !== 1 ? "s" : ""}`
+            : "Done",
       );
       await fetchPendingCount();
       openInboxTab("connections");

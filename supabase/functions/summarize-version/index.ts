@@ -1,7 +1,8 @@
 // Generate a one-line summary of the changes between a previous scene version
 // and the just-saved version.
 
-import { fetchAnthropic } from "../_shared/anthropic.ts";
+import { checkRefusal, extractText, fetchAnthropic, logRefusal, refusalPayload } from "../_shared/anthropic.ts";
+import { CLAUDE_HAIKU_MODEL } from "../_shared/models.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
     // Fetch the version (RLS-safe).
     const { data: version, error: vErr } = await userClient
       .from("scene_versions")
-      .select("id, scene_id, content, created_at")
+      .select("id, scene_id, content, created_at, scenes:scene_id ( title )")
       .eq("id", versionId)
       .maybeSingle();
 
@@ -69,6 +70,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // deno-lint-ignore no-explicit-any
+    const sceneTitle = (version as any).scenes?.title ?? "this scene";
 
     // Find previous version for the same scene to diff against.
     const { data: previous } = await userClient
@@ -118,8 +121,9 @@ One-sentence summary:`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 256,
+        model: CLAUDE_HAIKU_MODEL,
+        max_tokens: 1024,
+        output_config: { effort: "low" },
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -134,8 +138,15 @@ One-sentence summary:`;
     }
 
     const aiJson = await aiResp.json();
-    const summary: string =
-      aiJson?.content?.[0]?.text?.trim().replace(/^["']|["']$/g, "") ?? "";
+    const refusal = checkRefusal(aiJson);
+    if (refusal) {
+      logRefusal("summarize-version", { scene_id: version.scene_id, version_id: versionId }, refusal);
+      return new Response(JSON.stringify(refusalPayload(sceneTitle, refusal)), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const summary: string = extractText(aiJson?.content).replace(/^["']|["']$/g, "");
 
     if (summary) {
       const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

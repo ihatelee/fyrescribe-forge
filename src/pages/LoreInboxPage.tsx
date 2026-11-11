@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import ConnectionsTab from "@/components/lore-inbox/ConnectionsTab";
 import MentionsTab from "@/components/lore-inbox/MentionsTab";
 import TagsTab from "@/components/lore-inbox/TagsTab";
@@ -587,6 +588,12 @@ const LoreInboxPage = () => {
           .then(({ data: mergeResult, error: mergeError }) => {
             if (mergeError) {
               console.error("[merge] edge function error:", mergeError);
+              toast.error("Couldn't merge the AI-generated content for this entry.");
+              return;
+            }
+            if (mergeResult?.refused) {
+              console.error("[merge] AI refused:", mergeResult);
+              toast.error(mergeResult.message);
               return;
             }
             const merged = mergeResult?.merged_sections as Record<string, string> | undefined;

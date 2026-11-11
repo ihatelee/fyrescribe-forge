@@ -1,4 +1,5 @@
-import { fetchAnthropic } from "../_shared/anthropic.ts";
+import { checkRefusal, extractText, fetchAnthropic, logRefusal, refusalPayload } from "../_shared/anthropic.ts";
+import { CLAUDE_SONNET_MODEL } from "../_shared/models.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -66,7 +67,7 @@ serve(async (req) => {
     // Verify caller owns the entity (RLS-enforced).
     const { data: entityRow, error: entityErr } = await userClient
       .from("entities")
-      .select("id")
+      .select("id, name")
       .eq("id", entity_id)
       .maybeSingle();
 
@@ -115,8 +116,9 @@ ${JSON.stringify(new_sections, null, 2)}
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 2048,
+        model: CLAUDE_SONNET_MODEL,
+        max_tokens: 4096,
+        output_config: { effort: "low" },
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -130,7 +132,15 @@ ${JSON.stringify(new_sections, null, 2)}
     }
 
     const aiJson = await aiRes.json();
-    const rawText: string = aiJson?.content?.[0]?.text?.trim() ?? "{}";
+    const refusal = checkRefusal(aiJson);
+    if (refusal) {
+      logRefusal("merge-entity-sections", { entity_id }, refusal);
+      return new Response(JSON.stringify(refusalPayload(entityRow.name ?? entity_id, refusal)), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const rawText: string = extractText(aiJson?.content) || "{}";
     const cleaned = rawText.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/, "").trim();
 
     let merged: Record<string, string>;

@@ -22,7 +22,7 @@ Fyrescribe is a dark, atmospheric web app for fantasy writers to manage their ma
 - Tailwind CSS
 - Supabase (database, auth, edge functions, storage)
 - Vite
-- Claude AI (claude-sonnet-4-20250514)
+- Claude AI (model IDs are not hardcoded — see `supabase/functions/_shared/models.ts`)
 
 ## Environment Variables
 

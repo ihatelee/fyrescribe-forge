@@ -1,4 +1,5 @@
-import { fetchAnthropic } from "../_shared/anthropic.ts";
+import { checkRefusal, extractText, fetchAnthropic, logRefusal, refusalPayload } from "../_shared/anthropic.ts";
+import { CLAUDE_SONNET_MODEL } from "../_shared/models.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -136,8 +137,9 @@ serve(async (req) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 2000,
+        model: CLAUDE_SONNET_MODEL,
+        max_tokens: 4096,
+        output_config: { effort: "medium" },
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -151,8 +153,17 @@ serve(async (req) => {
       });
     }
 
-    const aiResult: { content?: { text?: string }[] } = await response.json();
-    const rawText = aiResult.content?.[0]?.text ?? "[]";
+    // deno-lint-ignore no-explicit-any
+    const aiResult: any = await response.json();
+    const refusal = checkRefusal(aiResult);
+    if (refusal) {
+      logRefusal("check-continuity", { chapter_id, project_id }, refusal);
+      return new Response(
+        JSON.stringify(refusalPayload(chapter?.title || "this chapter", refusal)),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const rawText = extractText(aiResult.content) || "[]";
     const jsonText = rawText
       .replace(/^```json?\s*/i, "")
       .replace(/```\s*$/i, "")

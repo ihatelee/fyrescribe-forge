@@ -1,4 +1,5 @@
-import { fetchAnthropic } from "../_shared/anthropic.ts";
+import { checkRefusal, extractText, fetchAnthropic, logRefusal, refusalPayload } from "../_shared/anthropic.ts";
+import { CLAUDE_SONNET_MODEL } from "../_shared/models.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -229,8 +230,9 @@ Return ONLY a JSON object. No prose, no markdown fences, no explanation.`;
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: povScenes.length > 0 ? 4096 : 2048,
+        model: CLAUDE_SONNET_MODEL,
+        max_tokens: povScenes.length > 0 ? 8192 : 4096,
+        output_config: { effort: "medium" },
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -244,7 +246,15 @@ Return ONLY a JSON object. No prose, no markdown fences, no explanation.`;
     }
 
     const aiJson = await aiRes.json();
-    const rawText: string = aiJson?.content?.[0]?.text?.trim() ?? "{}";
+    const refusal = checkRefusal(aiJson);
+    if (refusal) {
+      logRefusal("generate-profile", { entity_id, mode }, refusal);
+      return new Response(JSON.stringify(refusalPayload(entity.name, refusal)), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const rawText: string = extractText(aiJson?.content) || "{}";
     const cleaned = rawText.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/, "").trim();
 
     let generatedSections: Record<string, string>;

@@ -1,4 +1,5 @@
-import { fetchAnthropic } from "../_shared/anthropic.ts";
+import { checkRefusal, extractText, fetchAnthropic, logRefusal, refusalPayload } from "../_shared/anthropic.ts";
+import { CLAUDE_SONNET_MODEL } from "../_shared/models.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -119,8 +120,9 @@ Include world history events and story-level events separately. ONLY include eve
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 1024,
+        model: CLAUDE_SONNET_MODEL,
+        max_tokens: 4096,
+        output_config: { effort: "medium" },
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -135,7 +137,15 @@ Include world history events and story-level events separately. ONLY include eve
     }
 
     const aiResult = await response.json();
-    const rawText = aiResult.content?.[0]?.text ?? "[]";
+    const refusal = checkRefusal(aiResult);
+    if (refusal) {
+      logRefusal("generate-timeline", { project_id }, refusal);
+      return new Response(JSON.stringify(refusalPayload("this project's timeline", refusal)), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const rawText = extractText(aiResult.content) || "[]";
 
     // Strip any accidental code fences
     const jsonText = rawText.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();

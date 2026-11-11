@@ -2,7 +2,8 @@
 // Additive: builds on existing history rather than replacing it.
 // Uses Anthropic Claude directly (migrated from Lovable AI gateway).
 
-import { fetchAnthropic } from "../_shared/anthropic.ts";
+import { checkRefusal, extractText, fetchAnthropic, logRefusal, refusalPayload } from "../_shared/anthropic.ts";
+import { CLAUDE_SONNET_MODEL } from "../_shared/models.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -140,8 +141,9 @@ If there is existing history, build on it additively — preserve what is alread
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 1024,
+        model: CLAUDE_SONNET_MODEL,
+        max_tokens: 4096,
+        output_config: { effort: "medium" },
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       }),
@@ -163,8 +165,15 @@ If there is existing history, build on it additively — preserve what is alread
     }
 
     const aiJson = await aiRes.json();
-    const generated: string =
-      aiJson?.content?.[0]?.text?.trim() ?? "";
+    const refusal = checkRefusal(aiJson);
+    if (refusal) {
+      logRefusal("generate-story-history", { entity_id: entityId }, refusal);
+      return new Response(JSON.stringify(refusalPayload(entity.name, refusal)), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const generated: string = extractText(aiJson?.content);
 
     if (!generated) {
       return new Response(JSON.stringify({ error: "Empty AI response" }), {

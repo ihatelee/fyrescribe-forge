@@ -1,4 +1,11 @@
-import { fetchAnthropic } from "../_shared/anthropic.ts";
+import {
+  checkRefusal,
+  extractText as extractResponseText,
+  fetchAnthropic,
+  logRefusal,
+  refusalPayload,
+} from "../_shared/anthropic.ts";
+import { CLAUDE_SONNET_MODEL } from "../_shared/models.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { extractText } from "https://esm.sh/unpdf@0.11.0";
@@ -124,8 +131,9 @@ serve(async (req) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 2048,
+        model: CLAUDE_SONNET_MODEL,
+        max_tokens: 4096,
+        output_config: { effort: "low" },
         system:
           "You are a lore extraction assistant for a fantasy world-building app called Fyrescribe.\n" +
           "Extract structured fields from the provided document and map them to the exact field\n" +
@@ -183,7 +191,15 @@ serve(async (req) => {
     }
 
     const aiResult = await response.json();
-    const rawText: string = aiResult.content?.[0]?.text ?? "{}";
+    const refusal = checkRefusal(aiResult);
+    if (refusal) {
+      logRefusal("parse-lore-file", { file_name: file.name, category }, refusal);
+      return new Response(
+        JSON.stringify(refusalPayload(file.name, refusal)),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const rawText: string = extractResponseText(aiResult.content) || "{}";
 
     // Strip accidental code fences
     const jsonText = rawText

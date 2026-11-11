@@ -23,6 +23,72 @@ function backoffMs(attempt: number, res?: Response): number {
   return attempt === 1 ? 1_000 : 3_000;
 }
 
+// Claude Sonnet 5.5 / Haiku 5.5 responses can begin with one or more
+// `thinking` blocks (adaptive thinking runs by default when `thinking` is
+// omitted) — never read content[0].text. Join every `text` block instead.
+// deno-lint-ignore no-explicit-any
+export function extractText(content: any): string {
+  if (!Array.isArray(content)) return "";
+  return content
+    .filter((b) => b && typeof b === "object" && b.type === "text" && typeof b.text === "string")
+    .map((b) => b.text)
+    .join("\n")
+    .trim();
+}
+
+// A decline is a normal HTTP 200 with stop_reason "refusal" — check before
+// reading content. Returns the refusal detail, or null when the response
+// isn't a refusal.
+export interface RefusalDetail {
+  category: string;
+  stop_details: unknown;
+}
+
+export function checkRefusal(
+  // deno-lint-ignore no-explicit-any
+  result: { stop_reason?: string; stop_details?: unknown } | any,
+): RefusalDetail | null {
+  if (result?.stop_reason !== "refusal") return null;
+  return {
+    // deno-lint-ignore no-explicit-any
+    category: (result?.stop_details as any)?.category ?? "unknown",
+    stop_details: result?.stop_details ?? null,
+  };
+}
+
+// Logs a refusal with the function name, whatever identifiers the caller has
+// (scene id, entity id, chapter id, project id, ...), and the full stop_details.
+export function logRefusal(
+  fnName: string,
+  ids: Record<string, unknown>,
+  refusal: RefusalDetail,
+): void {
+  console.error(
+    `[${fnName}] Anthropic refused:`,
+    JSON.stringify({ ...ids, category: refusal.category, stop_details: refusal.stop_details }),
+  );
+}
+
+// Standard body for a refused request so the frontend can show a specific,
+// named message instead of a generic failure. Always sent with HTTP 200 —
+// a refusal is a normal outcome, not a server error — so `supabase-js`
+// surfaces it on `data`, not `error`.
+export interface RefusalPayload {
+  refused: true;
+  message: string;
+  name: string;
+  category: string;
+}
+
+export function refusalPayload(name: string, refusal: RefusalDetail): RefusalPayload {
+  return {
+    refused: true,
+    message: `The AI declined to process "${name}".`,
+    name,
+    category: refusal.category,
+  };
+}
+
 export async function fetchAnthropic(init: RequestInit): Promise<Response> {
   const started = Date.now();
   let lastError: unknown;

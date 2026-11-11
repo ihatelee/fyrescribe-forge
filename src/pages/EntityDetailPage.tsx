@@ -700,6 +700,12 @@ const EntityDetailInner = () => {
       );
       if (error) {
         console.error("Story history generation failed:", error);
+        toast({ description: "Story history generation failed. Please try again.", variant: "destructive" });
+        return;
+      }
+      if (data?.refused) {
+        console.error("Story history generation refused:", data);
+        toast({ description: data.message, variant: "destructive" });
         return;
       }
       const html = (data as { html?: string } | null)?.html ?? "";
@@ -718,7 +724,7 @@ const EntityDetailInner = () => {
     } finally {
       setGeneratingHistory(false);
     }
-  }, [id, generatingHistory]);
+  }, [id, generatingHistory, toast]);
 
   const handleDeleteStoryHistory = useCallback(async () => {
     if (!id) return;
@@ -802,6 +808,16 @@ const EntityDetailInner = () => {
       if (data?.id) {
         supabase.functions
           .invoke("summarize-entity-version", { body: { versionId: data.id } })
+          .then(({ data: summaryData, error: summaryError }) => {
+            if (summaryError) {
+              console.error("Summarize entity version failed:", summaryError);
+              return;
+            }
+            if (summaryData?.refused) {
+              console.error("Summarize entity version refused:", summaryData);
+              toast({ description: summaryData.message, variant: "destructive" });
+            }
+          })
           .catch((e) => console.error("Summarize entity version failed:", e));
       }
       if (!opts?.silent) {
@@ -809,7 +825,7 @@ const EntityDetailInner = () => {
         setTimeout(() => setVersionSavedNotice(false), 2500);
       }
     },
-    [id, projectId, fields, summary],
+    [id, projectId, fields, summary, toast],
   );
 
   const restoreEntityVersion = useCallback(
@@ -870,6 +886,11 @@ const EntityDetailInner = () => {
           setProfileNotice("Profile generation failed. Please try again.");
         }
         console.error("Profile generation failed:", error);
+        return;
+      }
+      if (data?.refused) {
+        console.error("Profile generation refused:", data);
+        setProfileNotice(data.message);
         return;
       }
       const payload = data as { sections?: Record<string, string>; summary?: string } | null;

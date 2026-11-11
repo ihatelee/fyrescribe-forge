@@ -145,6 +145,10 @@ rewrites them — out of scope for this phase.
 - `claude-sonnet-4-20250514` is retired (404s). Swapped to
   `claude-sonnet-4-5-20250929` in the 10 functions that referenced it
   (model string only). `claude-haiku-4-5-20251001` still works unchanged.
+  (Nov 11, 2026: both superseded in turn — `claude-sonnet-4-5-20250929`
+  was itself retiring Nov 30, 2026. All Anthropic calls now import a
+  model id from `supabase/functions/_shared/models.ts` instead of a
+  hardcoded string, currently `claude-sonnet-5-5` / `claude-haiku-5-5`.)
 - Set both accounts' passwords via the Admin API; both emails stay
   confirmed.
 - Added `.github/workflows/nightly-backup.yml` and `keep-alive.yml`,

@@ -1,4 +1,12 @@
-import { fetchAnthropic } from "../_shared/anthropic.ts";
+import {
+  checkRefusal,
+  extractText,
+  fetchAnthropic,
+  logRefusal,
+  type RefusalDetail,
+  refusalPayload,
+} from "../_shared/anthropic.ts";
+import { CLAUDE_SONNET_MODEL } from "../_shared/models.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -176,8 +184,9 @@ ${existingLinkLines || "(none)"}
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 2048,
+        model: CLAUDE_SONNET_MODEL,
+        max_tokens: 4096,
+        output_config: { effort: "low" },
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -191,7 +200,15 @@ ${existingLinkLines || "(none)"}
     }
 
     const aiJson = await aiRes.json();
-    const rawContent: string = aiJson?.content?.[0]?.text?.trim() ?? "";
+    const refusal = checkRefusal(aiJson);
+    if (refusal) {
+      logRefusal("link-lore", { project_id }, refusal);
+      return new Response(JSON.stringify(refusalPayload("this project's lore connections", refusal)), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const rawContent: string = extractText(aiJson?.content);
 
     // ── Parse AI response ────────────────────────────────────────────────
     let aiSuggestions: { entity_a_id: string; entity_b_id: string; relationship: string; confidence: number }[] = [];
@@ -237,10 +254,16 @@ ${existingLinkLines || "(none)"}
     }
 
     // ── Second pass: field-tagging ───────────────────────────────────────
-    const fieldLinksCreated = await runFieldTaggingPass(admin, project_id, anthropicKey, entities);
+    const fieldTaggingResult = await runFieldTaggingPass(admin, project_id, anthropicKey, entities);
 
     return new Response(
-      JSON.stringify({ suggestions_created: filtered.length, field_links_created: fieldLinksCreated }),
+      JSON.stringify({
+        suggestions_created: filtered.length,
+        field_links_created: fieldTaggingResult.count,
+        field_tagging_refused: fieldTaggingResult.refusal
+          ? refusalPayload("this project's field-tagging pass", fieldTaggingResult.refusal)
+          : undefined,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
@@ -257,9 +280,9 @@ async function runFieldTaggingPass(
   project_id: string,
   anthropicKey: string,
   entities: any[],
-): Promise<number> {
+): Promise<{ count: number; refusal?: RefusalDetail }> {
   const targetableEntities = entities.filter((e) => !!FIELD_TARGET_MAP[e.category as string]);
-  if (targetableEntities.length === 0 || entities.length < 2) return 0;
+  if (targetableEntities.length === 0 || entities.length < 2) return { count: 0 };
 
   const entityIds = entities.map((e) => e.id);
 
@@ -363,19 +386,25 @@ ${alreadyFilledLines || "(none)"}
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1024,
+      model: CLAUDE_SONNET_MODEL,
+      max_tokens: 2048,
+      output_config: { effort: "low" },
       messages: [{ role: "user", content: prompt }],
     }),
   });
 
   if (!aiRes.ok) {
     console.error("Field-tagging AI error:", aiRes.status, await aiRes.text().catch(() => ""));
-    return 0;
+    return { count: 0 };
   }
 
   const aiJson = await aiRes.json();
-  const rawContent: string = aiJson?.content?.[0]?.text?.trim() ?? "";
+  const refusal = checkRefusal(aiJson);
+  if (refusal) {
+    logRefusal("link-lore:field-tagging", { project_id }, refusal);
+    return { count: 0, refusal };
+  }
+  const rawContent: string = extractText(aiJson?.content);
 
   let aiSuggestions: { entity_id: string; field_key: string; target_entity_id: string }[] = [];
   try {
@@ -422,5 +451,5 @@ ${alreadyFilledLines || "(none)"}
     if (error) console.error("Field-tagging insert error:", error);
   }
 
-  return toInsert.length;
+  return { count: toInsert.length };
 }

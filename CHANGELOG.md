@@ -4,6 +4,35 @@ All notable changes to Fyrescribe are recorded here. Older entries: see CHANGELO
 
 ---
 
+## 2026-11-11 — Remove analyze-lore
+
+- Deleted `supabase/functions/analyze-lore/` and undeployed it from `kxryozryqbajtgrfystu`. It had been dead code since 2026-04-17: `link-lore` was built as its direct replacement in commit `3f0b337` ("Add Link Lore AI relationship inference"), the same commit that removed `analyze-lore`'s only caller (`LinkLoreModal.tsx`'s old raw `fetch`). It wrote to no tables and had no caller for ~7 months. 12 Anthropic-calling functions remain; `sync-mentions` (no AI call) makes 13 total.
+
+---
+
+## 2026-11-11 — Refusal handling, generator effort, analyze-lore audit
+
+- **Effort**: `generate-profile`, `generate-story-history`, `generate-timeline`, `check-continuity` moved from the model's default (`high`) to explicit `medium`. The 8 extraction/summarization calls stay at `low`.
+- **Refusal handling** (`stop_reason: "refusal"` — a normal HTTP 200, new on Sonnet 5.5/Haiku 5.5): `_shared/anthropic.ts` — `checkRefusal()` now returns the full `stop_details`; added `logRefusal()` (function name + scene/entity/project id + stop_details, to the edge function logs) and `refusalPayload()` (a named `{ refused: true, message, name, category }` body, always HTTP 200 so `supabase-js` surfaces it on `data`, never `error`). Every one of the 12 call sites now logs and returns this instead of a generic 500.
+- **`sync-lore` no longer aborts on a refusal.** A declined scene is logged, added to a `refused_scenes` list on that project's result, and the loop moves on to the next scene. The Sidebar surfaces a toast plus an inline count naming the declined scene(s); the rest of the batch's suggestions are unaffected.
+- **`link-lore`'s two passes are independent.** A refusal on the main relationship pass returns the named payload. A refusal on the field-tagging sub-pass no longer silently returns 0 — it's flagged separately (`field_tagging_refused`) in the same successful response, and the main pass's suggestions still save.
+- **`sync-tags`** flags a refused pass (`refused`) while still returning whatever tag suggestions were already pending.
+- **UI**: `Sidebar.tsx`, `LoreInboxPage.tsx`, `LoreUploadModal.tsx`, `ManuscriptPage.tsx`, `EntityDetailPage.tsx`, `TimelinePage.tsx` all check for a refusal on their respective calls and show the AI's message naming the scene/entity/chapter — no blank result, no infinite spinner, no system-prompt changes (the dark-fantasy tone instructions are untouched).
+- **`analyze-lore` audited, not removed**: dead code since 2026-04-17 — `link-lore` was built as its direct replacement in the same commit that deleted its only caller. Still migrated to the shared model constant for consistency.
+
+---
+
+## 2026-11-11 — Migrate all Anthropic calls to Sonnet 5.5 / Haiku 5.5
+
+- New `supabase/functions/_shared/models.ts` — `CLAUDE_SONNET_MODEL` (`claude-sonnet-5-5`) and `CLAUDE_HAIKU_MODEL` (`claude-haiku-5-5`). All 12 functions that call Anthropic now import from it; no hardcoded model string remains anywhere. Driver: `claude-sonnet-4-5-20250929` was retiring Nov 30, 2026.
+- `supabase/functions/_shared/anthropic.ts` — added `extractText()` (joins `text`-type content blocks instead of reading `content[0].text`, since a response can now start with `thinking` blocks) and `checkRefusal()` (`stop_reason: "refusal"` is a normal HTTP 200 on these models). Every call site now uses both.
+- `output_config: { effort: "low" }` set on the 8 extraction/summarization calls (`sync-lore`, `link-lore` ×2, `sync-tags`, `analyze-lore`, `parse-lore-file`, `merge-entity-sections`, `summarize-version`, `summarize-entity-version`). `generate-profile`, `generate-story-history`, `generate-timeline`, `check-continuity` left at the model's default effort.
+- `max_tokens` raised on every affected call (thinking now counts against the same budget) — e.g. the two Haiku summarizers from 200–256 to 1024, the four default-effort Sonnet calls to 4096–8192.
+- No sampling params, prefills, or forced `tool_choice` existed in this codebase, so nothing to remove there.
+- `README.md`, `MIGRATION-fyrescribe.md`, `CLAUDE.md` — stale hardcoded model-id references updated to point at `_shared/models.ts`.
+
+---
+
 ## 2026-11-09 — Lore Inbox tabs (Entries · Connections · Mentions · Tags)
 
 - `LoreInboxPage.tsx`: tab bar with per-tab pending counts (they sum to the sidebar badge). With no `?tab=`, opens the first tab that has items. Counts stay live via the `fyrescribe:lore-inbox-changed` window event (`src/components/lore-inbox/shared.ts`).

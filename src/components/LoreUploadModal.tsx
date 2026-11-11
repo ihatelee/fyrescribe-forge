@@ -98,6 +98,12 @@ const LoreUploadModal = ({ projectId, defaultCategory, onClose }: LoreUploadModa
         { body: formData },
       );
 
+      if (data?.refused) {
+        setError(data.message);
+        setState("ready");
+        return;
+      }
+
       if (invokeError || (!data?.fields && !data?.sections)) {
         throw new Error(data?.error ?? invokeError?.message ?? "Unknown error");
       }

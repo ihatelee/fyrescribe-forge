@@ -1,4 +1,5 @@
-import { fetchAnthropic } from "../_shared/anthropic.ts";
+import { checkRefusal, extractText, fetchAnthropic, logRefusal, type RefusalDetail } from "../_shared/anthropic.ts";
+import { CLAUDE_SONNET_MODEL } from "../_shared/models.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -292,6 +293,7 @@ async function syncProject(
   suggestions_created: number;
   force: boolean;
   debug_data?: { name: string; update_type: string; routed_to: string }[];
+  refused_scenes?: { scene_id: string; name: string; category: string }[];
 }> {
   const { data: logEntry } = await supabase
     .from("sync_log")
@@ -363,6 +365,7 @@ async function syncProject(
     // ── One AI call per scene ────────────────────────────────────────────
     const allSuggestions: AISuggestion[] = [];
     const entitySceneMap = new Map<string, string[]>();
+    const refusedScenes: { scene_id: string; name: string; category: string }[] = [];
 
     for (const scene of scenes) {
       const sceneText = stripHtml(scene.content ?? "").slice(0, SCENE_CONTENT_LIMIT).trim();
@@ -385,7 +388,11 @@ async function syncProject(
       const entityContext = buildEntityContext(existingEntityList);
       const povCharacterName = scenePovNameMap.get(scene.id) ?? null;
 
-      const sceneSuggestions = await callAnthropicForScene(
+      const sourceLocation = scene.chapter_title
+        ? `${scene.chapter_title} › ${scene.title}`
+        : scene.title;
+
+      const { suggestions: sceneSuggestions, refusal } = await callAnthropicForScene(
         anthropicKey,
         scene.title,
         scene.chapter_title,
@@ -394,9 +401,11 @@ async function syncProject(
         povCharacterName,
       );
 
-      const sourceLocation = scene.chapter_title
-        ? `${scene.chapter_title} › ${scene.title}`
-        : scene.title;
+      if (refusal) {
+        logRefusal("sync-lore", { scene_id: scene.id, scene_title: scene.title, project_id: projectId }, refusal);
+        refusedScenes.push({ scene_id: scene.id, name: sourceLocation, category: refusal.category });
+        continue; // skip this scene only — the rest of the batch still runs
+      }
 
       for (const s of sceneSuggestions) {
         s.scene_id = scene.id;
@@ -553,12 +562,20 @@ async function syncProject(
       `[sync-lore] project=${projectId} suggestions_created=${suggestionsCreated}`,
     );
 
+    if (refusedScenes.length > 0) {
+      console.error(
+        `[sync-lore] project=${projectId} refused_scenes=${refusedScenes.length}`,
+        JSON.stringify(refusedScenes),
+      );
+    }
+
     return {
       project_id: projectId,
       scenes_processed: scenes.length,
       suggestions_created: suggestionsCreated,
       force,
       debug_data: debug ? debugEntries : undefined,
+      refused_scenes: refusedScenes.length > 0 ? refusedScenes : undefined,
     };
   } catch (err) {
     await finaliseLog(supabase, logId, "failed", 0, 0);
@@ -575,7 +592,7 @@ async function callAnthropicForScene(
   sceneText: string,
   entityContext: string,
   povCharacterName: string | null,
-): Promise<AISuggestion[]> {
+): Promise<{ suggestions: AISuggestion[]; refusal?: RefusalDetail }> {
   let response: Response;
   try {
     response = await fetchAnthropic({
@@ -586,8 +603,9 @@ async function callAnthropicForScene(
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 2000,
+        model: CLAUDE_SONNET_MODEL,
+        max_tokens: 4096,
+        output_config: { effort: "low" },
         messages: [
           {
             role: "user",
@@ -604,7 +622,7 @@ async function callAnthropicForScene(
     });
   } catch (err) {
     console.error(`[sync-lore] fetch error for scene "${sceneTitle}":`, err);
-    return [];
+    return { suggestions: [] };
   }
 
   if (!response.ok) {
@@ -613,10 +631,11 @@ async function callAnthropicForScene(
       `[sync-lore] Anthropic HTTP ${response.status} for scene "${sceneTitle}":`,
       errText.slice(0, 400),
     );
-    return [];
+    return { suggestions: [] };
   }
 
-  let aiResult: { content?: { text?: string }[] };
+  // deno-lint-ignore no-explicit-any
+  let aiResult: any;
   try {
     aiResult = await response.json();
   } catch (err) {
@@ -624,10 +643,15 @@ async function callAnthropicForScene(
       `[sync-lore] Failed to parse Anthropic response JSON for scene "${sceneTitle}":`,
       err,
     );
-    return [];
+    return { suggestions: [] };
   }
 
-  const rawText = aiResult.content?.[0]?.text ?? "[]";
+  const refusal = checkRefusal(aiResult);
+  if (refusal) {
+    return { suggestions: [], refusal };
+  }
+
+  const rawText = extractText(aiResult.content) || "[]";
   const jsonText = rawText
     .replace(/^```json?\s*/i, "")
     .replace(/```\s*$/i, "")
@@ -641,7 +665,7 @@ async function callAnthropicForScene(
       `[sync-lore] JSON.parse failed for scene "${sceneTitle}". Raw:`,
       rawText.slice(0, 600),
     );
-    return [];
+    return { suggestions: [] };
   }
 
   if (!Array.isArray(parsed)) {
@@ -649,10 +673,10 @@ async function callAnthropicForScene(
       `[sync-lore] Expected array for scene "${sceneTitle}", got ${typeof parsed}. Raw:`,
       rawText.slice(0, 400),
     );
-    return [];
+    return { suggestions: [] };
   }
 
-  return parsed as AISuggestion[];
+  return { suggestions: parsed as AISuggestion[] };
 }
 
 // ── Prompt ───────────────────────────────────────────────────────────────────

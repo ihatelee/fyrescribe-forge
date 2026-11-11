@@ -277,6 +277,10 @@ const TimelinePage = () => {
         setGenerateError(data?.error || error.message || "Generation failed. Please try again.");
         return;
       }
+      if (data?.refused) {
+        setGenerateError(data.message);
+        return;
+      }
       if (data?.events) {
         setEvents((prev) => {
           const newIds = new Set((data.events as TimelineEvent[]).map((e) => e.id));

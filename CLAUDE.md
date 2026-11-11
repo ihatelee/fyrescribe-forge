@@ -6,7 +6,7 @@
 - **Supabase project ref**: `kxryozryqbajtgrfystu` (old Lovable project `bedrzyekoynnzdeblunt` is retired — never target it)
 - **Hosting**: Vercel (auto-deploys `main`); app at app.fyrescribe.com
 - **Supabase credentials**: `src/integrations/supabase/client.ts`; generated types: `src/integrations/supabase/types.ts`
-- **AI models** (edge functions): `claude-sonnet-4-5-20250929` (most), `claude-sonnet-4-6` (parse-lore-file), `claude-haiku-4-5-20251001` (version summaries)
+- **AI models** (edge functions): defined once in `supabase/functions/_shared/models.ts` (`CLAUDE_SONNET_MODEL`, `CLAUDE_HAIKU_MODEL`) — import from there, never hardcode a model string in a function.
 
 ## Tech Stack
 
@@ -48,6 +48,7 @@ supabase/
 - **contentEditable editors** — use `data-initialized` guard; set `el.dataset.initialized = "true"` after first `innerHTML` write to prevent resets on re-render.
 - **Debounced saves** — 1 s `useDebouncedCallback`; write directly to Supabase with no optimistic UI.
 - **Design tokens** — all theme styles (colours + fonts) flow through CSS variables only. Key tokens: `gold`, `gold-bright`, `fyrescribe-raised`, `fyrescribe-hover`, `text-dimmed`, `text-secondary`. Defined in `tailwind.config.ts`.
+- **Parse Anthropic responses by block type** — never read `content[0].text`. A response can start with one or more `thinking` blocks (adaptive thinking runs by default). Use `extractText()` and `checkRefusal()` from `supabase/functions/_shared/anthropic.ts` on every call.
 
 ## Story History (character pages)
 

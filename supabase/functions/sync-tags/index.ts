@@ -1,4 +1,12 @@
-import { fetchAnthropic } from "../_shared/anthropic.ts";
+import {
+  checkRefusal,
+  extractText,
+  fetchAnthropic,
+  logRefusal,
+  type RefusalDetail,
+  refusalPayload,
+} from "../_shared/anthropic.ts";
+import { CLAUDE_SONNET_MODEL } from "../_shared/models.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -93,7 +101,7 @@ serve(async (req) => {
 
     const admin = createClient<any>(supabaseUrl, supabaseServiceKey);
 
-    const suggestions = await runFieldTaggingPass(admin, project_id, anthropicKey);
+    const { suggestions, refusal } = await runFieldTaggingPass(admin, project_id, anthropicKey);
 
     // Persist newly-found suggestions as pending (idempotent upsert).
     if (suggestions.length > 0) {
@@ -150,9 +158,13 @@ serve(async (req) => {
       target_entity_category: r.target_entity_category,
     }));
 
-    return new Response(JSON.stringify({ suggestions: responseSuggestions }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        suggestions: responseSuggestions,
+        refused: refusal ? refusalPayload("this project's tag suggestions", refusal) : undefined,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (err) {
     console.error("sync-tags error:", err);
     return new Response(
@@ -176,7 +188,7 @@ async function runFieldTaggingPass(
   admin: any,
   project_id: string,
   anthropicKey: string,
-): Promise<TagSuggestion[]> {
+): Promise<{ suggestions: TagSuggestion[]; refusal?: RefusalDetail }> {
   // Fetch entities
   const { data: entities } = await admin
     .from("entities")
@@ -188,7 +200,7 @@ async function runFieldTaggingPass(
     (e: any) => !!FIELD_TARGET_MAP[e.category as string],
   );
 
-  if (targetableEntities.length === 0 || (entities ?? []).length < 2) return [];
+  if (targetableEntities.length === 0 || (entities ?? []).length < 2) return { suggestions: [] };
 
   const entityIds = (entities ?? []).map((e: any) => e.id);
 
@@ -296,19 +308,25 @@ ${alreadyFilledLines || "(none)"}
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1024,
+      model: CLAUDE_SONNET_MODEL,
+      max_tokens: 2048,
+      output_config: { effort: "low" },
       messages: [{ role: "user", content: prompt }],
     }),
   });
 
   if (!aiRes.ok) {
     console.error("sync-tags AI error:", aiRes.status, await aiRes.text().catch(() => ""));
-    return [];
+    return { suggestions: [] };
   }
 
   const aiJson = await aiRes.json();
-  const rawContent: string = aiJson?.content?.[0]?.text?.trim() ?? "";
+  const refusal = checkRefusal(aiJson);
+  if (refusal) {
+    logRefusal("sync-tags", { project_id }, refusal);
+    return { suggestions: [], refusal };
+  }
+  const rawContent: string = extractText(aiJson?.content);
 
   let aiSuggestions: { entity_id: string; field_key: string; target_entity_id: string }[] = [];
   try {
@@ -361,5 +379,5 @@ ${alreadyFilledLines || "(none)"}
     });
   }
 
-  return validated;
+  return { suggestions: validated };
 }

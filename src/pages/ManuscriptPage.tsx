@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { toast } from "sonner";
 import DOMPurify from "dompurify";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
@@ -703,6 +704,16 @@ const ManuscriptPage = () => {
         // Fire-and-forget AI summary (panel will poll for it).
         supabase.functions
           .invoke("summarize-version", { body: { versionId: inserted.id } })
+          .then(({ data, error: summaryError }) => {
+            if (summaryError) {
+              console.error("Summary generation failed:", summaryError);
+              return;
+            }
+            if (data?.refused) {
+              console.error("Summary generation refused:", data);
+              toast.error(data.message);
+            }
+          })
           .catch((e) => console.error("Summary generation failed:", e));
       }
       setTimeout(() => setVersionToast(null), 2500);
@@ -983,9 +994,15 @@ const ManuscriptPage = () => {
         body: { chapter_id: chapterId, project_id: projectId },
       });
       if (res.error) throw res.error;
+      if (res.data?.refused) {
+        console.error("Continuity check refused:", res.data);
+        toast.error(res.data.message);
+        return;
+      }
       setContinuityPanel({ chapterTitle: res.data.chapter_title, issues: res.data.issues ?? [] });
     } catch (err) {
       console.error("Continuity check failed:", err);
+      toast.error("Continuity check failed. Please try again.");
     } finally {
       setContinuityCheckingId(null);
     }
